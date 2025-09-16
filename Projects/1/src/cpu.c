@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "../include/cpu.h"
 #include "../include/types.h"
+#include "../include/memory.h"
 
 #define CPU_HALT (word)0xFFFF
 
@@ -162,6 +163,7 @@ void cpu_print_state(const CPU* cpu) {
 int main() {
   struct flags flags = {0, 0, 0};
   struct cpu cpu = {0x300, 0, 0, flags}; 
+  /*
   word memory[0x1000];
   memory[0x300] = 0x1940;
   memory[0x301] = 0x5941;
@@ -171,9 +173,21 @@ int main() {
   memory[0x940] = 0x0003;
   memory[0x941] = 0x0002;
   memory[0x942] = 0x0001;
+  */
+  init_cache(&L1, L1CACHE_SIZE);
+  init_cache(&L2, L2CACHE_SIZE);
+  init_ram(RAM_SIZE);
 
-  cpu_run(&cpu, 5, memory);
+  
+  //cpu_run(&cpu, 5, memory);
+  /*
   printf("0x941: %X\n", memory[0x941]);
   printf("0x942: %X\n", memory[0x942]);
+  */
+
+  write_mem(0x300, 0x1940);
+  printf("read adress 0x300 <-> 0x%X\n", read_mem(0x300));
+  cpu_run(&cpu, 5, RAM);
+  print_cache_stats();
 }
 
