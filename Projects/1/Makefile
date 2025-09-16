@@ -1,12 +1,14 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -g -fsanitize=address -O2
-OBJS = main.o mem.o cpu.o
+CFLAGS = -Wall -O2 -Iinclude
+
+SRC = src/main.c src/cpu.c src/isa.c src/memory.c
+OBJS = $(SRC:.c=.o)
 
 prog: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS)
 
-%.o: %.c mem.h
-	$(CC) $(CFLAGS) -c $<
+src/%.o: src/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) prog

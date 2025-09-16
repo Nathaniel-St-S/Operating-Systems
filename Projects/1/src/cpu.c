@@ -1,40 +1,12 @@
-#include <stdint.h>
-#include <stdio.h>
 #include "../include/cpu.h"
 #include "../include/types.h"
 #include "../include/memory.h"
+#include "../include/isa.h"
 
-#define CPU_HALT (word)0xFFFF
-
-/**
- * Enum for the supported operations.
- * This includes loading, storing, adding, subtracting, and halting.
- */
-typedef enum op {
-  OP_LOAD  = 0x1,
-  OP_STORE = 0x2,
-  OP_ADD   = 0x5,
-  OP_SUB   = 0x6,
-  OP_HALT  = 0xF,
-} OP;
-
-/**
- * Represents the lower 4 and upper 12 bits from a instruction.
- */
-typedef struct {
-  OP       op;
-  mem_addr addr;
-} Decoded;
+//CPU to control execution
+Cpu CPU;
 
 /* --- helpers ------------------------------------------------------------- */
-
-// Decodes the given instruction into its operator and operand
-static inline Decoded decode(instr instruction) {
-  Decoded d;
-  d.op   = (OP)((instruction & 0xF000u) >> 12);
-  d.addr = (mem_addr)(instruction & 0x0FFFu);
-  return d;
-}
 
 // Sets the zero flag of the given cpu to 1 if the value is 0, 0 otherwise
 static inline void set_zero_flag(CPU *cpu, word value) {
@@ -67,54 +39,47 @@ static inline void set_sub_flags(CPU *cpu, word a, word b, word r) {
 
   set_zero_flag(cpu, r);
 }
+
 /* --- core ---------------------------------------------------------------- */
 
+void init_cpu(Cpu* cpu)
+{
+  //initialize the flags of the given cpu
+  void init_flags(Flags* flags)
+  {
+    flags->ZERO     = UNSET_FLAG;
+    flags->CARRY    = UNSET_FLAG;
+    flags->OVERFLOW = UNSET_FLAG;
+  }
+  
+  cpu->EAX = EMPTY_REG;
+  cpu->EBX = EMPTY_REG;
+  cpu->ECX = EMPTY_REG;
+  cpu->EDX = EMPTY_REG;
+  cpu->PC  = 0;
+  cpu->IR  = EMPTY_REG;
+  cpu->ACC = EMPTY_REG;
+  init_flags(cpu->flags);
+}
+
 // Fetch the next instruction from the given memory and cpu and increments the program counter
-static void fetch(CPU* cpu, word* data_mem) {
-  mem_addr next_instruction_addr = cpu->PC;
-  cpu->IR = (instr)data_mem[next_instruction_addr];
-  cpu->PC++;
+void fetch() {
+  mem_addr next_instruction_addr = CPU.pc;
+  //cpu->IR = (instr)data_mem[next_instruction_addr];
+  CPU.IR = read_mem(next_instruction_addr);
+  CPU.PC++;
 }
 
-// Loads the data at operand in data_mem into cpu's ACC register
-static void load(CPU* cpu, word* data_mem, mem_addr operand) {
-  cpu->ACC = (word)data_mem[operand];
-  set_zero_flag(cpu, cpu->ACC);
-}
-
-// Stores the data in cpu's ACC register at the operand in data_mem
-static void store(CPU* cpu, word* data_mem, mem_addr operand) {
-  data_mem[operand] = cpu->ACC;
-}
-
-// Adds the value in the cpu's ACC register with the value at operand in data_mem
-// The sum is stored in ACC and the appropiate flags are set
-static void add(CPU* cpu, word* data_mem, mem_addr operand) {
-  word a = cpu->ACC;
-  word b = data_mem[operand];
-  word r = (a + b);
-  cpu->ACC = r;
-  set_add_flags(cpu, a, b, r);
-}
-
-// Subtracts the value in the cpu's ACC register with the value at operand in data_mem
-// The differnce is stored in ACC and the appropiate flags are set
-static void sub(CPU* cpu, word* data_mem, mem_addr operand) {
-  word a = cpu->ACC;
-  word b = data_mem[operand];
-  word r = (a - b);
-  cpu->ACC = r;
-  set_sub_flags(cpu, a, b, r);
-}
-
-// Halts execution of the given cpu
-static void halt(CPU* cpu) {
-  printf("HALT\n");
-  cpu->PC = CPU_HALT;
+// Decodes the given instruction into its operator and operand
+Decoded decode(instr instruction) {
+  Decoded d;
+  d.op   = (OP)((instruction & 0xF000u) >> 12);
+  d.addr = (mem_addr)(instruction & 0x0FFFu);
+  return d;
 }
 
 // Executes the instruction in the given cpu's IR with the given RAM
-static void execute(CPU* cpu, word* data_mem) {
+void execute(CPU* cpu, word* data_mem) {
   instr instruction = cpu->IR;
   Decoded d = decode(instruction);
   OP opcode = d.op;
@@ -160,34 +125,35 @@ void cpu_print_state(const CPU* cpu) {
   printf("  OVERFLOW: %1d\n\n\n", cpu->flags.OVERFLOW);
 }
 
+/*
 int main() {
   struct flags flags = {0, 0, 0};
   struct cpu cpu = {0x300, 0, 0, flags}; 
-  /*
-  word memory[0x1000];
-  memory[0x300] = 0x1940;
-  memory[0x301] = 0x5941;
-  memory[0x302] = 0x2941;
-  memory[0x303] = 0x6942;
-  memory[0x304] = 0x2942;
-  memory[0x940] = 0x0003;
-  memory[0x941] = 0x0002;
-  memory[0x942] = 0x0001;
-  */
+  
+  //word memory[0x1000];
+  //memory[0x300] = 0x1940;
+  //memory[0x301] = 0x5941;
+  //memory[0x302] = 0x2941;
+  //memory[0x303] = 0x6942;
+  //memory[0x304] = 0x2942;
+  //memory[0x940] = 0x0003;
+  //memory[0x941] = 0x0002;
+  //memory[0x942] = 0x0001;
+  
   init_cache(&L1, L1CACHE_SIZE);
   init_cache(&L2, L2CACHE_SIZE);
   init_ram(RAM_SIZE);
 
   
   //cpu_run(&cpu, 5, memory);
-  /*
-  printf("0x941: %X\n", memory[0x941]);
-  printf("0x942: %X\n", memory[0x942]);
-  */
+  
+  //printf("0x941: %X\n", memory[0x941]);
+  //printf("0x942: %X\n", memory[0x942]);
+  
 
   write_mem(0x300, 0x1940);
   printf("read adress 0x300 <-> 0x%X\n", read_mem(0x300));
   cpu_run(&cpu, 5, RAM);
   print_cache_stats();
 }
-
+*/
