@@ -19,7 +19,7 @@ of memory adress and associated value
 typedef struct
 {
 	word val;
-	uword addr;
+	mem_addr addr;
 }Entry;
 
 /*
@@ -58,16 +58,16 @@ static void init_cache(Cache* cache, int size);
 static void init_ram(int size);
 
 //find the address of the value if it exists in cache
-static int cache_search(Cache* cache, uword addr);
+static int cache_search(Cache* cache, mem_addr addr);
 
 //Update the given cache in case of misses
-static void update_cache(Cache* cache, uword addr, word val);
+static void update_cache(Cache* cache, mem_addr addr, word val);
 
 //return the value at the given memory adress
-static word read_mem(uword addr);
+static word read_mem(mem_addr addr);
 
 //write the given value to the given memory adress.
-static void write_mem(uword addr, const word val);
+static void write_mem(mem_addr addr, const word val);
 
 //print the number of cache hits & misses
 static void print_cache_stats(void);

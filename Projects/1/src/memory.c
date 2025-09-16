@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "../include/memory.h"
 
 //values for tracking cache stats
@@ -39,7 +37,7 @@ void init_ram(int size)
 }
 
 //find the address of the value if it exists in cache
-int cache_search(Cache* cache, uword addr)
+int cache_search(Cache* cache, mem_addr addr)
 {
 	for(int i = 0; i < cache->size; i++)
 	{
@@ -55,7 +53,7 @@ int cache_search(Cache* cache, uword addr)
 }
 
 //Update the given cache in case of misses
-void update_cache(Cache* cache, uword addr, word val)
+void update_cache(Cache* cache, mem_addr addr, word val)
 {
 	//calculate where in the cache to store the value
 	//yah it's like a hash stay mad brysen
@@ -79,7 +77,7 @@ void update_cache(Cache* cache, uword addr, word val)
 }
 
 //return the value at the given memory adress
-word read_mem(uword addr)
+word read_mem(mem_addr addr)
 {
 	int index;
 	index = cache_search(&L1, addr);
@@ -98,7 +96,7 @@ word read_mem(uword addr)
 	{
 		//Cache hit at l2
 		L2cache_hit++;
-		uword val = L2.items[index].val;
+		word val = L2.items[index].val;
 		//Update L1 cache to prevent future cache misses
 		update_cache(&L1, addr, val);
 		return val;
@@ -114,7 +112,7 @@ word read_mem(uword addr)
 }
 
 //write the given value to the given memory adress.
-void write_mem(uword addr, const word val)
+void write_mem(mem_addr addr, const word val)
 {
 	RAM[addr] = val;
 
