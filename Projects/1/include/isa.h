@@ -19,20 +19,20 @@ typedef enum op {
 static void execute_instruction(OP op, mem_addr addr);
 
 // Loads the data at operand in data_mem into cpu's ACC register
-static void load(CPU* cpu, mem_addr operand);
+static void load(mem_addr operand);
 
 // Stores the data in cpu's ACC register at the operand in data_mem
-static void store(CPU* cpu, mem_addr operand);
+static void store(mem_addr operand);
 
 // Adds the value in the cpu's ACC register with the value at operand in data_mem
 // The sum is stored in ACC and the appropiate flags are set
-static void add(CPU* cpu, mem_addr operand)
+static void add(mem_addr operand);
 
 // Subtracts the value in the cpu's ACC register with the value at operand in data_mem
 // The differnce is stored in ACC and the appropiate flags are set
-static void sub(CPU* cpu, mem_addr operand)
+static void sub(mem_addr operand);
 
 // Halts execution of the given cpu
-static void halt(CPU* cpu)
+static void halt(void);
 
 #endif

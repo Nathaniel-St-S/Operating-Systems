@@ -5,7 +5,7 @@
 #include "isa.h"
 
 #define EMPTY_REG ((word) - 1)
-#define UNSET_FLAG INT_MIN
+#define UNSET_FLAG ((int) -1)
 
 typedef struct {
   int ZERO;
@@ -33,25 +33,34 @@ typedef struct {
 } Decoded;
 
 //CPU to control execution
-extern Cpu* CPU;
+extern Cpu CPU;
 
 //initialize a CPU to fetch, decode, and execute instructions
 static void init_cpu(Cpu* cpu);
 
+// Sets the zero flag of the given cpu to 1 if the value is 0, 0 otherwise
+static void set_zero_flag(word value);
+
+// Sets the carry, overflow, and zero flags of the given cpu based on the given a + b = r
+void set_add_flags(word a, word b, word r);
+
+// Sets the carry, overflow, and zero flags of the given cpu based on the given a - b = r
+void set_sub_flags(word a, word b, word r);
+
 // Fetch the next instruction from the given memory and cpu
 // and increments the program counter
-static void fetch(word* data_mem);
+static void fetch(void);
 
 // Decodes the given instruction into its operator and operand
 static Decoded decode(instr instruction);
 
 // Executes the instruction in the given cpu's IR with the given RAM
-static void execute(CPU* cpu, word* data_mem);
+static void execute(void);
 
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
-static void cpu_run(CPU* cpu, int program_size, word* mem);
+static void cpu_run(int program_size, word* mem);
 
 // Prints the state of the given CPU
-static void cpu_print_state(const CPU* cpu);
+static void cpu_print_state(void);
 
 #endif

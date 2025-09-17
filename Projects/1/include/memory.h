@@ -9,7 +9,7 @@
 #define RAM_SIZE 50000
 
 #define EMPTY_ADDR -1
-#define NO_VAL ((word)-1)
+#define NO_VAL ((word) - 1)
 
 /*
 Individual entries in the cache

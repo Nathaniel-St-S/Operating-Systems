@@ -9,35 +9,35 @@ Cpu CPU;
 /* --- helpers ------------------------------------------------------------- */
 
 // Sets the zero flag of the given cpu to 1 if the value is 0, 0 otherwise
-static inline void set_zero_flag(CPU *cpu, word value) {
-  cpu->flags.ZERO = (value == 0);
+void set_zero_flag(word value) {
+  CPU.flags.ZERO = (value == 0);
 }
 
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a + b = r
-static inline void set_add_flags(CPU *cpu, word a, word b, word r) {
+void set_add_flags(word a, word b, word r) {
   // Unsigned carry out of bit 15
-  cpu->flags.CARRY =
+  CPU.flags.CARRY =
       ((uint32_t)(uword)a + (uint32_t)(uword)b) > 0xFFFFu;
 
   // Signed overflow: inputs same sign, result different sign
-  cpu->flags.OVERFLOW =
+  CPU.flags.OVERFLOW =
       ((a >= 0 && b >= 0 && r <  0) ||
        (a <  0 && b <  0 && r >= 0));
 
-  set_zero_flag(cpu, r);
+  set_zero_flag(r);
 }
 
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a - b = r
-static inline void set_sub_flags(CPU *cpu, word a, word b, word r) {
+void set_sub_flags(word a, word b, word r) {
   // Borrow in unsigned
-  cpu->flags.CARRY = ((uword)a < (uword)b);
+  CPU.flags.CARRY = ((uword)a < (uword)b);
 
   // Signed overflow: inputs different sign, result sign differs from a
-  cpu->flags.OVERFLOW =
+  CPU.flags.OVERFLOW =
       ((a >= 0 && b <  0 && r <  0) ||
        (a <  0 && b >= 0 && r >= 0));
 
-  set_zero_flag(cpu, r);
+  set_zero_flag(r);
 }
 
 /* --- core ---------------------------------------------------------------- */
@@ -45,11 +45,11 @@ static inline void set_sub_flags(CPU *cpu, word a, word b, word r) {
 void init_cpu(Cpu* cpu)
 {
   //initialize the flags of the given cpu
-  void init_flags(Flags* flags)
+  void init_flags(Flags flags)
   {
-    flags->ZERO     = UNSET_FLAG;
-    flags->CARRY    = UNSET_FLAG;
-    flags->OVERFLOW = UNSET_FLAG;
+    flags.ZERO     = UNSET_FLAG;
+    flags.CARRY    = UNSET_FLAG;
+    flags.OVERFLOW = UNSET_FLAG;
   }
   
   cpu->EAX = EMPTY_REG;
@@ -64,7 +64,7 @@ void init_cpu(Cpu* cpu)
 
 // Fetch the next instruction from the given memory and cpu and increments the program counter
 void fetch() {
-  mem_addr next_instruction_addr = CPU.pc;
+  mem_addr next_instruction_addr = CPU.PC;
   //cpu->IR = (instr)data_mem[next_instruction_addr];
   CPU.IR = read_mem(next_instruction_addr);
   CPU.PC++;
@@ -79,34 +79,25 @@ Decoded decode(instr instruction) {
 }
 
 // Executes the instruction in the given cpu's IR with the given RAM
-void execute(CPU* cpu, word* data_mem) {
-  instr instruction = cpu->IR;
+void execute() {
+  instr instruction = CPU.IR;
   Decoded d = decode(instruction);
   OP opcode = d.op;
   mem_addr operand = d.addr;
 
-  switch (opcode) {
-    case OP_LOAD:  load(cpu, data_mem, operand);  break;
-    case OP_STORE: store(cpu, data_mem, operand); break;
-    case OP_ADD:   add(cpu, data_mem, operand);   break;
-    case OP_SUB:   sub(cpu, data_mem, operand);   break;
-    case OP_HALT:  halt(cpu);                     break;
-    default:
-      printf("ERROR: Invalid opcode %u (IR=0x%04X)\n", (unsigned)opcode, (unsigned)instruction);
-      cpu->PC = CPU_HALT;
-  }
+  execute_instruction(opcode, operand);
 }
 
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
-void cpu_run(CPU* cpu, int program_size, word* mem) {
-  for (int i = 0; i < program_size && cpu->PC != CPU_HALT; i++) {
+void cpu_run(int program_size, word* mem) {
+  for (int i = 0; i < program_size && CPU.PC != CPU_HALT; i++) {
     printf("=== Cycle %d ===\n", i + 1);
-    cpu_print_state(cpu);
+    cpu_print_state();
 
-    fetch(cpu, mem);
-    execute(cpu, mem);
+    fetch();
+    execute();
 
-    if (cpu->PC == CPU_HALT) {
+    if (CPU.PC == CPU_HALT) {
       printf("CPU Halted!\n");
       break;
     }
@@ -114,15 +105,15 @@ void cpu_run(CPU* cpu, int program_size, word* mem) {
 }
 
 // Prints the state of the given CPU
-void cpu_print_state(const CPU* cpu) {
+void cpu_print_state() {
   printf("CPU STATE\n");
-  printf("PC: %X\n", cpu->PC);
-  printf("ACC: %X\n", cpu->ACC);
-  printf("IR: %X\n", cpu->IR);
+  printf("PC: %X\n", CPU.PC);
+  printf("ACC: %X\n", CPU.PC);
+  printf("IR: %X\n", CPU.IR);
   printf("FLAGS:\n");
-  printf("  ZERO: %1d\n", cpu->flags.ZERO);
-  printf("  CARRY: %1d\n", cpu->flags.CARRY);
-  printf("  OVERFLOW: %1d\n\n\n", cpu->flags.OVERFLOW);
+  printf("  ZERO: %1d\n", CPU.flags.ZERO);
+  printf("  CARRY: %1d\n", CPU.flags.CARRY);
+  printf("  OVERFLOW: %1d\n\n\n", CPU.flags.OVERFLOW);
 }
 
 /*
