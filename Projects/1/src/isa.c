@@ -4,57 +4,53 @@
 #include "../include/memory.h"
 
 // Loads the data at operand in data_mem into cpu's ACC register
-static void load(CPU* cpu, mem_addr operand) {
-  //cpu->ACC = (word)data_mem[operand];
-  cpu->ACC = read_mem(operand);
-  set_zero_flag(cpu, cpu->ACC);
+void load(mem_addr operand) {
+  CPU.ACC = read_mem(operand);
+  set_zero_flag(CPU.ACC);
 }
 
 // Stores the data in cpu's ACC register at the operand in data_mem
-static void store(CPU* cpu, mem_addr operand) {
-  //data_mem[operand] = cpu->ACC;
-  write_mem(operand, cpu->ACC);
+void store(mem_addr operand) {
+  write_mem(operand, CPU.ACC);
 }
 
 // Adds the value in the cpu's ACC register with the value at operand in data_mem
 // The sum is stored in ACC and the appropiate flags are set
-static void add(CPU* cpu, mem_addr operand) {
-  word a = cpu->ACC;
-  //word b = data_mem[operand];
+void add(mem_addr operand) {
+  word a = CPU.ACC;
   word b = read_mem(operand);
   word r = (a + b);
-  cpu->ACC = r;
-  set_add_flags(cpu, a, b, r);
+  CPU.ACC = r;
+  set_add_flags(a, b, r);
 }
 
 // Subtracts the value in the cpu's ACC register with the value at operand in data_mem
 // The differnce is stored in ACC and the appropiate flags are set
-static void sub(CPU* cpu, mem_addr operand) {
-  word a = cpu->ACC;
-  //word b = data_mem[operand];
+void sub(mem_addr operand) {
+  word a = CPU.ACC;
   word b = read_mem(operand);
   word r = (a - b);
-  cpu->ACC = r;
-  set_sub_flags(cpu, a, b, r);
+  CPU.ACC = r;
+  set_sub_flags(a, b, r);
 }
 
 // Halts execution of the given cpu
-static void halt(CPU* cpu) {
+void halt() {
   printf("HALT\n");
-  cpu->PC = CPU_HALT;
+  CPU.PC = CPU_HALT;
 }
 
 //execute the instruction based off of the opcode
 void execute_instruction(OP opcode, mem_addr operand)
 {
   switch (opcode) {
-    case OP_LOAD:  load(cpu, data_mem, operand);  break;
-    case OP_STORE: store(cpu, data_mem, operand); break;
-    case OP_ADD:   add(cpu, data_mem, operand);   break;
-    case OP_SUB:   sub(cpu, data_mem, operand);   break;
-    case OP_HALT:  halt(cpu);                     break;
+    case OP_LOAD:  load(operand);  break;
+    case OP_STORE: store(operand); break;
+    case OP_ADD:   add(operand);   break;
+    case OP_SUB:   sub(operand);   break;
+    case OP_HALT:  halt();         break;
     default:
-      printf("ERROR: Invalid opcode %u (IR=0x%04X)\n", (unsigned)opcode, (unsigned)instruction);
-      cpu->PC = CPU_HALT;
+      printf("ERROR: Invalid opcode %u (IR=0x%04X)\n", (unsigned)opcode, (unsigned)operand);
+      CPU.PC = CPU_HALT;
   }
 }
