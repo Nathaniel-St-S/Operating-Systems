@@ -60,27 +60,31 @@ void init_cpu(Cpu* cpu)
   cpu->IR  = EMPTY_REG;
   cpu->ACC = EMPTY_REG;
   init_flags(cpu->flags);
+  printf("Initialized the cpu!\n");
 }
 
 // Fetch the next instruction from the given memory and cpu and increments the program counter
 void fetch() {
   mem_addr next_instruction_addr = CPU.PC;
-  //cpu->IR = (instr)data_mem[next_instruction_addr];
+  printf("fetched memory adress == %u\n", (unsigned)next_instruction_addr);
   CPU.IR = read_mem(next_instruction_addr);
   CPU.PC++;
 }
 
 // Decodes the given instruction into its operator and operand
-Decoded decode(instr instruction) {
+Decoded decode (word instruction) {
+  printf("given instruction == %u\n", (unsigned)instruction);
   Decoded d;
   d.op   = (OP)((instruction & 0xF000u) >> 12);
   d.addr = (mem_addr)(instruction & 0x0FFFu);
+  printf("opcode == %u\n", (unsigned)d.op);
+  printf("address after decode == %u\n", (unsigned)d.addr);
   return d;
 }
 
 // Executes the instruction in the given cpu's IR with the given RAM
 void execute() {
-  instr instruction = CPU.IR;
+  word instruction = CPU.IR;
   Decoded d = decode(instruction);
   OP opcode = d.op;
   mem_addr operand = d.addr;

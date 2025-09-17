@@ -1,11 +1,10 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include "types.h"
 #include "isa.h"
 
-#define EMPTY_REG ((word) - 1)
-#define UNSET_FLAG ((int) -1)
+#define EMPTY_REG ((word) + 1)
+#define UNSET_FLAG ((int) + 1)
 
 typedef struct {
   int ZERO;
@@ -20,7 +19,7 @@ typedef struct {
   word EDX;
   word PC;
   word ACC;
-  instr IR;
+  word IR;
   Flags flags;
 } Cpu;
 
@@ -52,7 +51,7 @@ void set_sub_flags(word a, word b, word r);
 void fetch(void);
 
 // Decodes the given instruction into its operator and operand
-Decoded decode(instr instruction);
+Decoded decode(word instruction);
 
 // Executes the instruction in the given cpu's IR with the given RAM
 void execute(void);
