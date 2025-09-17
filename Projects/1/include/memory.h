@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include "types.h"
 
-#define L1CACHE_SIZE 64
-#define L2CACHE_SIZE 1000
-#define RAM_SIZE 50000
+#define L1CACHE_SIZE 5
+#define L2CACHE_SIZE 20
+#define RAM_SIZE 500
 
 #define EMPTY_ADDR -1
 #define NO_VAL ((word) - 1)
@@ -63,13 +63,13 @@ int cache_search(Cache* cache, mem_addr addr);
 //Update the given cache in case of misses
 void update_cache(Cache* cache, mem_addr addr, word val);
 
-//return the value at the given memory adress
+ //return the value at the given memory adress
 word read_mem(mem_addr addr);
 
 //write the given value to the given memory adress.
 void write_mem(mem_addr addr, const word val);
 
-//print the number of cache hits & misses
+ //print the number of cache hits & misses
 void print_cache_stats(void);
 
 #endif
