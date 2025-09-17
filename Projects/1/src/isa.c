@@ -3,35 +3,31 @@
 #include "../include/isa.h"
 #include "../include/memory.h"
 
-// Loads the data at operand in data_mem into cpu's ACC register
-void load(mem_addr operand) {
+// Loads the data at the given memory adress into cpu's ACC register
+void load(const mem_addr operand) {
   CPU.ACC = read_mem(operand);
   set_zero_flag(CPU.ACC);
 }
 
-// Stores the data in cpu's ACC register at the operand in data_mem
-void store(mem_addr operand) {
+// Stores the data in cpu's ACC register at the given memory address
+void store(const mem_addr operand) {
   write_mem(operand, CPU.ACC);
 }
 
-// Adds the value in the cpu's ACC register with the value at operand in data_mem
+// Adds the value in the cpu's ACC register with the given value
 // The sum is stored in ACC and the appropiate flags are set
-void add(mem_addr operand) {
-  word a = CPU.ACC;
-  word b = operand;
-  word r = (a + b);
-  CPU.ACC = r;
-  set_add_flags(a, b, r);
+void add(const mem_addr operand) {
+  word init = CPU.ACC;
+  CPU.ACC += operand;
+  set_add_flags(init, operand, CPU.ACC);
 }
 
-// Subtracts the value in the cpu's ACC register with the value at operand in data_mem
+// Subtracts the value in the cpu's ACC register with the given value
 // The differnce is stored in ACC and the appropiate flags are set
-void sub(mem_addr operand) {
-  word a = CPU.ACC;
-  word b = operand;
-  word r = (a - b);
-  CPU.ACC = r;
-  set_sub_flags(a, b, r);
+void sub(const mem_addr operand) {
+  word init = CPU.ACC;
+  CPU.ACC -= operand;
+  set_sub_flags(init, operand, CPU.ACC);
 }
 
 // Halts execution of the given cpu
@@ -41,7 +37,7 @@ void halt() {
 }
 
 //execute the instruction based off of the opcode
-void execute_instruction(OP opcode, mem_addr operand)
+void execute_instruction(const OP opcode, const mem_addr operand)
 {
   switch (opcode) {
     case OP_LOAD:  load(operand);  break;

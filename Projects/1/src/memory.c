@@ -12,7 +12,7 @@ Cache L2;
 word* RAM = NULL;
 
 //Initialize the cache to the given size
-void init_cache(Cache* cache, int size)
+void init_cache(Cache* cache, const int size)
 {
 	cache->items = (Entry*)malloc(sizeof(Entry) * size);
 	cache->front = 0;
@@ -28,7 +28,7 @@ void init_cache(Cache* cache, int size)
 }
 
 //initialize the ram to the given size
-void init_ram(int size)
+void init_ram(const int size)
 {
 	RAM = (word*)malloc(sizeof(word) * size);
 	for(int i = 0; i < size; i++)
@@ -39,7 +39,7 @@ void init_ram(int size)
 }
 
 //find the address of the value if it exists in cache
-int cache_search(Cache* cache, mem_addr addr)
+int cache_search(Cache* cache, const mem_addr addr)
 {
 	for(int i = 0; i < cache->size; i++)
 	{
@@ -55,7 +55,7 @@ int cache_search(Cache* cache, mem_addr addr)
 }
 
 //Update the given cache in case of misses
-void update_cache(Cache* cache, mem_addr addr, word val)
+void update_cache(Cache* cache, const mem_addr addr, const word val)
 {
 	//calculate where in the cache to store the value
 	//yah it's like a hash stay mad brysen
@@ -79,7 +79,7 @@ void update_cache(Cache* cache, mem_addr addr, word val)
 }
 
 //return the value at the given memory adress
-word read_mem(mem_addr addr)
+word read_mem(const mem_addr addr)
 {
 	int index;
 	index = cache_search(&L1, addr);
@@ -114,7 +114,7 @@ word read_mem(mem_addr addr)
 }
 
 //write the given value to the given memory adress.
-void write_mem(mem_addr addr, const word val)
+void write_mem(const mem_addr addr, const word val)
 {
 	RAM[addr] = val;
 
@@ -139,39 +139,8 @@ void write_mem(mem_addr addr, const word val)
 void print_cache_stats()
 {
     printf("\nCache statistics:\n");
-    printf("L1 hits:  %d\n", L1cache_hit);
-    printf("L1 misses:%d\n", L1cache_miss);
-    printf("L2 hits:  %d\n", L2cache_hit);
-    printf("L2 misses:%d\n", L2cache_miss);
+    printf("L1 hits:   %d\n", L1cache_hit);
+    printf("L1 misses: %d\n", L1cache_miss);
+    printf("L2 hits:   %d\n", L2cache_hit);
+    printf("L2 misses: %d\n", L2cache_miss);
 }
-
-/*
-int main()
-{
-	//initialize the cache for use
-	init_cache(&L1, L1CACHE_SIZE);
-	init_cache(&L2, L2CACHE_SIZE);
-	//initialize the ram
-	init_ram(RAM_SIZE);
-	write_mem(5, 0x0000);
-	write_mem(25, 0xABCD);
-	printf("read addr 5  <-> 0x%X\n", read_mem(5));
-	printf("read addr 15 <-> 0x%X\n", read_mem(15));
-	printf("read addr 5  <-> 0x%X\n", read_mem(5));
-	printf("read addr 25 <-> 0x%X\n", read_mem(25));
-	printf("read addr 15 <-> 0x%X\n", read_mem(15));
-	
-	write_mem(5, 0xFFFF);
-	printf("read addr 5  <-> 0x%X\n", read_mem(5));
-
-	printf("read addr 30 <-> 0x%X\n", read_mem(30));
-	printf("read addr 60 <-> 0x%X\n", read_mem(60));
-
-	print_cache_stats();
-
-	free(L1.items);
-	free(L2.items);
-	free(RAM);
-	return 0;
-}
-*/
