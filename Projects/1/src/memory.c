@@ -24,6 +24,7 @@ void init_cache(Cache* cache, int size)
 		cache->items[i].addr = EMPTY_ADDR;
 		cache->items[i].val = NO_VAL;
 	}
+	printf("Initialized cache at -> '%p' <- with size: %d\n",cache, size);
 }
 
 //initialize the ram to the given size
@@ -34,6 +35,7 @@ void init_ram(int size)
 	{
 		RAM[i] = NO_VAL;
 	}
+	printf("initialized ram with size: %d\n", size);
 }
 
 //find the address of the value if it exists in cache

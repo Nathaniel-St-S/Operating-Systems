@@ -10,21 +10,23 @@ int main()
 	init_cache(&L2, L2CACHE_SIZE);
 	//initialize the ram
 	init_ram(RAM_SIZE);
-	write_mem(5, 0x0000);
-	write_mem(25, 0xABCD);
-	printf("read addr 5  <-> 0x%X\n", read_mem(5));
-	printf("read addr 15 <-> 0x%X\n", read_mem(15));
-	printf("read addr 5  <-> 0x%X\n", read_mem(5));
-	printf("read addr 25 <-> 0x%X\n", read_mem(25));
-	printf("read addr 15 <-> 0x%X\n", read_mem(15));
-	
-	write_mem(5, 0xFFFF);
-	printf("read addr 5  <-> 0x%X\n", read_mem(5));
+	//initialize the cpu
+	init_cpu(&CPU);
 
-	printf("read addr 30 <-> 0x%X\n", read_mem(30));
-	printf("read addr 60 <-> 0x%X\n", read_mem(60));
-
-	print_cache_stats();
+	//write some random instructions to memory
+	write_mem(0x0, 0x5);
+	write_mem(0x1, 0x5);
+	write_mem(0x2, 0x5);
+	write_mem(0x3, 0xF);
+	write_mem(0x4, 0x6);
+	write_mem(0x5, 0x6);
+	write_mem(0x6, 0x6);
+	write_mem(0x7, 0x6);
+	write_mem(0x8, 0x6);
+	write_mem(0x9, 0xF);
+  
+  cpu_run(5, RAM);
+  print_cache_stats();
 
 	free(L1.items);
 	free(L2.items);
