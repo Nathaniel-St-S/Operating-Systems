@@ -18,7 +18,7 @@ void store(mem_addr operand) {
 // The sum is stored in ACC and the appropiate flags are set
 void add(mem_addr operand) {
   word a = CPU.ACC;
-  word b = read_mem(operand);
+  word b = operand;
   word r = (a + b);
   CPU.ACC = r;
   set_add_flags(a, b, r);
@@ -28,7 +28,7 @@ void add(mem_addr operand) {
 // The differnce is stored in ACC and the appropiate flags are set
 void sub(mem_addr operand) {
   word a = CPU.ACC;
-  word b = read_mem(operand);
+  word b = operand;
   word r = (a - b);
   CPU.ACC = r;
   set_sub_flags(a, b, r);

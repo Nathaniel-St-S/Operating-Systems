@@ -58,27 +58,23 @@ void init_cpu(Cpu* cpu)
   cpu->EDX = EMPTY_REG;
   cpu->PC  = 0;
   cpu->IR  = EMPTY_REG;
-  cpu->ACC = EMPTY_REG;
+  cpu->ACC = 0;
   init_flags(cpu->flags);
   printf("Initialized the cpu!\n");
+  cpu_print_state();
 }
 
 // Fetch the next instruction from the given memory and cpu and increments the program counter
 void fetch() {
-  mem_addr next_instruction_addr = CPU.PC;
-  printf("fetched memory adress == %u\n", (unsigned)next_instruction_addr);
-  CPU.IR = read_mem(next_instruction_addr);
+  CPU.IR = read_mem(CPU.PC);
   CPU.PC++;
 }
 
 // Decodes the given instruction into its operator and operand
 Decoded decode (word instruction) {
-  printf("given instruction == %u\n", (unsigned)instruction);
   Decoded d;
   d.op   = (OP)((instruction & 0xF000u) >> 12);
   d.addr = (mem_addr)(instruction & 0x0FFFu);
-  printf("opcode == %u\n", (unsigned)d.op);
-  printf("address after decode == %u\n", (unsigned)d.addr);
   return d;
 }
 
@@ -88,6 +84,8 @@ void execute() {
   Decoded d = decode(instruction);
   OP opcode = d.op;
   mem_addr operand = d.addr;
+  printf("opcode == %X\n", d.op);
+  printf("operand == %X\n", d.addr);
 
   execute_instruction(opcode, operand);
 }
@@ -96,27 +94,27 @@ void execute() {
 void cpu_run(int program_size, word* mem) {
   for (int i = 0; i < program_size && CPU.PC != CPU_HALT; i++) {
     printf("=== Cycle %d ===\n", i + 1);
-    cpu_print_state();
-
-    fetch();
-    execute();
 
     if (CPU.PC == CPU_HALT) {
       printf("CPU Halted!\n");
       break;
     }
+    fetch();
+    execute();
+
+    cpu_print_state();
   }
 }
 
 // Prints the state of the given CPU
 void cpu_print_state() {
   printf("CPU STATE\n");
-  printf("PC: %X\n", CPU.PC);
-  printf("ACC: %X\n", CPU.PC);
-  printf("IR: %X\n", CPU.IR);
+  printf("PC:  %X\n", CPU.PC);
+  printf("ACC: %X\n", CPU.ACC);
+  printf("IR:  %X\n", CPU.IR);
   printf("FLAGS:\n");
-  printf("  ZERO: %1d\n", CPU.flags.ZERO);
-  printf("  CARRY: %1d\n", CPU.flags.CARRY);
+  printf("  ZERO:     %1d\n", CPU.flags.ZERO);
+  printf("  CARRY:    %1d\n", CPU.flags.CARRY);
   printf("  OVERFLOW: %1d\n\n\n", CPU.flags.OVERFLOW);
 }
 

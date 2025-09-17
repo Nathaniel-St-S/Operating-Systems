@@ -3,8 +3,8 @@
 
 #include "isa.h"
 
-#define EMPTY_REG ((word) + 1)
-#define UNSET_FLAG ((int) + 1)
+#define EMPTY_REG ((word) - 1)
+#define UNSET_FLAG ((int) - 1)
 
 typedef struct {
   int ZERO;
