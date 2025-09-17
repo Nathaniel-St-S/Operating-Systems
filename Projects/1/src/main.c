@@ -13,6 +13,9 @@ int main()
 	//initialize the cpu
 	init_cpu(&CPU);
 
+	//for later instructions
+	write_mem(0x0100, 0x0100);
+
 	//write some random instructions to memory
 	write_mem(0x0, 0x5001);
 	write_mem(0x1, 0x5002);
@@ -22,11 +25,14 @@ int main()
 	write_mem(0x5, 0x6003);
 	write_mem(0x6, 0x6002);
 	write_mem(0x7, 0x6001);
-	write_mem(0x8, 0x6555);
-	write_mem(0x9, 0xF);
+	write_mem(0x8, 0x1100);
+	write_mem(0x9, 0x5050);
+	write_mem(0xA, 0x200C);
+	write_mem(0xB, 0xF000);
   
-  cpu_run(11, RAM);
+  cpu_run(20, RAM);
   print_cache_stats();
+  printf("saved memory value == %X", read_mem(0x000C));
 
 	free(L1.items);
 	free(L2.items);
