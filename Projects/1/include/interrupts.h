@@ -3,12 +3,12 @@
 
 #include "types.h"
 
-#define interruptFlag 0 //flag to signal interrupt
+#define INTERRUPTFLAG 1 //flag to signal interrupt
 
 //interrupt handler
-void interruptHandler();
+void interrupt_handler(void);
 
 //Checks for if any interrupts are present
-void checkForInterrupt();
+void check_for_interrupt(void);
 
 #endif 

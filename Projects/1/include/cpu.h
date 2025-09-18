@@ -10,6 +10,7 @@ typedef struct {
   int ZERO;
   int CARRY;
   int OVERFLOW;
+  int INTERRUPT;
 } Flags;
 
 typedef struct {

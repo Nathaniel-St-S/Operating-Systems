@@ -36,7 +36,7 @@ typedef struct
 	int front;
 	int count;
 	int size;
-}Cache;
+} Cache;
 
 //Track the number of misses for stats
 extern int L1cache_hit, L1cache_miss;

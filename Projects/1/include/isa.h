@@ -14,6 +14,7 @@ typedef enum op {
   OP_ADD   = 0x5,
   OP_SUB   = 0x6,
   OP_HALT  = 0xF,
+  OP_INTR = 0x9,
 } OP;
 
 //execute instruction based off of opcode

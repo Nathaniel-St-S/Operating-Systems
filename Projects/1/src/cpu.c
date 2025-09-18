@@ -2,6 +2,7 @@
 #include "../include/types.h"
 #include "../include/memory.h"
 #include "../include/isa.h"
+#include "../include/interrupts.h"
 
 //CPU to control execution
 Cpu CPU;
@@ -45,11 +46,12 @@ void set_sub_flags(word a, word b, word r) {
 void init_cpu(Cpu* cpu)
 {
   //initialize the flags of the given cpu
-  void init_flags(Flags flags)
-  {
-    flags.ZERO     = UNSET_FLAG;
-    flags.CARRY    = UNSET_FLAG;
-    flags.OVERFLOW = UNSET_FLAG;
+  void init_flags(Flags flags) {
+    flags.ZERO      = UNSET_FLAG;
+    flags.CARRY     = UNSET_FLAG;
+    flags.OVERFLOW  = UNSET_FLAG;
+    flags.INTERRUPT = UNSET_FLAG;
+  
   }
   
   // cpu->EAX = EMPTY_REG;
@@ -99,6 +101,7 @@ void cpu_run(const int program_size, word* mem) {
     }
     fetch();
     execute();
+    check_for_interrupt();
 
     cpu_print_state();
   }
