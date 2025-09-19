@@ -30,6 +30,12 @@ void sub(const mem_addr operand) {
   set_sub_flags(init, operand, CPU.ACC);
 }
 
+//Initiates and handles CPU interrupts
+void interrupt(const mem_addr operand) {
+  CPU.PC = operand;
+  set_interrupt_flag();
+}
+
 // Halts execution of the given cpu
 void halt() {
   printf("HALT\n");
