@@ -32,8 +32,8 @@ void sub(const mem_addr operand) {
 
 //Initiates and handles CPU interrupts
 void interrupt(const mem_addr operand) {
-  CPU.PC = operand;
-  set_interrupt_flag();
+  //CPU.PC = operand;
+  set_interrupt_flag(operand);
 }
 
 // Halts execution of the given cpu
@@ -50,6 +50,7 @@ void execute_instruction(const OP opcode, const mem_addr operand)
     case OP_STORE: store(operand); break;
     case OP_ADD:   add(operand);   break;
     case OP_SUB:   sub(operand);   break;
+    case OP_INTR: interrupt(operand); break;
     case OP_HALT:  halt();         break;
     default:
       printf("ERROR: Invalid opcode %u (IR=0x%04X)\n", (unsigned)opcode, (unsigned)operand);

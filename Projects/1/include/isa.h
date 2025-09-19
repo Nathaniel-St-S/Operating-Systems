@@ -15,6 +15,7 @@ typedef enum op {
   OP_SUB   = 0x6,
   OP_HALT  = 0xF,
   OP_INTR = 0x9,
+  OP_ENDINT = 0xA,
 } OP;
 
 //execute instruction based off of opcode
@@ -33,6 +34,9 @@ void add(mem_addr operand);
 // Subtracts the value in the cpu's ACC register with the value at operand in data_mem
 // The differnce is stored in ACC and the appropiate flags are set
 void sub(mem_addr operand);
+
+//Initiates and handles CPU interrupts
+void interrupt(mem_addr operand);
 
 // Halts execution of the given cpu
 void halt(void);
