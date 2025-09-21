@@ -2,11 +2,12 @@
 
 InterruptHeap INTERRUPTCONTROLLER;
 stack callstack;
+Interrupt curr_intrrpt;
 
-void swap(Interrupt a, Interrupt b) {
-    Interrupt tmp = a;
-    a = b;
-    b = tmp;
+void swap(Interrupt* a, Interrupt* b) {
+    Interrupt tmp = *a;
+    *a = *b;
+    *b = tmp;
 }
 
 int parent(int i) { return (i - 1) / 2; }
@@ -27,12 +28,12 @@ void add_interrupt(IRQ irq, int priority) {
     // reoder the interrupts by priority
     // higher priority interrupts have a higher number 
     while (i != 0 && INTERRUPTCONTROLLER.data[parent(i)].priority > INTERRUPTCONTROLLER.data[i].priority) {
-        swap(INTERRUPTCONTROLLER.data[i], INTERRUPTCONTROLLER.data[parent(i)]);
+        swap(&INTERRUPTCONTROLLER.data[i], &INTERRUPTCONTROLLER.data[parent(i)]);
         i = parent(i);
     }
 
     //Set the interrupt flag to let the cpu know about an incoming interrupt
-    CPU.flags.INTERRUPT = irq;
+    set_interrupt_flag(true);
 }
 
 Interrupt next_interrupt() {
@@ -55,7 +56,7 @@ Interrupt next_interrupt() {
             smallest = r;
 
         if (smallest != i) {
-            swap(INTERRUPTCONTROLLER.data[i], INTERRUPTCONTROLLER.data[smallest]);
+            swap(&INTERRUPTCONTROLLER.data[i], &INTERRUPTCONTROLLER.data[smallest]);
             i = smallest;
         } else {
             break;
@@ -70,7 +71,27 @@ void init_interrupt_controller(){
       INTERRUPTCONTROLLER.data[i].irq = -1;
       INTERRUPTCONTROLLER.data[i].priority = 100000;
   }
-  printf("initialized interrupt controller\n");
+  // init callstack
+    callstack.SP = 0;
+    callstack.items = malloc(sizeof(Cpu) * CALLSTACK_SIZE);
+    if (!callstack.items) {
+        fprintf(stderr, "Failed to allocate callstack\n");
+        exit(1);
+    }
+
+    // Initialize CPUs in stack (optional, but tidy)
+    for (int i = 0; i < CALLSTACK_SIZE; ++i) {
+        callstack.items[i].PC  = 0;
+        callstack.items[i].IR  = EMPTY_REG;
+        callstack.items[i].ACC = 0;
+        // you may want to zero flags too
+    }
+
+    // initialize current interrupt so comparisons are safe
+    curr_intrrpt.irq = 100000;
+    curr_intrrpt.priority = 100000;
+
+    printf("initialized interrupt controller\n");
 }
 
 //interrupt handler
@@ -82,38 +103,50 @@ void interrupt_handler(Interrupt intrpt) {
 
     //decode the given interupt and handle it
     switch(intrpt.irq) {
-        case SAY_HI : printf("hello"); break;
-        case SAY_GOODBYE : printf("goodbye"); break;
-        case EOI : CPU.flags.INTERRUPT = UNSET_FLAG; break;
-        default:
-          printf("ERROR: Invalid irq -> %u <-\n", (unsigned)intrpt.irq);
-          CPU.PC = CPU_HALT;
-
+    case SAY_HI :
+      printf("INTERRUPT: hello\n");
+      set_interrupt_flag(false);
+      break;
+    case SAY_GOODBYE :
+      printf("INTERRUPT: goodbye\n");
+      set_interrupt_flag(false);
+      break;
+    case EOI : 
+      set_interrupt_flag(false); 
+      break;
+    default:
+      printf("ERROR: Invalid irq -> %u <-\n", (unsigned)intrpt.irq);
+      CPU.PC = CPU_HALT;
+      break;
     }
 
     //decrement the CPU stack
     callstack.SP--;
     //reset the CPU to it's original state
-    CPU = init_cpu_state;
+    CPU = callstack.items[callstack.SP];
     //increment the PC to start normal execution
-    CPU.PC++;
+    //CPU.PC++;
 }
 
-Interrupt curr_intrrpt;
 //Checks for if any interrupts are present
 void check_for_interrupt() {
-    printf("got here");
-    if (CPU.flags.INTERRUPT) {
-        //if(INTERRUPTCONTROLLER.size == 0){
-        //    curr_intrrpt = next_interrupt();
-        //}
-        Interrupt intrpt = next_interrupt();
-        if (curr_intrrpt.priority < intrpt.priority) {
-            interrupt_handler(curr_intrrpt);
-        } else {
-            curr_intrrpt = intrpt;
-            interrupt_handler(curr_intrrpt);
-        }
-    }
-}
+  if (!CPU.flags.INTERRUPT) return;
+  if (INTERRUPTCONTROLLER.size == 0){
+    //no more interrupts in que, so clear flag
+    set_interrupt_flag(false);
+    return;
+  }
+    
+  Interrupt intrpt = next_interrupt();
+  if(curr_intrrpt.irq == -1 || intrpt.priority < curr_intrrpt.priority){
+    curr_intrrpt = intrpt;
+    interrupt_handler(curr_intrrpt);
+  }else{
+    interrupt_handler(curr_intrrpt);
+    add_interrupt(intrpt.irq, intrpt.priority);
+  }
 
+  //clear flag if heap is empty after handle
+  if(INTERRUPTCONTROLLER.size == 0) set_interrupt_flag(false);
+
+}

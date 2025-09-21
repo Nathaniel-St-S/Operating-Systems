@@ -3,15 +3,16 @@
 
 #include "cpu.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #define MAX_INTERRUPTS 128
+#define CALLSTACK_SIZE 128
 
 //#define INTERRUPTFLAG 1 //flag to signal interrupt
 
 typedef enum irq{
     SAY_HI = 0x1,
     SAY_GOODBYE,
-    BREAK,
     EOI, //end of interupt, make sure this is the last in the list
 }IRQ;
 

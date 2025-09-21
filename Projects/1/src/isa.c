@@ -31,8 +31,7 @@ void sub(const mem_addr operand) {
 }
 
 //Initiates and handles CPU interrupts
-void interrupt(const mem_addr operand) {
-  //CPU.PC = operand;
+void interrupt(const mem_addr operand) { 
   set_interrupt_flag(operand);
 }
 

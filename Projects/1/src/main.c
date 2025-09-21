@@ -16,7 +16,9 @@ int main()
 	//initialize the cpu
 	init_cpu(&CPU);
 
-	
+  //memory adresses for later
+  write_mem(0x0100, 0x0100);
+
 	//write some random instructions to memory
 	write_mem(0x0, 0x5001);
 	write_mem(0x1, 0x5002);

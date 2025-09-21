@@ -14,11 +14,6 @@ void set_zero_flag(word value) {
   CPU.flags.ZERO = (value == 0);
 }
 
-//Sets the interrupt flag of the given cpu to 1 if the value is 0, otherwise 0
-void set_interrupt_flag(word irq) {
-  CPU.flags.INTERRUPT = irq;
-}
-
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a + b = r
 void set_add_flags(word a, word b, word r) {
   // Unsigned carry out of bit 15
@@ -46,14 +41,20 @@ void set_sub_flags(word a, word b, word r) {
   set_zero_flag(r);
 }
 
+// Set the interrupt flag
+void set_interrupt_flag(bool enabled) {
+    CPU.flags.INTERRUPT = enabled ? 1 : 0;
+}
+
+
 /* --- core ---------------------------------------------------------------- */
 
 //initialize the flags of the given cpu
-  void init_flags(Flags flags) {
-    flags.ZERO      = UNSET_FLAG;
-    flags.CARRY     = UNSET_FLAG;
-    flags.OVERFLOW  = UNSET_FLAG;
-    flags.INTERRUPT = 0;
+  void init_flags(Flags* flags) {
+    flags->ZERO      = UNSET_FLAG;
+    flags->CARRY     = UNSET_FLAG;
+    flags->OVERFLOW  = UNSET_FLAG;
+    flags->INTERRUPT = 0;
   
   }
 
@@ -66,7 +67,7 @@ void init_cpu(Cpu* cpu)
   cpu->PC  = 0;
   cpu->IR  = EMPTY_REG;
   cpu->ACC = 0;
-  init_flags(cpu->flags);
+  init_flags(&cpu->flags);
   printf("Initialized the cpu!\n");
   cpu_print_state();
 }
@@ -74,8 +75,7 @@ void init_cpu(Cpu* cpu)
 // Fetch the next instruction from the given memory and cpu and increments the program counter
 void fetch() {
   CPU.IR = read_mem(CPU.PC);
-  CPU.PC++;printf("got here");
-
+  CPU.PC++;
 }
 
 // Decodes the given instruction into its operator and operand
@@ -99,9 +99,7 @@ void execute() {
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
 void cpu_run(const int program_size, word* mem) {
   for (int i = 0; i < program_size && CPU.PC != CPU_HALT; i++) {
-    printf("got here\n");
     printf("=== Cycle %d ===\n", i + 1);
-    printf("got here");
 
     if (CPU.PC == CPU_HALT) {
       printf("CPU Halted!\n");
