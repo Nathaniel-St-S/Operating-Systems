@@ -65,13 +65,20 @@ Interrupt next_interrupt() {
     return root;
 }
 
+void reset_curr_interrupt()
+{
+  //set the curr interupt to it's default state
+  curr_intrrpt.irq = -1;
+  curr_intrrpt.priority = 100000;
+}
+
 void init_interrupt_controller(){
   INTERRUPTCONTROLLER.size = 0;
     for(int i = 0; i < MAX_INTERRUPTS; i++){
       INTERRUPTCONTROLLER.data[i].irq = -1;
       INTERRUPTCONTROLLER.data[i].priority = 100000;
   }
-  // init callstack
+  // initialize callstack
     callstack.SP = 0;
     callstack.items = malloc(sizeof(Cpu) * CALLSTACK_SIZE);
     if (!callstack.items) {
@@ -79,17 +86,7 @@ void init_interrupt_controller(){
         exit(1);
     }
 
-    // Initialize CPUs in stack (optional, but tidy)
-    for (int i = 0; i < CALLSTACK_SIZE; ++i) {
-        callstack.items[i].PC  = 0;
-        callstack.items[i].IR  = EMPTY_REG;
-        callstack.items[i].ACC = 0;
-        // you may want to zero flags too
-    }
-
-    // initialize current interrupt so comparisons are safe
-    curr_intrrpt.irq = 100000;
-    curr_intrrpt.priority = 100000;
+    reset_curr_interrupt();
 
     printf("initialized interrupt controller\n");
 }
@@ -106,13 +103,16 @@ void interrupt_handler(Interrupt intrpt) {
     case SAY_HI :
       printf("INTERRUPT: hello\n");
       set_interrupt_flag(false);
+      reset_curr_interrupt();
       break;
     case SAY_GOODBYE :
       printf("INTERRUPT: goodbye\n");
       set_interrupt_flag(false);
+      reset_curr_interrupt();
       break;
     case EOI : 
       set_interrupt_flag(false); 
+      reset_curr_interrupt();
       break;
     default:
       printf("ERROR: Invalid irq -> %u <-\n", (unsigned)intrpt.irq);
