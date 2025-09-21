@@ -3,6 +3,7 @@
 #include "../include/memory.h"
 #include "../include/isa.h"
 #include "../include/interrupts.h"
+#include "../include/dma.h"
 
 int main()
 {
@@ -23,6 +24,7 @@ int main()
 	write_mem(0x0, 0x5001);
 	write_mem(0x1, 0x5002);
 	write_mem(0x2, 0x5003);
+	initiateDMA(RAM, *RAM, 10);
 	write_mem(0x3, 0x5004);
 	write_mem(0x4, 0x6004);
 	write_mem(0x5, 0x6003);
@@ -31,6 +33,7 @@ int main()
 	write_mem(0x7, 0x6001);
 	write_mem(0x8, 0x1100);
 	write_mem(0x9, 0x5050);
+	initiateDMA(RAM, *RAM, 5);
 	write_mem(0xA, 0x200C);
   add_interrupt(0x0002, 1);
 	write_mem(0xB, 0xF000);

@@ -51,6 +51,8 @@ extern Cache L2;
 //Ram, large amounts of storage but very slow
 extern word* RAM;
 
+
+
 //Initialize the cache to the given size
 void init_cache(Cache* cache, int size);
 
