@@ -7,6 +7,8 @@
 #define L1CACHE_SIZE 5
 #define L2CACHE_SIZE 20
 #define RAM_SIZE 500
+#define SSD_SIZE 250
+#define HDD_SIZE 1000
 
 #define EMPTY_ADDR -1
 #define NO_VAL ((word) - 1)
@@ -51,7 +53,11 @@ extern Cache L2;
 //Ram, large amounts of storage but very slow
 extern word* RAM;
 
+//HDD,  
+extern word* HDD;
 
+//SSD
+extern word* SSD;
 
 //Initialize the cache to the given size
 void init_cache(Cache* cache, int size);
@@ -59,7 +65,13 @@ void init_cache(Cache* cache, int size);
 //initialize the ram to the given size
 void init_ram(int size);
 
- //return the value at the given memory adress
+//initializes the SSD to the given size 
+void init_SSD(const int size);
+
+//initializes the HDD to the given size 
+void init_HDD(const int size);
+
+//return the value at the given memory adress
 word read_mem(mem_addr addr);
 
 //write the given value to the given memory adress.

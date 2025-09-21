@@ -10,6 +10,11 @@ Cache L1;
 Cache L2;
 //RAM
 word* RAM = NULL;
+//HDD
+word* HDD = NULL;
+//SSD
+word* SSD = NULL;
+
 
 //Initialize the cache to the given size
 void init_cache(Cache* cache, const int size)
@@ -36,6 +41,24 @@ void init_ram(const int size)
 		RAM[i] = NO_VAL;
 	}
 	printf("initialized ram with size: %d\n", size);
+}
+
+//initializes the SSD to the given size 
+void init_SSD(const int size) {
+	SSD = (word*)malloc(sizeof(word) * size);
+	for(int i = 0; i < size; i++)
+	{
+		SSD[i] = NO_VAL;
+	}
+}
+
+//initializes the HDD to the given size 
+void init_HDD(const int size) {
+	HDD = (word*)malloc(sizeof(word) * size);
+	for(int i = 0; i < size; i++)
+	{
+		HDD[i] = NO_VAL;
+	}
 }
 
 //find the address of the value if it exists in cache
