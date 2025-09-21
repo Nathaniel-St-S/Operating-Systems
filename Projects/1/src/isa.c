@@ -46,12 +46,12 @@ void halt() {
 void execute_instruction(const OP opcode, const mem_addr operand)
 {
   switch (opcode) {
-    case OP_LOAD:  load(operand);  break;
-    case OP_STORE: store(operand); break;
-    case OP_ADD:   add(operand);   break;
-    case OP_SUB:   sub(operand);   break;
-    case OP_INTR: interrupt(operand); break;
-    case OP_HALT:  halt();         break;
+    case OP_LOAD:  load(operand);       break;
+    case OP_STORE: store(operand);      break;
+    case OP_ADD:   add(operand);        break;
+    case OP_SUB:   sub(operand);        break;
+    case OP_INTR:  interrupt(operand);  break;
+    case OP_HALT:  halt();              break;
     default:
       printf("ERROR: Invalid opcode %u (IR=0x%04X)\n", (unsigned)opcode, (unsigned)operand);
       CPU.PC = CPU_HALT;

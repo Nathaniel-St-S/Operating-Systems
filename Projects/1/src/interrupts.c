@@ -1,9 +1,77 @@
 #include "../include/interrupts.h"
-#include "../include/memory.h"
-#include "../include/cpu.h"
 
+InterruptHeap INTERRUPTCONTROLLER;
 stack callstack;
-InterruptHeap* intrptqueue;
+
+void swap(Interrupt a, Interrupt b) {
+    Interrupt tmp = a;
+    a = b;
+    b = tmp;
+}
+
+int parent(int i) { return (i - 1) / 2; }
+int left(int i)   { return 2 * i + 1; }
+int right(int i)  { return 2 * i + 2; }
+
+void add_interrupt(IRQ irq, int priority) {
+    if (INTERRUPTCONTROLLER.size >= MAX_INTERRUPTS) {
+        printf("Heap overflow!\n");
+        return;
+    }
+
+    // Insert new interrupt at end
+    int i = INTERRUPTCONTROLLER.size++;
+    INTERRUPTCONTROLLER.data[i].irq = irq;
+    INTERRUPTCONTROLLER.data[i].priority = priority;
+
+    // reoder the interrupts by priority
+    // higher priority interrupts have a higher number 
+    while (i != 0 && INTERRUPTCONTROLLER.data[parent(i)].priority > INTERRUPTCONTROLLER.data[i].priority) {
+        swap(INTERRUPTCONTROLLER.data[i], INTERRUPTCONTROLLER.data[parent(i)]);
+        i = parent(i);
+    }
+
+    //Set the interrupt flag to let the cpu know about an incoming interrupt
+    CPU.flags.INTERRUPT = irq;
+}
+
+Interrupt next_interrupt() {
+    if (INTERRUPTCONTROLLER.size <= 0) {
+        printf("Heap underflow!\n");
+        return (Interrupt){-1, -1};
+    }
+
+    Interrupt root = INTERRUPTCONTROLLER.data[0];
+    INTERRUPTCONTROLLER.data[0] = INTERRUPTCONTROLLER.data[--INTERRUPTCONTROLLER.size];
+
+    // Heapify down
+    int i = 0;
+    while (1) {
+        int l = left(i), r = right(i), smallest = i;
+
+        if (l < INTERRUPTCONTROLLER.size && INTERRUPTCONTROLLER.data[l].priority < INTERRUPTCONTROLLER.data[smallest].priority)
+            smallest = l;
+        if (r < INTERRUPTCONTROLLER.size && INTERRUPTCONTROLLER.data[r].priority < INTERRUPTCONTROLLER.data[smallest].priority)
+            smallest = r;
+
+        if (smallest != i) {
+            swap(INTERRUPTCONTROLLER.data[i], INTERRUPTCONTROLLER.data[smallest]);
+            i = smallest;
+        } else {
+            break;
+        }
+    }
+    return root;
+}
+
+void init_interrupt_controller(){
+  INTERRUPTCONTROLLER.size = 0;
+    for(int i = 0; i < MAX_INTERRUPTS; i++){
+      INTERRUPTCONTROLLER.data[i].irq = -1;
+      INTERRUPTCONTROLLER.data[i].priority = 100000;
+  }
+  printf("initialized interrupt controller\n");
+}
 
 //interrupt handler
 void interrupt_handler(Interrupt intrpt) {
@@ -17,6 +85,10 @@ void interrupt_handler(Interrupt intrpt) {
         case SAY_HI : printf("hello"); break;
         case SAY_GOODBYE : printf("goodbye"); break;
         case EOI : CPU.flags.INTERRUPT = UNSET_FLAG; break;
+        default:
+          printf("ERROR: Invalid irq -> %u <-\n", (unsigned)intrpt.irq);
+          CPU.PC = CPU_HALT;
+
     }
 
     //decrement the CPU stack
@@ -27,18 +99,20 @@ void interrupt_handler(Interrupt intrpt) {
     CPU.PC++;
 }
 
-Interrupt curr_intrrpt = NULL;
+Interrupt curr_intrrpt;
 //Checks for if any interrupts are present
 void check_for_interrupt() {
+    printf("got here");
     if (CPU.flags.INTERRUPT) {
-        if(&curr_intrrpt == NULL){
-            curr_intrrpt = heap_extract_min(intrptqueue);
-        }
-        Interrupt intrpt = heap_extract_min(intrptqueue);
+        //if(INTERRUPTCONTROLLER.size == 0){
+        //    curr_intrrpt = next_interrupt();
+        //}
+        Interrupt intrpt = next_interrupt();
         if (curr_intrrpt.priority < intrpt.priority) {
             interrupt_handler(curr_intrrpt);
         } else {
-            interrupt_handler(intrpt);
+            curr_intrrpt = intrpt;
+            interrupt_handler(curr_intrrpt);
         }
     }
 }

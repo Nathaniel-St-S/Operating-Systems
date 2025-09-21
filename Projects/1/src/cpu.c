@@ -15,8 +15,8 @@ void set_zero_flag(word value) {
 }
 
 //Sets the interrupt flag of the given cpu to 1 if the value is 0, otherwise 0
-void set_interrupt_flag() {
-  CPU.flags.INTERRUPT =  1;
+void set_interrupt_flag(word irq) {
+  CPU.flags.INTERRUPT = irq;
 }
 
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a + b = r
@@ -48,17 +48,17 @@ void set_sub_flags(word a, word b, word r) {
 
 /* --- core ---------------------------------------------------------------- */
 
-void init_cpu(Cpu* cpu)
-{
-  //initialize the flags of the given cpu
+//initialize the flags of the given cpu
   void init_flags(Flags flags) {
     flags.ZERO      = UNSET_FLAG;
     flags.CARRY     = UNSET_FLAG;
     flags.OVERFLOW  = UNSET_FLAG;
-    flags.INTERRUPT = UNSET_FLAG;
+    flags.INTERRUPT = 0;
   
   }
-  
+
+void init_cpu(Cpu* cpu)
+{
   // cpu->EAX = EMPTY_REG;
   // cpu->EBX = EMPTY_REG;
   // cpu->ECX = EMPTY_REG;
@@ -74,7 +74,8 @@ void init_cpu(Cpu* cpu)
 // Fetch the next instruction from the given memory and cpu and increments the program counter
 void fetch() {
   CPU.IR = read_mem(CPU.PC);
-  CPU.PC++;
+  CPU.PC++;printf("got here");
+
 }
 
 // Decodes the given instruction into its operator and operand
@@ -98,7 +99,9 @@ void execute() {
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
 void cpu_run(const int program_size, word* mem) {
   for (int i = 0; i < program_size && CPU.PC != CPU_HALT; i++) {
+    printf("got here\n");
     printf("=== Cycle %d ===\n", i + 1);
+    printf("got here");
 
     if (CPU.PC == CPU_HALT) {
       printf("CPU Halted!\n");
@@ -119,7 +122,8 @@ void cpu_print_state() {
   printf("ACC: %X\n", CPU.ACC);
   printf("IR:  %X\n", CPU.IR);
   printf("FLAGS:\n");
-  printf("  ZERO:     %1d\n", CPU.flags.ZERO);
-  printf("  CARRY:    %1d\n", CPU.flags.CARRY);
-  printf("  OVERFLOW: %1d\n\n\n", CPU.flags.OVERFLOW);
+  printf("  ZERO:      %1d\n", CPU.flags.ZERO);
+  printf("  CARRY:     %1d\n", CPU.flags.CARRY);
+  printf("  OVERFLOW:  %1d\n", CPU.flags.OVERFLOW);
+  printf("  INTERRUPT: %1d\n\n\n", CPU.flags.INTERRUPT);
 }

@@ -57,12 +57,6 @@ void init_cache(Cache* cache, int size);
 //initialize the ram to the given size
 void init_ram(int size);
 
-//find the address of the value if it exists in cache
-int cache_search(Cache* cache, mem_addr addr);
-
-//Update the given cache in case of misses
-void update_cache(Cache* cache, mem_addr addr, word val);
-
  //return the value at the given memory adress
 word read_mem(mem_addr addr);
 

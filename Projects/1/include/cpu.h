@@ -41,8 +41,8 @@ void init_cpu(Cpu* cpu);
 // Sets the zero flag of the given cpu to 1 if the value is 0, 0 otherwise
 void set_zero_flag(word value);
 
-//Sets the interrupt flag of the given cpu to 1 if the value is 0, otherwise 0
-void set_interrupt_flag();
+//Sets the interrupt flag of the cpu to the given interrupt irq
+void set_interrupt_flag(word irq);
 
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a + b = r
 void set_add_flags(word a, word b, word r);
