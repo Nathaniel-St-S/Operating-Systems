@@ -66,14 +66,14 @@ int cache_search(Cache* cache, const mem_addr addr)
 {
 	for(int i = 0; i < cache->size; i++)
 	{
-		//the adress we want was found in cache
+		//the address we want was found in cache
 		//so return the index of that adress
 		if(cache->items[i].addr == addr)
 		{
 			return i;
 		}
 	}
-	//adress not found so return signifier
+	//address not found so return signifier
 	return EMPTY_ADDR;
 }
 
@@ -81,7 +81,6 @@ int cache_search(Cache* cache, const mem_addr addr)
 void update_cache(Cache* cache, const mem_addr addr, const word val)
 {
 	//calculate where in the cache to store the value
-	//yah it's like a hash stay mad brysen
 	int index = (cache->front + cache->count) % cache->size;
 	cache->items[index].addr = addr;
 	cache->items[index].val = val;

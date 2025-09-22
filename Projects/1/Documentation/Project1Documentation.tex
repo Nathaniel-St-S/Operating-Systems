@@ -1,0 +1,230 @@
+\documentclass[titlepage, 12pt,a4paper]{article}
+
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{alltt}
+\usepackage{tikz}
+\usepackage{float}
+\floatstyle{ruled}
+\restylefloat{figure}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{balance}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{stfloats}
+\pgfplotsset{compat=newest}
+\usepackage{pgfplotstable}
+\usepackage{url}
+\def\UrlBreaks{\do\/\do-}
+\usepackage{bold-extra}
+\usepackage{enumitem}
+\setlist[description]{leftmargin=\parindent,labelindent=\parindent}
+\usepackage{doi}
+\usepackage{bm}
+\usepackage{listings}
+
+\newcommand{\ADD}{\texttt{ADD}}
+\newcommand{\SUB}{\texttt{SUB}}
+\newcommand{\LOAD}{\texttt{LOAD}}
+\newcommand{\STORE}{\texttt{STORE}}
+\newcommand{\PC}{\texttt{PC}}
+\newcommand{\IR}{\texttt{IR}}
+\newcommand{\ACC}{\texttt{ACC}}
+\newcommand{\C}{\texttt{C}}
+\newcommand{\N}{\texttt{n}}
+
+\begin{document}
+	\title{Project 1 Documentation}
+	
+	
+	\author{Brysen Pfingsten, Nathaniel Savoury, David Anthony Fields}
+%	\affiliation{\institution{Seton Hall University}
+%		%\streetaddress{400 South Orange Avenue}
+%		\city{South Orange}
+%		\state{NJ}
+%		\country{USA}}
+%	\email{pfingsbr@shu.edu}
+		
+	%\author{Nathaniel Savoury}
+%	\affiliation{\institution{Seton Hall University}
+%		%\streetaddress{400 South Orange Avenue}
+%		\city{South Orange}
+%		\state{NJ}
+%		\country{USA}}
+%	\email{savourna@shu.edu}
+	
+	%\author{David Anthony Fields}
+%	\affiliation{\institution{Seton Hall University}
+%		%\streetaddress{400 South Orange Avenue}
+%		\city{South Orange}
+%		\state{NJ}
+%		\country{USA}}
+%	\email{fieldsda@shu.edu}
+
+	\newcommand{\shortauthors}{Pfingsten, Savoury and Fields}
+	\maketitle
+	
+
+\tableofcontents
+
+\pagebreak
+
+\section{Outline}
+\subsection{Problem Statement}
+\label{problem-statement}
+In this project, you will develop a Computer System Simulator that simulates key components of a basic computer system. The purpose of this assignment is to help you understand the fundamental concepts of computer systems (from chapters 1 and 2). You will simulate components such as the CPU, memory, interrupt handling, and Direct Memory Access (DMA).
+
+The goal is to design and simulate a fully functioning computer system by implementing all the components listed below. Your project 1 will cover five modules, each focusing on the simulation of specific system components.
+
+\begin{itemize}
+	\item Module 1: Central Processing Unit
+	\item Module 2: Memory Management System
+	\item Module 3: Instructions Set Architecture
+	\item Module 4: Interrupts
+	\item Module 5: Direct Memory Access
+\end{itemize}
+
+\subsection{Introduction}
+To complete the tasked of simulating a computer system, we elected to us the programming language, \texttt{C}, to implement this project. This documentation is structured as follows, the implementation for modules 1 through 5 can be found in \Cref{module1}, \Cref{module2}, \Cref{module3}, \Cref{module4} and, \Cref{module5} respectively. The testing and debugging is found in \Cref{test and debug}. Finally, the simulation of the described computer system is be found in \Cref{simulation}.
+
+\pagebreak
+
+\section{Module 1: Central Processing Unit}
+\label{module1}
+
+\subsection{Problem Statement}
+\label{PS-m1}
+Implement the core components of the CPU including the Program Counter (\PC{}), Accumulator (\ACC{}), and Instruction Register (\IR{}). The CPU will follow the fetch-decode-execute cycle, fetching instructions from memory, decoding them, and performing operations. 
+
+Simulate the \PC{}, which stores the address of the next instruction to be executed. Implement the \ACC{} for performing arithmetic and logic operations, and the IR to hold the current instruction. The Status Register will manage flags like zero, carry, and overflow. The CPU must execute a fetch-decode-execute cycle, where it fetches an instruction from memory, decodes the opcode, and executes it, updating the register values. For instance, the CPU might fetch an \ADD{} instruction, decode it, and then update the \ACC{} with the result. Implement error handling for invalid instructions, and ensure the \PC{} updates correctly after each cycle. Your program execution should simulate real-time instruction processing and register updates, handling valid instructions and interrupts efficiently. It must handle instructions such as \ADD{}, \SUB{}, \LOAD{}, and \STORE{}. Also, ensure that the \PC{} is updated correctly after each instruction, and implement error handling for invalid instructions.
+
+\subsection{Implementation}
+\label{IMP-m1}
+To implement the core components of the CPU, we first chose to represent the CPU as a structure: 
+
+\begin{alltt}
+typedef struct \{
+	word PC;
+	word ACC;
+	word IR;	
+	Flags flags;
+\} Cpu;	
+\end{alltt}
+
+where the \PC{}, \ACC{} and, \IR{} are all represented as \texttt{word}s and the flags is a structure: 
+\begin{alltt}
+typedef struct \{
+	int ZERO;
+	int CARRY;
+	int OVERFLOW;
+	int INTERRUPT;
+\} Flags;
+\end{alltt}
+
+The main function for the implementation of the CPU is: 
+
+\begin{alltt}
+	
+// Runs the fetch-execution cycle program\_size times 
+// or until a halt is encountered
+void cpu\_run(const int program\_size, word* mem) \{
+	for (int i = 0; i < program\_size \&\& CPU.PC != CPU\_HALT; i++) \{
+		printf("=== Cycle \%d === \textbackslash{}n", i + 1);
+		
+		if (CPU.PC == CPU\_HALT) \{
+			printf("CPU Halted! \textbackslash{}n");
+			break;
+		\}
+		fetch();
+		execute();
+		check\_for\_interrupt();
+		
+		cpu\_print\_state();
+	\}
+\}
+\end{alltt}
+
+The design idea behind this function leverages the fact that the CPU runs for at most \texttt{program\_size} amount of times unless a halt is encounter. Since the CPU cycles a variable amount of times, we decided to use a for-loop. Within the body of the for-loop we print the cycle number, fetch the instruction using \texttt{fetch}, execute the instruction using \texttt{execute}, check for and handle system interrupts using \texttt{check\_for\_interrupt}, and finally printing the CPU state using \texttt{cpu\_print\_state}. Within \texttt{fetch}, we read the instruction from the \PC{} and load it into the \IR{} then increment the \PC{} by 1. For \texttt{execute}, we decode the instruction by extracting the opcode and operand then execute the instruction using the extracted opcode and operand. After the instruction has been executed, we check for interrupts and handle any interrupts accordingly.\footnote{For more information on how we execute instructions and check for interrupts, see \Cref{IMP-m3} and \Cref{IMP-m4} respectively.} To close the cycle, print the CPU state where we show the values of the \PC{}, \ACC{}, \IR{}, and the flags. 
+\pagebreak
+\section{Module 2: Memory Management System}
+\label{module2}
+
+\subsection{Problem Statement}
+\label{PS-m2}
+Simulate a hierarchical memory system, including RAM as the main memory for storing data and programs, and cache (L1 and L2) for faster memory access. The memory system should allow the CPU to perform read and write operations. Implement the logic cache hits and misses, where the CPU first checks the cache for data and falls back on RAM if necessary.
+
+\subsection{Implementation}
+\label{IMP-m2}
+To simulate a hierarchical memory system, we implemented the RAM as an array of \texttt{word} and the L1 and L2 caches are structures: 
+
+\begin{alltt}
+typedef struct \{
+	Entry* items;
+	int front;
+	int count;
+	int size;
+\} Cache;
+\end{alltt}
+
+where \texttt{Entry} is a structure: 
+
+\begin{alltt}
+typedef struct \{
+	word val;
+	mem\_addr addr;
+\} Entry;
+\end{alltt}
+
+The two main functions for this module is \texttt{read\_mem} and \texttt{write\_mem}. The former takes in as input a memory 
+
+
+\pagebreak
+\section{Module 3: Instructions Set Architecture}
+\label{module3}
+
+\subsection{Problem Statement}
+\label{PS-m3}
+Define a simple ISA with basic operations like \ADD{}, \SUB{}, \LOAD{}, and \STORE{}. Assign opcodes to each instruction, allowing the CPU to interpret and execute them. The ISA should ensure that the CPU can fetch, decode, and execute these instructions, modifying the values in registers or interacting with memory as necessary. Provide mechanisms for error handling in case of undefined opcodes.
+
+\subsection{Implementation}
+\label{IMP-m3}
+
+\pagebreak
+\section{Module 4: Interrupts}
+\label{module4}
+
+\subsection{Problem Statement}
+\label{PS-m4}
+Implement a mechanism for interrupts that allows the CPU to pause its current task, service an interrupt through an Interrupt handler, and then return to the previous task. This includes handling hardware interrupts (e.g., timer interrupts) and software interrupts (e.g., system calls). Ensure that the CPU can manage both synchronous and asynchronous events, simulating how real systems handle task prioritization through interrupts.
+
+\subsection{Implementation}
+\label{IMP-m4}
+
+\pagebreak
+\section{Module 5: Direct Memory Access}
+\label{module5}
+
+\subsection{Problem Statement}
+\label{PS-m5}
+Simulate a DMA system that allows for data transfer between memory and I/O devices without CPU intervention. Implement a DMA controller that manages data transfers between RAM and devices like disk storage or network interfaces. The CPU will initiate the DMA transfer, but the actual data movement should proceed without using CPU cycles, demonstrating how DMA improves system efficiency by freeing up the CPU for other tasks.
+
+
+\subsection{Implementation}
+\label{IMP-m5}
+\pagebreak
+
+\section{Debugging and Testing}
+\label{test and debug}
+
+\pagebreak
+
+\section{The Simulation}
+\label{simulation}
+
+
+\end{document}

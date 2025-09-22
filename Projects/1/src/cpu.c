@@ -60,10 +60,6 @@ void set_interrupt_flag(bool enabled) {
 
 void init_cpu(Cpu* cpu)
 {
-  // cpu->EAX = EMPTY_REG;
-  // cpu->EBX = EMPTY_REG;
-  // cpu->ECX = EMPTY_REG;
-  // cpu->EDX = EMPTY_REG;
   cpu->PC  = 0;
   cpu->IR  = EMPTY_REG;
   cpu->ACC = 0;

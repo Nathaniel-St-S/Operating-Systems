@@ -14,10 +14,6 @@ typedef struct {
 } Flags;
 
 typedef struct {
-  // word EAX;
-  // word EBX;
-  // word ECX;
-  // word EDX;
   word PC;
   word ACC;
   word IR;
