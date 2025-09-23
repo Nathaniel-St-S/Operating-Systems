@@ -1,0 +1,59 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{//return the value at the given memory address}
+\PYG{n}{word}\PYG{+w}{ }\PYG{n+nf}{read\PYGZus{}mem}\PYG{p}{(}\PYG{k}{const}\PYG{+w}{ }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{index}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{index}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{cache\PYGZus{}search}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{L1}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{);}
+\PYG{+w}{  }\PYG{k}{if}\PYG{p}{(}\PYG{n}{index}\PYG{+w}{ }\PYG{o}{!=}\PYG{+w}{ }\PYG{n}{EMPTY\PYGZus{}ADDR}\PYG{p}{)}
+\PYG{+w}{  }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{c+c1}{//Cache hit at L1}
+\PYG{+w}{    }\PYG{n}{L1cache\PYGZus{}hit}\PYG{o}{++}\PYG{p}{;}
+\PYG{+w}{    }\PYG{k}{return}\PYG{+w}{ }\PYG{n}{L1}\PYG{p}{.}\PYG{n}{items}\PYG{p}{[}\PYG{n}{index}\PYG{p}{].}\PYG{n}{val}\PYG{p}{;}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+
+\PYG{+w}{  }\PYG{c+c1}{//cache miss at L1}
+\PYG{+w}{  }\PYG{n}{L1cache\PYGZus{}miss}\PYG{o}{++}\PYG{p}{;}
+
+\PYG{+w}{  }\PYG{n}{index}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{cache\PYGZus{}search}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{L2}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{);}
+\PYG{+w}{  }\PYG{k}{if}\PYG{p}{(}\PYG{n}{index}\PYG{+w}{ }\PYG{o}{!=}\PYG{+w}{ }\PYG{n}{EMPTY\PYGZus{}ADDR}\PYG{p}{)}
+\PYG{+w}{  }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{c+c1}{//Cache hit at l2}
+\PYG{+w}{    }\PYG{n}{L2cache\PYGZus{}hit}\PYG{o}{++}\PYG{p}{;}
+\PYG{+w}{    }\PYG{n}{word}\PYG{+w}{ }\PYG{n}{val}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{L2}\PYG{p}{.}\PYG{n}{items}\PYG{p}{[}\PYG{n}{index}\PYG{p}{].}\PYG{n}{val}\PYG{p}{;}
+\PYG{+w}{    }\PYG{c+c1}{//Update L1 cache to prevent future cache misses}
+\PYG{+w}{    }\PYG{n}{update\PYGZus{}cache}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{L1}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{);}
+\PYG{+w}{    }\PYG{k}{return}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{;}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+
+\PYG{+w}{  }\PYG{c+c1}{//Cache miss at L2}
+\PYG{+w}{  }\PYG{n}{L2cache\PYGZus{}miss}\PYG{o}{++}\PYG{p}{;}
+
+\PYG{+w}{  }\PYG{c+c1}{//Complete cache miss, so read RAM and update cache}
+\PYG{+w}{  }\PYG{n}{word}\PYG{+w}{ }\PYG{n}{val}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{RAM}\PYG{p}{[}\PYG{n}{addr}\PYG{p}{];}
+\PYG{+w}{  }\PYG{n}{update\PYGZus{}cache}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{L1}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{update\PYGZus{}cache}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{L2}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{);}
+\PYG{+w}{  }\PYG{k}{return}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{//write the given value to the given memory address.}
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{write\PYGZus{}mem}\PYG{p}{(}\PYG{k}{const}\PYG{+w}{ }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{,}\PYG{+w}{ }\PYG{k}{const}\PYG{+w}{ }\PYG{n}{word}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n}{RAM}\PYG{p}{[}\PYG{n}{addr}\PYG{p}{]}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{;}
+
+\PYG{+w}{  }\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{index}\PYG{p}{;}
+
+\PYG{+w}{  }\PYG{c+c1}{//Update L1 Cache}
+\PYG{+w}{  }\PYG{n}{index}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{cache\PYGZus{}search}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{L1}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{);}
+\PYG{+w}{  }\PYG{k}{if}\PYG{p}{(}\PYG{n}{index}\PYG{+w}{ }\PYG{o}{!=}\PYG{+w}{ }\PYG{n}{EMPTY\PYGZus{}ADDR}\PYG{p}{)}
+\PYG{+w}{  }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n}{L1}\PYG{p}{.}\PYG{n}{items}\PYG{p}{[}\PYG{n}{index}\PYG{p}{].}\PYG{n}{val}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{;}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+
+\PYG{+w}{  }\PYG{c+c1}{//Update L2 Cache}
+\PYG{+w}{  }\PYG{n}{index}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{cache\PYGZus{}search}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{L2}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{);}
+\PYG{+w}{  }\PYG{k}{if}\PYG{p}{(}\PYG{n}{index}\PYG{+w}{ }\PYG{o}{!=}\PYG{+w}{ }\PYG{n}{EMPTY\PYGZus{}ADDR}\PYG{p}{)}
+\PYG{+w}{  }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n}{L2}\PYG{p}{.}\PYG{n}{items}\PYG{p}{[}\PYG{n}{index}\PYG{p}{].}\PYG{n}{val}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{;}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

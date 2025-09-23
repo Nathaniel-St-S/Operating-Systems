@@ -1,0 +1,7 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{typedef}\PYG{+w}{ }\PYG{k}{struct}
+\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n}{word}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}\PYG{+w}{ }\PYG{n}{Entry}\PYG{p}{;}
+\end{Verbatim}

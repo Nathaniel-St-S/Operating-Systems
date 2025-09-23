@@ -1,0 +1,39 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{// Loads the data at the given memory address into cpu\PYGZsq{}s ACC register}
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{load}\PYG{p}{(}\PYG{k}{const}\PYG{+w}{ }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{operand}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{ACC}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{read\PYGZus{}mem}\PYG{p}{(}\PYG{n}{operand}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{set\PYGZus{}zero\PYGZus{}flag}\PYG{p}{(}\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{ACC}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{// Stores the data in cpu\PYGZsq{}s ACC register at the given memory address}
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{store}\PYG{p}{(}\PYG{k}{const}\PYG{+w}{ }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{operand}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{n}{operand}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{ACC}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{// Adds the value in the cpu\PYGZsq{}s ACC register with the given value}
+\PYG{c+c1}{// The sum is stored in ACC and the appropriate flags are set}
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{add}\PYG{p}{(}\PYG{k}{const}\PYG{+w}{ }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{operand}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n}{word}\PYG{+w}{ }\PYG{n}{init}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{ACC}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{ACC}\PYG{+w}{ }\PYG{o}{+=}\PYG{+w}{ }\PYG{n}{operand}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{set\PYGZus{}add\PYGZus{}flags}\PYG{p}{(}\PYG{n}{init}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{operand}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{ACC}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{// Subtracts the value in the cpu\PYGZsq{}s ACC register with the given value}
+\PYG{c+c1}{// The difference is stored in ACC and the appropriate flags are set}
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{sub}\PYG{p}{(}\PYG{k}{const}\PYG{+w}{ }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{operand}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n}{word}\PYG{+w}{ }\PYG{n}{init}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{ACC}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{ACC}\PYG{+w}{ }\PYG{o}{\PYGZhy{}=}\PYG{+w}{ }\PYG{n}{operand}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{set\PYGZus{}sub\PYGZus{}flags}\PYG{p}{(}\PYG{n}{init}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{operand}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{ACC}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{//Initiates and handles CPU interrupts}
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{interrupt}\PYG{p}{(}\PYG{k}{const}\PYG{+w}{ }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{operand}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n}{set\PYGZus{}interrupt\PYGZus{}flag}\PYG{p}{(}\PYG{n}{operand}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{// Halts execution of the given cpu}
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{halt}\PYG{p}{()}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}HALT}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{PC}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{CPU\PYGZus{}HALT}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

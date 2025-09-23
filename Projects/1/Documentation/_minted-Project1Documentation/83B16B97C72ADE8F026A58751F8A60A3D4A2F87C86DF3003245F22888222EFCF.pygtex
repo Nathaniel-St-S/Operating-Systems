@@ -1,0 +1,22 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{check\PYGZus{}for\PYGZus{}interrupt}\PYG{p}{()}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{k}{if}\PYG{+w}{ }\PYG{p}{(}\PYG{o}{!}\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{flags}\PYG{p}{.}\PYG{n}{INTERRUPT}\PYG{p}{)}\PYG{+w}{ }\PYG{k}{return}\PYG{p}{;}
+\PYG{+w}{  }\PYG{k}{if}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{INTERRUPTCONTROLLER}\PYG{p}{.}\PYG{n}{size}\PYG{+w}{ }\PYG{o}{==}\PYG{+w}{ }\PYG{l+m+mi}{0}\PYG{p}{)\PYGZob{}}
+\PYG{+w}{    }\PYG{c+c1}{//no more interrupts in que, so clear flag}
+\PYG{+w}{    }\PYG{n}{set\PYGZus{}interrupt\PYGZus{}flag}\PYG{p}{(}\PYG{n+nb}{false}\PYG{p}{);}
+\PYG{+w}{    }\PYG{k}{return}\PYG{p}{;}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+
+\PYG{+w}{  }\PYG{n}{Interrupt}\PYG{+w}{ }\PYG{n}{intrpt}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{next\PYGZus{}interrupt}\PYG{p}{();}
+\PYG{+w}{  }\PYG{k}{if}\PYG{p}{(}\PYG{n}{curr\PYGZus{}intrrpt}\PYG{p}{.}\PYG{n}{irq}\PYG{+w}{ }\PYG{o}{==}\PYG{+w}{ }\PYG{l+m+mi}{\PYGZhy{}1}\PYG{+w}{ }\PYG{o}{||}\PYG{+w}{ }\PYG{n}{intrpt}\PYG{p}{.}\PYG{n}{priority}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{curr\PYGZus{}intrrpt}\PYG{p}{.}\PYG{n}{priority}\PYG{p}{)\PYGZob{}}
+\PYG{+w}{    }\PYG{n}{curr\PYGZus{}intrrpt}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{intrpt}\PYG{p}{;}
+\PYG{+w}{    }\PYG{n}{interrupt\PYGZus{}handler}\PYG{p}{(}\PYG{n}{curr\PYGZus{}intrrpt}\PYG{p}{);}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}\PYG{k}{else}\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n}{interrupt\PYGZus{}handler}\PYG{p}{(}\PYG{n}{curr\PYGZus{}intrrpt}\PYG{p}{);}
+\PYG{+w}{    }\PYG{n}{add\PYGZus{}interrupt}\PYG{p}{(}\PYG{n}{intrpt}\PYG{p}{.}\PYG{n}{irq}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{intrpt}\PYG{p}{.}\PYG{n}{priority}\PYG{p}{);}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+
+\PYG{+w}{  }\PYG{c+c1}{//clear flag if heap is empty after handle}
+\PYG{+w}{  }\PYG{k}{if}\PYG{p}{(}\PYG{n}{INTERRUPTCONTROLLER}\PYG{p}{.}\PYG{n}{size}\PYG{+w}{ }\PYG{o}{==}\PYG{+w}{ }\PYG{l+m+mi}{0}\PYG{p}{)}\PYG{+w}{ }\PYG{n}{set\PYGZus{}interrupt\PYGZus{}flag}\PYG{p}{(}\PYG{n+nb}{false}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

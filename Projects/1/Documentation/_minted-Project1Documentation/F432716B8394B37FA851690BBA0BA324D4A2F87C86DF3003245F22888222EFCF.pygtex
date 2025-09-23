@@ -1,0 +1,40 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{//find the address of the value if it exists in cache}
+\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n+nf}{cache\PYGZus{}search}\PYG{p}{(}\PYG{n}{Cache}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{cache}\PYG{p}{,}\PYG{+w}{ }\PYG{k}{const}\PYG{+w}{ }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{k}{for}\PYG{p}{(}\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{i}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mi}{0}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{i}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{size}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{i}\PYG{o}{++}\PYG{p}{)}
+\PYG{+w}{  }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{c+c1}{//the address we want was found in cache}
+\PYG{+w}{    }\PYG{c+c1}{//so return the index of that address}
+\PYG{+w}{    }\PYG{k}{if}\PYG{p}{(}\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{items}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{addr}\PYG{+w}{ }\PYG{o}{==}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{)}
+\PYG{+w}{    }\PYG{p}{\PYGZob{}}
+\PYG{+w}{      }\PYG{k}{return}\PYG{+w}{ }\PYG{n}{i}\PYG{p}{;}
+\PYG{+w}{    }\PYG{p}{\PYGZcb{}}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+\PYG{+w}{  }\PYG{c+c1}{//address not found so return signifier}
+\PYG{+w}{  }\PYG{k}{return}\PYG{+w}{ }\PYG{n}{EMPTY\PYGZus{}ADDR}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{//Update the given cache in case of misses}
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{update\PYGZus{}cache}\PYG{p}{(}\PYG{n}{Cache}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{cache}\PYG{p}{,}\PYG{+w}{ }\PYG{k}{const}\PYG{+w}{ }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{,}\PYG{+w}{ }\PYG{k}{const}\PYG{+w}{ }\PYG{n}{word}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{c+c1}{//calculate where in the cache to store the value}
+\PYG{+w}{  }\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{index}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{front}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{count}\PYG{p}{)}\PYG{+w}{ }\PYG{err}{\PYGZbs{}}\PYG{o}{\PYGZpc{}}\PYG{+w}{ }\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{size}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{items}\PYG{p}{[}\PYG{n}{index}\PYG{p}{].}\PYG{n}{addr}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{addr}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{items}\PYG{p}{[}\PYG{n}{index}\PYG{p}{].}\PYG{n}{val}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{val}\PYG{p}{;}
+
+\PYG{+w}{  }\PYG{c+c1}{//update the size and count of the cache}
+\PYG{+w}{  }\PYG{k}{if}\PYG{p}{(}\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{count}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{size}\PYG{p}{)}
+\PYG{+w}{  }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{c+c1}{//cache isn\PYGZsq{}t full so we can just put the new}
+\PYG{+w}{    }\PYG{c+c1}{//value in the next index in the cache}
+\PYG{+w}{    }\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{count}\PYG{o}{++}\PYG{p}{;}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+\PYG{+w}{  }\PYG{k}{else}
+\PYG{+w}{  }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{c+c1}{//cache is full, so loop around to put the new}
+\PYG{+w}{    }\PYG{c+c1}{//value at the front}
+\PYG{+w}{    }\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{front}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{front}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+m+mi}{1}\PYG{p}{)}\PYG{+w}{ }\PYG{o}{\PYGZpc{}}\PYG{+w}{ }\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{size}\PYG{p}{;}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

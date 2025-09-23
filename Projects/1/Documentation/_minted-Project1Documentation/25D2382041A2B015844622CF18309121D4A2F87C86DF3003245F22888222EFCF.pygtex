@@ -1,0 +1,11 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{typedef}\PYG{+w}{ }\PYG{k}{enum}\PYG{+w}{ }\PYG{n}{op}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n}{OP\PYGZus{}LOAD}\PYG{+w}{   }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mh}{0x1}\PYG{p}{,}
+\PYG{+w}{  }\PYG{n}{OP\PYGZus{}STORE}\PYG{+w}{  }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mh}{0x2}\PYG{p}{,}
+\PYG{+w}{  }\PYG{n}{OP\PYGZus{}ADD}\PYG{+w}{    }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mh}{0x5}\PYG{p}{,}
+\PYG{+w}{  }\PYG{n}{OP\PYGZus{}SUB}\PYG{+w}{    }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mh}{0x6}\PYG{p}{,}
+\PYG{+w}{  }\PYG{n}{OP\PYGZus{}HALT}\PYG{+w}{   }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mh}{0xF}\PYG{p}{,}
+\PYG{+w}{  }\PYG{n}{OP\PYGZus{}INTR}\PYG{+w}{   }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mh}{0x9}\PYG{p}{,}
+\PYG{+w}{  }\PYG{n}{OP\PYGZus{}ENDINT}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mh}{0xA}\PYG{p}{,}
+\PYG{p}{\PYGZcb{}}\PYG{+w}{ }\PYG{n}{OP}\PYG{p}{;}
+\end{Verbatim}
