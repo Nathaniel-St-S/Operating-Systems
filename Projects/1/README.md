@@ -85,7 +85,7 @@ If not you'll get "command not found"
 
 ### Now To run the project
     Go to the directory/folder where you have this saved and run
-    ```bash
+    ```
     make clean
     make
     ```
