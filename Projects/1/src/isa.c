@@ -3,7 +3,7 @@
 #include "../include/isa.h"
 #include "../include/memory.h"
 
-// Loads the data at the given memory adress into cpu's ACC register
+// Loads the data at the given memory address into cpu's ACC register
 void load(const mem_addr operand) {
   CPU.ACC = read_mem(operand);
   set_zero_flag(CPU.ACC);
@@ -15,7 +15,7 @@ void store(const mem_addr operand) {
 }
 
 // Adds the value in the cpu's ACC register with the given value
-// The sum is stored in ACC and the appropiate flags are set
+// The sum is stored in ACC and the appropriate flags are set
 void add(const mem_addr operand) {
   word init = CPU.ACC;
   CPU.ACC += operand;
@@ -23,7 +23,7 @@ void add(const mem_addr operand) {
 }
 
 // Subtracts the value in the cpu's ACC register with the given value
-// The differnce is stored in ACC and the appropiate flags are set
+// The difference is stored in ACC and the appropriate flags are set
 void sub(const mem_addr operand) {
   word init = CPU.ACC;
   CPU.ACC -= operand;

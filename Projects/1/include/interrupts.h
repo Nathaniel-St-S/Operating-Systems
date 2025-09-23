@@ -13,8 +13,8 @@
 typedef enum irq{
     SAY_HI = 0x1,
     SAY_GOODBYE,
-    EOI, //end of interupt, make sure this is the last in the list
-}IRQ;
+    EOI, //end of interrupt, make sure this is the last in the list
+} IRQ;
 
 typedef struct {
     Cpu* items;
@@ -34,7 +34,7 @@ typedef struct {
 //Initialize the interrupt controller
 void init_interrupt_controller(void);
 
-//Add an interupt to the queue to be handled
+//Add an interrupt to the queue to be handled
 void add_interrupt(IRQ irq, int priority); 
 
 //Checks for if any interrupts are present
