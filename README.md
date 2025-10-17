@@ -11,7 +11,7 @@ Instructed by Ashlin Johnsy John Angel
 >[!IMPORTANT]
 > Brysen Bradley Pfingsten
 
-![BronzoBall Chess Superstar](https://i0.wp.com/tigermedianet.com/wp-content/uploads/2023/01/Chess-Tournament-10.jpg?resize=790%2C527)
+![BronzoBall Chess Superstar](https://www.shutterstock.com/image-photo/handsome-young-mans-face-portrait-600nw-211381648.jpg)
 
 > [!WARNING]
 > Nathaniel St.Clair Savoury
