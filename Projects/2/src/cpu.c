@@ -94,21 +94,33 @@ void execute() {
 
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
 void cpu_run(const int program_size, word* mem) {
-  for (int i = 0; i < program_size && CPU.PC != CPU_HALT; i++) {
+  (void)mem; // unused here
+
+  int i = 0;
+
+  start:
+    if (!(i < program_size && CPU.PC != CPU_HALT))
+      goto end;
+
     printf("=== Cycle %d ===\n", i + 1);
 
     if (CPU.PC == CPU_HALT) {
       printf("CPU Halted!\n");
-      break;
+      goto end;
     }
+
     fetch();
     execute();
     check_for_interrupt();
 
     cpu_print_state();
-  }
-}
 
+    i++;
+    goto start;
+
+  end:
+    ;
+}
 // Prints the state of the given CPU
 void cpu_print_state() {
   printf("CPU STATE\n");
