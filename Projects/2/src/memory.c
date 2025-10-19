@@ -1,5 +1,7 @@
 #include "../include/memory.h"
 
+/*------------------------------------Global Vars------------------------------------*/
+
 //values for tracking cache stats
 int L1cache_hit = 0, L1cache_miss = 0;
 int L2cache_hit = 0, L2cache_miss = 0;
@@ -10,11 +12,16 @@ Cache L1;
 Cache L2;
 //RAM
 word* RAM = NULL;
+//Memory Table
+MemoryTable MEMORY_TABLE;
 //HDD
 word* HDD = NULL;
 //SSD
 word* SSD = NULL;
+//working ram size
+int WRS;
 
+/*------------------------------------Initializers------------------------------------*/
 
 //Initialize the cache to the given size
 void init_cache(Cache* cache, const int size)
@@ -32,15 +39,39 @@ void init_cache(Cache* cache, const int size)
 	printf("Initialized cache at -> '%p' <- with size: %d\n",cache, size);
 }
 
+//initialize the memory block
+void init_memtable(const int size)
+{
+  //make the first entry into the table one large free block of memory
+  MEMORY_TABLE.blocks = (MemoryBlock*)malloc(sizeof(MemoryBlock) * size);
+  MEMORY_TABLE.blocks[0].pid = NO_PID;
+  MEMORY_TABLE.blocks[0].is_free = true;
+  MEMORY_TABLE.blocks[0].start_addr = 0;
+  MEMORY_TABLE.blocks[0].end_addr = (size - 1);
+
+ // for(int i = 1; i < size; i ++)
+ // {
+ //  MEMORY_TABLE.blocks[i].pid = NO_PID;
+ //  MEMORY_TABLE.blocks[i].is_free = true;
+ //  MEMORY_TABLE.blocks[i].start_addr = EMPTY_ADDR;
+ //  MEMORY_TABLE.blocks[i].end_addr = EMPTY_ADDR;
+ // }
+
+  MEMORY_TABLE.block_count = 1;
+  printf("initialized memory table with size %d\n" , size);
+}
+
 //initialize the ram to the given size
 void init_ram(const int size)
 {
+  WRS = size;
 	RAM = (word*)malloc(sizeof(word) * size);
 	for(int i = 0; i < size; i++)
 	{
 		RAM[i] = NO_VAL;
 	}
 	printf("initialized ram with size: %d\n", size);
+  init_memtable(size);
 }
 
 //initializes the SSD to the given size 
@@ -60,6 +91,8 @@ void init_HDD(const int size) {
 		HDD[i] = NO_VAL;
 	}
 }
+
+/*------------------------------------Helper Functions------------------------------------*/
 
 //find the address of the value if it exists in cache
 int cache_search(Cache* cache, const mem_addr addr)
@@ -99,6 +132,8 @@ void update_cache(Cache* cache, const mem_addr addr, const word val)
 		cache->front = (cache->front + 1) % cache->size;
 	}
 }
+
+/*------------------------------------External Functions / API------------------------------------*/
 
 //return the value at the given memory address
 word read_mem(const mem_addr addr)
@@ -157,6 +192,112 @@ void write_mem(const mem_addr addr, const word val)
 	}
 }
 
+// allocate memory for a specific process
+// using the best fit method
+mem_addr mallocate(int pid, int size)
+{
+  int best_size = WRS + 1;
+  int index = -1;
+
+  for(int i = 0; i < MEMORY_TABLE.block_count; i++)
+  {
+    if (MEMORY_TABLE.blocks[i].is_free)
+    {
+      int mem_block_size = (MEMORY_TABLE.blocks[i].end_addr - MEMORY_TABLE.blocks[i].start_addr) + 1;
+      if(mem_block_size >= size && mem_block_size < best_size)
+      {
+        best_size = mem_block_size;
+        index = i;
+      }
+    }
+  }
+
+  //No memory free so ...idk
+  if(index == -1)
+  {
+    printf("Could not fullfill process(PID %d)'s request for a (%d byte) chunk of memory: Not Enough Free Space\n", pid, size);
+    return -1;
+  }
+
+  //Modify the free space to house our process
+  //@david Boo! spooky mutation ~~ooooh~~
+  MemoryBlock* best_fit = &MEMORY_TABLE.blocks[index];
+
+  //save the old start and end addresses
+  mem_addr old_start_addr = best_fit->start_addr;
+  mem_addr old_end_addr = best_fit->end_addr;
+
+  mem_addr new_end_addr = (old_start_addr + size) - 1;
+
+  //give the process the space
+  best_fit->pid = pid;
+  best_fit->is_free = false;
+  best_fit->end_addr = new_end_addr;
+
+  //cut down the size of the block
+  //to free up unused space
+  if(new_end_addr < old_end_addr)
+  {
+    //shift all the blocks to the right to make room
+    for(int i = MEMORY_TABLE.block_count; i > index + 1; i--)
+    {
+      MEMORY_TABLE.blocks[i] = MEMORY_TABLE.blocks[i - 1];
+    }
+
+    MEMORY_TABLE.blocks[index +1].pid = NO_PID;
+    MEMORY_TABLE.blocks[index +1].is_free = true;
+    MEMORY_TABLE.blocks[index +1].start_addr = new_end_addr + 1;
+    MEMORY_TABLE.blocks[index +1].end_addr = old_end_addr;
+
+    MEMORY_TABLE.block_count++;
+  }
+
+  printf("Process (PID %d) given (%d bytes) of memory from [%d --> %d]\n", pid, size, best_fit->start_addr, best_fit->end_addr);
+  return best_fit->start_addr;
+}
+
+// free up the memory block associated with the process
+void liberate(int pid)
+{
+  int index = 0;
+  for(index = 0; index < MEMORY_TABLE.block_count; index++)
+  {
+    if(MEMORY_TABLE.blocks[index].pid == pid && !MEMORY_TABLE.blocks[index].is_free)
+    {
+      MEMORY_TABLE.blocks[index].pid = NO_PID;
+      MEMORY_TABLE.blocks[index].is_free = true;
+      printf("Freed (PID %d) at memory [%d --> %d]\n", pid, MEMORY_TABLE.blocks[index].start_addr, MEMORY_TABLE.blocks[index].end_addr);
+      break;
+    }
+  }
+  //if the pid was not found
+  if(index == MEMORY_TABLE.block_count){return;}
+
+  //merge newly freed block with the previous block if it's also free
+  if(index > 0 && MEMORY_TABLE.blocks[index - 1].is_free)
+  {
+    MEMORY_TABLE.blocks[index -1].end_addr = MEMORY_TABLE.blocks[index].end_addr;
+    //shift everything left to clean the gap
+    for(int i = index; i < MEMORY_TABLE.block_count - 1; i++)
+    {
+      MEMORY_TABLE.blocks[i] = MEMORY_TABLE.blocks[i + 1];
+    }
+    MEMORY_TABLE.block_count--;
+    index--;
+  }
+
+  //merge with the next memory block if it's also free
+  if(index < MEMORY_TABLE.block_count - 1 && MEMORY_TABLE.blocks[index + 1].is_free)
+  {
+    MEMORY_TABLE.blocks[index].end_addr = MEMORY_TABLE.blocks[index + 1].end_addr;
+    //shift right to clean the gap
+    for(int i = index + 1; i < MEMORY_TABLE.block_count - 1; i++)
+    {
+      MEMORY_TABLE.blocks[i] = MEMORY_TABLE.blocks[i + 1];
+    }
+    MEMORY_TABLE.block_count--;
+  }
+}
 //print the number of cache hits & misses
 void print_cache_stats()
 {
