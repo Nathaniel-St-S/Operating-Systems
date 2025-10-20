@@ -6,7 +6,7 @@
 
 /**
  * The supported operations of the CPU
- */
+
 typedef enum {
   LOAD = 0x1,
   STORE = 0x2,
@@ -22,8 +22,35 @@ typedef enum {
   ENDINT = 0xC, // End Interrupt
   HALT = 0xF
 } OP;
+*/
+
+// Opcodes
+enum
+{
+  ADD = 0x1,
+  SUB,
+  MUL,
+  DIV,
+  AND,
+  OR,
+  NOT,
+  BRANCH,
+  JUMP,
+  JUMPR,
+  JUMPZ,
+  STORE,
+  STRR,
+  STRI,
+  LOAD,
+  LEA,
+  LDR,
+  LDI,
+  INTR,
+  ENDINT,
+  HALT,
+};
 
 // execute instruction based off of opcode
-void execute_instruction(OP op, mem_addr addr);
+void execute_instruction(word op, word isntruction);
 
 #endif

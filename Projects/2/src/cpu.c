@@ -7,46 +7,6 @@
 //CPU to control execution
 Cpu CPU;
 
-/* --- helpers ------------------------------------------------------------- */
-
-// Sets the zero flag of the given cpu to 1 if the value is 0, 0 otherwise
-void set_zero_flag(word value) {
-  CPU.flags.ZERO = (value == 0);
-}
-
-// Sets the carry, overflow, and zero flags of the given cpu based on the given a + b = r
-void set_add_flags(word a, word b, word r) {
-  // Unsigned carry out of bit 15
-  CPU.flags.CARRY =
-      ((uint32_t)(uword)a + (uint32_t)(uword)b) > 0xFFFFu;
-
-  // Signed overflow: inputs same sign, result different sign
-  CPU.flags.OVERFLOW =
-      ((a >= 0 && b >= 0 && r <  0) ||
-       (a <  0 && b <  0 && r >= 0));
-
-  set_zero_flag(r);
-}
-
-// Sets the carry, overflow, and zero flags of the given cpu based on the given a - b = r
-void set_sub_flags(word a, word b, word r) {
-  // Borrow in unsigned
-  CPU.flags.CARRY = ((uword)a < (uword)b);
-
-  // Signed overflow: inputs different sign, result sign differs from a
-  CPU.flags.OVERFLOW =
-      ((a >= 0 && b <  0 && r <  0) ||
-       (a <  0 && b >= 0 && r >= 0));
-
-  set_zero_flag(r);
-}
-
-// Set the interrupt flag
-void set_interrupt_flag(bool enabled) {
-    CPU.flags.INTERRUPT = enabled ? 1 : 0;
-}
-
-
 /* --- core ---------------------------------------------------------------- */
 
 //initialize the flags of the given cpu
@@ -54,15 +14,15 @@ void set_interrupt_flag(bool enabled) {
     flags->ZERO      = UNSET_FLAG;
     flags->CARRY     = UNSET_FLAG;
     flags->OVERFLOW  = UNSET_FLAG;
-    flags->INTERRUPT = 0;
+    flags->INTERRUPT = UNSET_FLAG;
   
   }
 
 void init_cpu(Cpu* cpu)
 {
-  cpu->PC  = 0;
-  cpu->IR  = EMPTY_REG;
-  cpu->ACC = 0;
+  cpu->registers[PC]  = MEM_START;
+  cpu->registers[IR]  = EMPTY_REG;
+  cpu->registers[ACC] = 0;
   init_flags(&cpu->flags);
   printf("Initialized the cpu!\n");
   cpu_print_state();
@@ -70,10 +30,11 @@ void init_cpu(Cpu* cpu)
 
 // Fetch the next instruction from the given memory and cpu and increments the program counter
 void fetch() {
-  CPU.IR = read_mem(CPU.PC);
-  CPU.PC++;
+  CPU.registers[IR] = read_mem(CPU.registers[PC]);
+  CPU.registers[PC]++;
 }
 
+/*
 // Decodes the given instruction into its operator and operand
 Decoded decode (word instruction) {
   Decoded d;
@@ -81,15 +42,21 @@ Decoded decode (word instruction) {
   d.addr = (mem_addr)(instruction & 0x0FFFu);
   return d;
 }
-
+*/
+word decode(word instruction)
+{
+  word op = instruction >> 12;
+  return op;
+}
 // Executes the instruction in the given cpu's IR with the given RAM
 void execute() {
-  word instruction = CPU.IR;
-  Decoded d = decode(instruction);
-  OP opcode = d.op;
-  mem_addr operand = d.addr;
+  word instruction = CPU.registers[IR];
+  //Decoded d = decode(instruction);
+  //OP opcode = d.op;
+  //mem_addr operand = d.addr;
+  word op = decode(instruction);
 
-  execute_instruction(opcode, operand);
+  execute_instruction(op, instruction);
 }
 
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
@@ -99,12 +66,12 @@ void cpu_run(const int program_size, word* mem) {
   int i = 0;
 
   start:
-    if (!(i < program_size && CPU.PC != CPU_HALT))
+    if (!(i < program_size && CPU.registers[PC] != CPU_HALT))
       goto end;
 
     printf("=== Cycle %d ===\n", i + 1);
 
-    if (CPU.PC == CPU_HALT) {
+    if (CPU.registers[PC] == CPU_HALT) {
       printf("CPU Halted!\n");
       goto end;
     }
@@ -124,9 +91,9 @@ void cpu_run(const int program_size, word* mem) {
 // Prints the state of the given CPU
 void cpu_print_state() {
   printf("CPU STATE\n");
-  printf("PC:  %X\n", CPU.PC);
-  printf("ACC: %X\n", CPU.ACC);
-  printf("IR:  %X\n", CPU.IR);
+  printf("PC:  %X\n", CPU.registers[PC]);
+  printf("ACC: %X\n", CPU.registers[PC]);
+  printf("IR:  %X\n", CPU.registers[IR]);
   printf("FLAGS:\n");
   printf("  ZERO:      %1d\n", CPU.flags.ZERO);
   printf("  CARRY:     %1d\n", CPU.flags.CARRY);
