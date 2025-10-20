@@ -4,6 +4,11 @@ InterruptHeap INTERRUPTCONTROLLER;
 stack callstack;
 Interrupt curr_intrrpt;
 
+ // Set the interrupt flag
+void set_interrupt_flag(bool enabled) {
+    CPU.flags.INTERRUPT = enabled ? 1 : 0;
+}
+
 void swap(Interrupt* a, Interrupt* b) {
     Interrupt tmp = *a;
     *a = *b;
@@ -116,7 +121,7 @@ void interrupt_handler(Interrupt intrpt) {
       break;
     default:
       printf("ERROR: Invalid irq -> %u <-\n", (unsigned)intrpt.irq);
-      CPU.PC = CPU_HALT;
+      CPU.registers[PC] = CPU_HALT;
       break;
     }
 

@@ -6,6 +6,14 @@
 
 #define MAX_PROCESSES 5
 
+typedef enum
+{
+  READY,
+  RUNNIG,
+  WAITING,
+  FINISHED
+} ProcessState;
+
 typedef struct
 {
   Cpu state;
@@ -14,10 +22,11 @@ typedef struct
 typedef struct
 {
   int pid;
-  mem_addr start;
-  mem_addr end;
-  int state;
-  Thread* threads;
+  // word start_addr;
+  // word end_addr;
+  ProcessState state;
+  Cpu cpu_state;
+  //Thread* threads;
 } Process;
 
 //Array to keep track of all the processes
@@ -29,5 +38,5 @@ void init_processes();
 
 void scheduler();
 
-void context_switch(Process current, Process next);
+void context_switch(int current, int next);
 #endif
