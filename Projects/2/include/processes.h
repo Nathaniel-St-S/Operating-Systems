@@ -5,6 +5,7 @@
 #include "memory.h"
 
 #define MAX_PROCESSES 5
+#define PROCESS_TIME 5
 
 typedef enum
 {

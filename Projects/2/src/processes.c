@@ -29,6 +29,8 @@ void init_processes()
 }
 
 //Switch from one process to another
+//Takes the index of the currnet process and
+//the next process to switch to
 void context_switch(int current, int next)
 {
   Process* curr = &PROCESS_TABLE[current];
@@ -42,7 +44,7 @@ void context_switch(int current, int next)
   CPU = nxt->cpu_state;
   nxt->state = RUNNIG;
 
-  printf("Switched from process (PID %d) to process (PID %d)", curr->pid, nxt->pid);
+  printf("Switched from process (PID: %d) to process (PID: %d)", curr->pid, nxt->pid);
 }
 
 //Scheduler that runs each process for a set amount of time
@@ -50,5 +52,17 @@ void context_switch(int current, int next)
 //yo @david @brysen ya'll know how to do this
 void scheduler()
 {
-  //Hope and pray :)
+  for(int i = 0; i < num_proccesses; i++)
+  {
+    if(PROCESS_TABLE[i].state == FINISHED){continue;}
+    int time = PROCESS_TIME;
+    while(time)
+    {
+      CPU = PROCESS_TABLE[i].cpu_state;
+      fetch();
+      execute();
+      time--;
+    }
+    //figure out what to do if a process finishes it's instructions
+  }
 }

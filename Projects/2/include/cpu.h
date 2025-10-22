@@ -60,13 +60,13 @@ void init_cpu(Cpu* cpu);
 
 // Fetch the next instruction from the given memory and cpu
 // and increments the program counter
-//void fetch(void);
+void fetch(void);
 
 // Decodes the given instruction into its operator and operand
-//Decoded decode(word instruction);
+word decode(word instruction);
 
 // Executes the instruction in the given cpu's IR with the given RAM
-//void execute(void);
+void execute(void);
 
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
 void cpu_run(int program_size, word* mem);
