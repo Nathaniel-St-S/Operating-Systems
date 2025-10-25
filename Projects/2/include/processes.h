@@ -10,7 +10,7 @@
 typedef enum
 {
   READY,
-  RUNNIG,
+  RUNNING,
   WAITING,
   FINISHED
 } ProcessState;

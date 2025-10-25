@@ -2,73 +2,106 @@
 #include "../include/cpu.h"
 #include "../include/memory.h"
 #include "../include/types.h"
+#include <stdint.h>
 
 /*-----------------------------Flag Setters-----------------------------*/
 
 // Sets the zero flag of the given cpu to 1 if the value is 0, 0 otherwise
-void set_zero_flag(word value) {
-  CPU.flags.ZERO = (value == 0);
+void set_nzp_flag(word value) {
+  CLEAR_ALL_FLAGS;
+
+    int16_t svalue = (int16_t)value;
+
+    if (svalue == 0){
+      SET_FLAG(F_ZERO);
+    }
+    else if (svalue < 0){
+      SET_FLAG(F_NEG);
+    }
+    else
+    {SET_FLAG(F_POS);
+    }
 }
 
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a + b = r
 void set_add_flags(word a, word b, word r) {
-  // Unsigned carry out of bit 15
-  CPU.flags.CARRY =
-      ((uint32_t)(word)a + (uint32_t)(word)b) > 0xFFFFu;
+  CLEAR_ALL_FLAGS;
 
+  // Unsigned carry out of bit 15
+  if ((uint32_t)a + (uint32_t)b > 0xFFFF){
+    SET_FLAG(F_CARRY);
+  }
   // Signed overflow: inputs same sign, result different sign
   sword sa = (sword)a;
   sword sb = (sword)b;
   sword sr = (sword)r;
-  CPU.flags.OVERFLOW =
-      ((sa >= 0 && sb >= 0 && sr <  0) ||
-       (sa <  0 && sb <  0 && sr >= 0));
-
-  set_zero_flag(r);
+  if((sa > 0 && sb > 0 && sr < 0) ||
+      (sa < 0 && sb < 0 && sr > 0)){
+    SET_FLAG(F_OVFLW);
+  }
+  
+  set_nzp_flag(r);
 }
 
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a - b = r
 void set_sub_flags(word a, word b, word r) {
+  CLEAR_ALL_FLAGS;
+
   // Borrow in unsigned
-  CPU.flags.CARRY = ((word)a < (word)b);
+  if((word)a < (word)b)
+  {
+    SET_FLAG(F_CARRY);
+  }
 
   // Signed overflow: inputs different sign, result sign differs from a
   sword sa = (sword)a;
   sword sb = (sword)b;
   sword sr = (sword)r;
-  CPU.flags.OVERFLOW =
-      ((sa >= 0 && sb <  0 && sr <  0) ||
-       (sa <  0 && sb >= 0 && sr >= 0));
+  if((sa >= 0 && sb <  0 && sr <  0) ||
+       (sa <  0 && sb >= 0 && sr >= 0))
+  {
+    SET_FLAG(F_OVFLW);
+  }
 
-  set_zero_flag(r);
+  set_nzp_flag(r);
 }
 
 // Set the zero, carry, and OF :P flags for multiplication
 void set_mul_flags(word a, word b, word r)
 {
+  CLEAR_ALL_FLAGS;
+
   uint32_t p = (uint32_t)a * (uint32_t)b;
-  CPU.flags.CARRY = (p >> 16) != 0;
+  if(p >> 16 != 0)
+  {
+    SET_FLAG(F_CARRY);
+  }
 
   int32_t sp = (int16_t)a * (int16_t)b;
-  CPU.flags.OVERFLOW = sp > INT16_MAX || sp <INT16_MIN;
+  if(sp > INT16_MAX || sp <INT16_MIN)
+  {
+    SET_FLAG(F_OVFLW);
+  }
 
-  set_zero_flag(r);
+  set_nzp_flag(r);
 }
 
 // Set the flags for division
 void set_div_flags(word a, word b, word r)
 {
-  CPU.flags.CARRY = false;
+  CLEAR_ALL_FLAGS;
 
-  CPU.flags.OVERFLOW = (sword)a == INT16_MIN && (sword)b == -1;
+  CLEAR_FLAG(F_CARRY);
 
-  set_zero_flag(r);
+  if((sword)a == INT16_MIN && (sword)b == -1){SET_FLAG(F_OVFLW);}
+
+  set_nzp_flag(r);
 }
 
 // Set the interrupt flag
-void set_interrupt_flag(bool enabled) {
-    CPU.flags.INTERRUPT = enabled ? 1 : 0;
-}
+//void set_interrupt_flag(bool enabled) {
+//    THE_CPU.flags.INTERRUPT = enabled ? 1 : 0;
+//}
 /*-----------------------------Helpers-----------------------------*/
 
 word sign_extend(word x, int bit_count)
@@ -97,15 +130,15 @@ void add(const word instruction)
   if(imm_flag)
   {
     word imm5 = sign_extend(instruction & 0x1F, 5);
-    CPU.registers[dr] = CPU.registers[sr1] + imm5;
-    set_add_flags(CPU.registers[sr1], imm5, CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] + imm5;
+    set_add_flags(THE_CPU.registers[sr1], imm5, THE_CPU.registers[dr]);
   }
   else
   {
     // Not in immediate mode so we must get our value from a second source register
     word sr2 = instruction & 0x7;
-    CPU.registers[dr] = CPU.registers[sr1] + CPU.registers[sr2];
-    set_add_flags(CPU.registers[sr1], CPU.registers[sr2], CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] + THE_CPU.registers[sr2];
+    set_add_flags(THE_CPU.registers[sr1], THE_CPU.registers[sr2], THE_CPU.registers[dr]);
   }
 
 }
@@ -126,15 +159,15 @@ void sub(const word instruction)
   if(imm_flag)
   {
     word imm5 = sign_extend(instruction & 0x1F, 5);
-    CPU.registers[dr] = CPU.registers[sr1] - imm5;
-    set_sub_flags(CPU.registers[sr1], imm5, CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] - imm5;
+    set_sub_flags(THE_CPU.registers[sr1], imm5, THE_CPU.registers[dr]);
   }
   else
   {
     // Not in immediate mode so we must get our value from a second source register
     word sr2 = instruction & 0x7;
-    CPU.registers[dr] = CPU.registers[sr1] - CPU.registers[sr2];
-    set_sub_flags(CPU.registers[sr1], CPU.registers[sr2], CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] - THE_CPU.registers[sr2];
+    set_sub_flags(THE_CPU.registers[sr1], THE_CPU.registers[sr2], THE_CPU.registers[dr]);
   }
 }
 
@@ -155,15 +188,15 @@ void mul(const word instruction)
   if(imm_flag)
   {
     word imm5 = sign_extend(instruction & 0x1F, 5);
-    CPU.registers[dr] = CPU.registers[sr1] * imm5;
-    set_mul_flags(CPU.registers[sr1], imm5, CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] * imm5;
+    set_mul_flags(THE_CPU.registers[sr1], imm5, THE_CPU.registers[dr]);
   }
   else
   {
     // Not in immediate mode so we must get our value from a second source register
     word sr2 = instruction & 0x7;
-    CPU.registers[dr] = CPU.registers[sr1] * CPU.registers[sr2];
-    set_mul_flags(CPU.registers[sr1], CPU.registers[sr2], CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] * THE_CPU.registers[sr2];
+    set_mul_flags(THE_CPU.registers[sr1], THE_CPU.registers[sr2], THE_CPU.registers[dr]);
   }
 }
 
@@ -186,25 +219,25 @@ void divide(const word instruction) {
     if(!imm5)
     {
       printf("Divide by Zero Error");
-      CPU.registers[PC] = CPU_HALT;
+      THE_CPU.registers[PC] = CPU_HALT;
       return;
     }
-    CPU.registers[dr] = CPU.registers[sr1] - imm5;
-    set_sub_flags(CPU.registers[sr1], imm5, CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] / imm5;
+    set_div_flags(THE_CPU.registers[sr1], imm5, THE_CPU.registers[dr]);
   }
   else
   {
     // Not in immediate mode so we must get our value from a second source register
     word sr2 = instruction & 0x7;
-    if(!sr2)
+    if(!THE_CPU.registers[sr2])
     {
       printf("Divide by Zero Error");
-      CPU.registers[PC] = CPU_HALT;
+      THE_CPU.registers[PC] = CPU_HALT;
       return;
     }
 
-    CPU.registers[dr] = CPU.registers[sr1] - CPU.registers[sr2];
-    set_sub_flags(CPU.registers[sr1], CPU.registers[sr2], CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] / THE_CPU.registers[sr2];
+    set_div_flags(THE_CPU.registers[sr1], THE_CPU.registers[sr2], THE_CPU.registers[dr]);
   }
 }
 
@@ -224,15 +257,15 @@ void bit_and(const word instruction)
   if(imm_flag)
   {
     word imm5 = sign_extend(instruction & 0x1F, 5);
-    CPU.registers[dr] = CPU.registers[sr1] & imm5;
-    set_zero_flag(CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] & imm5;
+    set_nzp_flag(THE_CPU.registers[dr]);
   }
   else
   {
     // Not in immediate mode so we must get our value from a second source register
     word sr2 = instruction & 0x7;
-    CPU.registers[dr] = CPU.registers[sr1] & CPU.registers[sr2];
-    set_zero_flag(CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] & THE_CPU.registers[sr2];
+    set_nzp_flag(THE_CPU.registers[dr]);
   } 
 }
 
@@ -252,15 +285,15 @@ void bit_or(const word instruction)
   if(imm_flag)
   {
     word imm5 = sign_extend(instruction & 0x1F, 5);
-    CPU.registers[dr] = CPU.registers[sr1] | imm5;
-    set_zero_flag(CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] | imm5;
+    set_nzp_flag(THE_CPU.registers[dr]);
   }
   else
   {
     // Not in immediate mode so we must get our value from a second source register
     word sr2 = instruction & 0x7;
-    CPU.registers[dr] = CPU.registers[sr1] | CPU.registers[sr2];
-    set_zero_flag(CPU.registers[dr]);
+    THE_CPU.registers[dr] = THE_CPU.registers[sr1] | THE_CPU.registers[sr2];
+    set_nzp_flag(THE_CPU.registers[dr]);
   } 
 }
 
@@ -274,9 +307,9 @@ void bit_not(const word instruction)
   // Source register
   word sr1 = (instruction >> 6) & 0x7;
 
-  CPU.registers[dr] = ~CPU.registers[sr1];
+  THE_CPU.registers[dr] = ~THE_CPU.registers[sr1];
 
-  set_zero_flag(CPU.registers[dr]);
+  set_nzp_flag(THE_CPU.registers[dr]);
 }
 
 // Conditionally branch the CPU depending on the status of the zero, overflow
@@ -286,28 +319,10 @@ void branch(const word instruction)
   word offset = sign_extend(instruction & 0x1FF, 9);
   word cond = (instruction >> 9) & 0x7;
 
-  bool flag_set = false;
-
   // Bit 11 is the zero flag
-  if ((cond & 0x4) && CPU.flags.ZERO)
+  if (cond & THE_CPU.registers[FLAG])
   {
-    flag_set = true;
-  }
-  
-  // Bit 10 is the carry flag
-  if ((cond & 0x2) && CPU.flags.CARRY)
-  {
-    flag_set = true;
-  }
-  
-  // Bit 9 is the overflow flag
-  if ((cond & 0x1) && CPU.flags.OVERFLOW)
-  {
-    flag_set = true;
-  }
-  if (flag_set)
-  {
-    CPU.registers[PC] += offset;
+    THE_CPU.registers[PC] += offset;
   }
 }
 
@@ -316,7 +331,7 @@ void branch(const word instruction)
 void jump(const word instruction)
 {
   word dest = (instruction >> 6) & 0x7;
-  CPU.registers[PC] = CPU.registers[dest];
+  THE_CPU.registers[PC] = THE_CPU.registers[dest];
 }
 
 // Save the incremented PC into EX, then jump to first instruction of the
@@ -325,7 +340,7 @@ void jump(const word instruction)
  void jump_register(const word instruction)
 {
   //save the pc in EX
-  CPU.registers[EX] = CPU.registers[PC];
+  THE_CPU.registers[EX] = THE_CPU.registers[PC];
 
   // bit 11 will signify wether the location is in a register
   word flag = (instruction >> 11) & 0x1;
@@ -333,30 +348,30 @@ void jump(const word instruction)
   if(flag)
   {
     word offset = sign_extend(instruction & 0x7FF, 11);
-    CPU.registers[PC] += offset;
+    THE_CPU.registers[PC] += offset;
   }
   else
   {
     word br = (instruction >> 6) & 0x7;
-    CPU.registers[PC] = CPU.registers[br];
+    THE_CPU.registers[PC] = THE_CPU.registers[br];
   }
 }
 
 // Begins execution at the given memory address if the zero flag is set.
 void jump_zero(const word instruction)
 {
-  word flag = (instruction >> 11) & 0x1;
-  if(CPU.flags.ZERO)
+  if((THE_CPU.registers[FLAG] >> 0) & 1)
   {
+    word flag = (instruction >> 11) & 0x1;
     if(flag)
     {
       word offset = sign_extend(instruction & 0x7FF, 11);
-      CPU.registers[PC] += offset;
+      THE_CPU.registers[PC] += offset;
     }
     else
     {
       word br = (instruction >> 6) & 0x7;
-      CPU.registers[PC] = CPU.registers[br]; 
+      THE_CPU.registers[PC] = THE_CPU.registers[br]; 
     }
   }
 }
@@ -366,7 +381,7 @@ void store(const word instruction)
 {
   word sr = (instruction >> 9) & 0x7;
   word offset = sign_extend(instruction & 0x1FF, 9);
-  write_mem(CPU.registers[PC] + offset, CPU.registers[sr]);
+  write_mem(THE_CPU.registers[PC] + offset, THE_CPU.registers[sr]);
 }
 
 // The contents of the register specified by SR are stored in the memory location
@@ -378,7 +393,7 @@ void store_register(const word instruction)
   word br = (instruction >> 6) & 0x7;
   word offset = sign_extend(instruction & 0x3F, 6);
 
-  write_mem(CPU.registers[br] + offset, CPU.registers[sr]);
+  write_mem(THE_CPU.registers[br] + offset, THE_CPU.registers[sr]);
 }
 
 // The contents of the register specified by SR are stored in the memory location
@@ -389,7 +404,7 @@ void store_indirect(const word instruction)
 {
   word sr = (instruction >> 9) & 0x7;
   word offset = sign_extend(instruction & 0x1FF, 9);
-  write_mem(read_mem(CPU.registers[PC] + offset), CPU.registers[sr]);
+  write_mem(read_mem(THE_CPU.registers[PC] + offset), THE_CPU.registers[sr]);
 }
 
 // Loads the data at the given memory address into cpu's ACC register
@@ -398,8 +413,8 @@ void load(const word instruction)
   word dr = (instruction >> 9) & 0x7;
   word offset = sign_extend(instruction & 0x1FF, 9);
 
-  CPU.registers[dr] = read_mem(CPU.registers[PC] + offset);
-  set_zero_flag(CPU.registers[dr]);
+  THE_CPU.registers[dr] = read_mem(THE_CPU.registers[PC] + offset);
+  set_nzp_flag(THE_CPU.registers[dr]);
 }
 
 // An address is computed by sign-extending bits [8:0] to 16 bits and adding this
@@ -410,8 +425,8 @@ void load_effective_address(const word instruction)
   word dr = (instruction >> 9) & 0x7;
   word offset= sign_extend(instruction & 0x1FF, 9);
 
-  CPU.registers[dr] = CPU.registers[PC] + offset;
-  set_zero_flag(CPU.registers[dr]);
+  THE_CPU.registers[dr] = THE_CPU.registers[PC] + offset;
+  set_nzp_flag(THE_CPU.registers[dr]);
 }
 
 // An address is computed by sign-extending bits [5:0] to 16 bits and adding this
@@ -424,8 +439,8 @@ void load_register(const word instruction)
   word br = (instruction >> 6) & 0x7;
   word offset = sign_extend(instruction & 0x3F, 6);
 
-  CPU.registers[dr] = read_mem(CPU.registers[br] + offset);
-  set_zero_flag(CPU.registers[dr]); 
+  THE_CPU.registers[dr] = read_mem(THE_CPU.registers[br] + offset);
+  set_nzp_flag(THE_CPU.registers[dr]); 
 }
 
 // An address is computed by sign-extending bits [8:0] to 16 bits and adding this
@@ -437,25 +452,103 @@ void load_indirect(const word instruction)
   word dr = (instruction >> 9) & 0x7;
   word offset = sign_extend(instruction & 0x1FF, 9);
 
-  CPU.registers[dr] = read_mem(read_mem(CPU.registers[PC] + offset));
+  THE_CPU.registers[dr] = read_mem(read_mem(THE_CPU.registers[PC] + offset));
 
-  set_zero_flag(CPU.registers[dr]);
+  set_nzp_flag(THE_CPU.registers[dr]);
 }
 
-// Initiates and handles CPU interrupts
-static inline void interrupt(const word instruction) { set_interrupt_flag(instruction); }
-
-// Halts execution of the given cpu
-static inline void halt() {
-  printf("HALT\n");
-  CPU.registers[PC] = CPU_HALT;
+// get a single ascii charachter from BX
+void get_char()
+{
+  THE_CPU.registers[BX] = (word)getchar();
 }
 
-// Reports an error for invalid opcodes and halts the CPU.
+// flush a single characher to stdout
+void out()
+{
+  putc((char)THE_CPU.registers[BX], stdout);
+  fflush(stdout);
+}
+
+// grab a single charachter from stdin
+void in()
+{
+  printf("Enter a charachter: ");
+  char c = getchar();
+  putc(c, stdout);
+  fflush(stdout);
+  THE_CPU.registers[BX] = (word)c;
+}
+
+// put an entire null terminated string into stdout
+void put_str()
+{
+  //one char per word
+  uint16_t* c = RAM + THE_CPU.registers[BX];
+  while (*c)
+  {
+      putc((char)*c, stdout);
+      ++c;
+  }
+  fflush(stdout);
+}
+
+// Put up to 2 8 bit charachters into stdout
+void put_sp()
+{
+  //one char per byte (two bytes per word)
+  uint16_t* c = RAM + THE_CPU.registers[BX];
+  while (*c)
+  {
+      char char1 = (*c) & 0xFF;
+      putc(char1, stdout);
+      char char2 = (*c) >> 8;
+      if (char2) putc(char2, stdout);
+      ++c;
+  }
+  fflush(stdout);
+}
+
+// END execution of the cpu
+void halt()
+{
+  puts("HALT");
+  fflush(stdout);
+  THE_CPU.registers[PC] = CPU_HALT;
+}
+
+void report_invalid_instruction(const word instruction)
+{
+printf("ERROR: Invalid instruction %u \n", (unsigned)instruction);
+   THE_CPU.registers[PC] = CPU_HALT;
+}
+
+// Reports an error for invalid opcodes and halts the THE_CPU.
 static inline void report_invalid_opcode(const word opcode, const word instruction) {
   printf("ERROR: Invalid opcode %u (IR=0x%04X)\n", (unsigned)opcode,
           (unsigned)instruction);
-   CPU.registers[PC] = CPU_HALT;
+   THE_CPU.registers[PC] = CPU_HALT;
+}
+
+// Initiates and handles CPU interrupts
+static inline void interrupt(const word instruction)
+{
+  // Save the register for restoration later
+  THE_CPU.registers[AX] = THE_CPU.registers[PC];
+
+  switch(instruction & 0xFF)
+  {
+    case INT_GETC: get_char(); break;
+    case INT_OUT: out(); break;
+    case INT_IN: in(); break;
+    case INT_PUTS: put_str(); break;
+    case INT_PUTSP: put_sp(); break;
+    case INT_HALT: halt(); break;
+    default: report_invalid_instruction(instruction);
+  }
+
+  // go back to the og instruction
+  THE_CPU.registers[PC] = THE_CPU.registers[AX];
 }
 
 /*------------------------------------External Functions / API------------------------------------*/
@@ -472,7 +565,7 @@ void execute_instruction(const word op, const word instruction) {
     case NOT: bit_not(instruction); break;
     case BRANCH: branch(instruction); break;
     case JUMP: jump(instruction); break;
-    case JUMPR: jump_register(instruction);
+    case JUMPR: jump_register(instruction); break;
     case JUMPZ: jump_zero(instruction); break;
     case STORE: store(instruction); break;
     case STRR: store_register(instruction); break;
@@ -483,7 +576,7 @@ void execute_instruction(const word op, const word instruction) {
     case LDI: load_indirect(instruction); break;
     case INTR: interrupt(instruction); break;
     //case ENDINT: end_interrupt(instruction); break;
-    case HALT: halt(); break;
+    //case HALT: halt(); break;
     default: report_invalid_opcode(op, instruction);
   }
 }

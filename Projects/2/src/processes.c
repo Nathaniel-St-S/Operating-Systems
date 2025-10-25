@@ -7,11 +7,13 @@ int current_process = 0;
 //RUNNING
 //WAITING
 //READY
-int num_proccesses = 0;
+int num_processes = 0;
 
 //Get the next process
 //(round robin style so its just the next index of current)
-#define next_process ((current_process + 1) % num_proccesses)
+#define next_process ((current_process + 1) % num_processes)
+
+Process PROCESS_TABLE[MAX_PROCESSES];
 
 //Self explanatory, initialize the process table with default values
 //for no seg fault. (or don't 😈)
@@ -20,12 +22,12 @@ void init_processes()
   for(int i = 0; i < MAX_PROCESSES; i++)
   {
     PROCESS_TABLE[i].pid = i;
-    PROCESS_TABLE[i].cpu_state = CPU;
+    PROCESS_TABLE[i].cpu_state = THE_CPU;
     PROCESS_TABLE[i].state = READY;
   }
-  num_proccesses = MAX_PROCESSES;
+  num_processes = MAX_PROCESSES;
   current_process = 0;
-  PROCESS_TABLE[0].state = RUNNIG;
+  PROCESS_TABLE[0].state = RUNNING;
 }
 
 //Switch from one process to another
@@ -37,12 +39,12 @@ void context_switch(int current, int next)
   Process* nxt = &PROCESS_TABLE[next];
 
   //save current's state
-  curr->cpu_state = CPU;
+  curr->cpu_state = THE_CPU;
   curr->state = READY;
 
   //start the next process
-  CPU = nxt->cpu_state;
-  nxt->state = RUNNIG;
+  THE_CPU = nxt->cpu_state;
+  nxt->state = RUNNING;
 
   printf("Switched from process (PID: %d) to process (PID: %d)", curr->pid, nxt->pid);
 }
@@ -52,17 +54,43 @@ void context_switch(int current, int next)
 //yo @david @brysen ya'll know how to do this
 void scheduler()
 {
-  for(int i = 0; i < num_proccesses; i++)
+  while(true)
   {
-    if(PROCESS_TABLE[i].state == FINISHED){continue;}
-    int time = PROCESS_TIME;
-    while(time)
+    Process* proc = &PROCESS_TABLE[current_process];
+    if(proc->state == FINISHED)
     {
-      CPU = PROCESS_TABLE[i].cpu_state;
+      current_process = next_process;
+      continue;
+    }
+
+    proc->state = RUNNING;
+    THE_CPU = proc->cpu_state;
+
+    for(int i = 0; i < PROCESS_TIME; i++)
+    {
       fetch();
       execute();
-      time--;
+      //check_for_interrupt();
+
+      if(proc->cpu_state.registers[PC] == CPU_HALT)
+        break;
+
     }
-    //figure out what to do if a process finishes it's instructions
+
+    proc->cpu_state = THE_CPU;
+
+    context_switch(current_process, next_process);
+    current_process = next_process;
+
+    bool all_done = true;
+    for (int j = 0; j < num_processes; j++)
+    {
+      if (PROCESS_TABLE[j].state != FINISHED)
+      {
+        all_done = false;
+        break;
+      }
+    }
+    if (all_done) break;
   }
 }

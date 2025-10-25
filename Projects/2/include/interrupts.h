@@ -8,8 +8,6 @@
 #define MAX_INTERRUPTS 128
 #define CALLSTACK_SIZE 128
 
-//#define INTERRUPTFLAG 1 //flag to signal interrupt
-
 typedef enum irq{
     SAY_HI = 0x1,
     SAY_GOODBYE,
@@ -33,6 +31,9 @@ typedef struct {
 
 //Initialize the interrupt controller
 void init_interrupt_controller(void);
+
+// Free up memory from the interupt controller
+void free_interrupt_controller(void);
 
 //Add an interrupt to the queue to be handled
 void add_interrupt(IRQ irq, int priority); 

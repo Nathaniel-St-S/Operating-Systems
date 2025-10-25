@@ -5,44 +5,27 @@
 #include "../include/interrupts.h"
 
 //CPU to control execution
-Cpu CPU;
+Cpu THE_CPU;
 
 /* --- core ---------------------------------------------------------------- */
-
-//initialize the flags of the given cpu
-  void init_flags(Flags* flags) {
-    flags->ZERO      = UNSET_FLAG;
-    flags->CARRY     = UNSET_FLAG;
-    flags->OVERFLOW  = UNSET_FLAG;
-    flags->INTERRUPT = UNSET_FLAG;
-  
-  }
 
 void init_cpu(Cpu* cpu)
 {
   cpu->registers[PC]  = MEM_START;
   cpu->registers[IR]  = EMPTY_REG;
+  cpu->registers[FLAG] = F_ZERO;
   cpu->registers[ACC] = 0;
-  init_flags(&cpu->flags);
+  // init_flags(&cpu->flags);
   printf("Initialized the cpu!\n");
   cpu_print_state();
 }
 
 // Fetch the next instruction from the given memory and cpu and increments the program counter
 void fetch() {
-  CPU.registers[IR] = read_mem(CPU.registers[PC]);
-  CPU.registers[PC]++;
+  THE_CPU.registers[IR] = read_mem(THE_CPU.registers[PC]);
+  THE_CPU.registers[PC]++;
 }
 
-/*
-// Decodes the given instruction into its operator and operand
-Decoded decode (word instruction) {
-  Decoded d;
-  d.op   = (OP)((instruction & 0xF000u) >> 12);
-  d.addr = (mem_addr)(instruction & 0x0FFFu);
-  return d;
-}
-*/
 word decode(word instruction)
 {
   word op = instruction >> 12;
@@ -50,7 +33,7 @@ word decode(word instruction)
 }
 // Executes the instruction in the given cpu's IR with the given RAM
 void execute() {
-  word instruction = CPU.registers[IR];
+  word instruction = THE_CPU.registers[IR];
   //Decoded d = decode(instruction);
   //OP opcode = d.op;
   //mem_addr operand = d.addr;
@@ -66,12 +49,12 @@ void cpu_run(const int program_size, word* mem) {
   int i = 0;
 
   start:
-    if (!(i < program_size && CPU.registers[PC] != CPU_HALT))
+    if (!(i < program_size && THE_CPU.registers[PC] != CPU_HALT))
       goto end;
 
     printf("=== Cycle %d ===\n", i + 1);
 
-    if (CPU.registers[PC] == CPU_HALT) {
+    if (THE_CPU.registers[PC] == CPU_HALT) {
       printf("CPU Halted!\n");
       goto end;
     }
@@ -91,12 +74,12 @@ void cpu_run(const int program_size, word* mem) {
 // Prints the state of the given CPU
 void cpu_print_state() {
   printf("CPU STATE\n");
-  printf("PC:  %X\n", CPU.registers[PC]);
-  printf("ACC: %X\n", CPU.registers[PC]);
-  printf("IR:  %X\n", CPU.registers[IR]);
+  printf("PC:  %X\n", THE_CPU.registers[PC]);
+  printf("ACC: %X\n", THE_CPU.registers[ACC]);
+  printf("IR:  %X\n", THE_CPU.registers[IR]);
   printf("FLAGS:\n");
-  printf("  ZERO:      %1d\n", CPU.flags.ZERO);
-  printf("  CARRY:     %1d\n", CPU.flags.CARRY);
-  printf("  OVERFLOW:  %1d\n", CPU.flags.OVERFLOW);
-  printf("  INTERRUPT: %1d\n\n\n", CPU.flags.INTERRUPT);
+  printf("  ZERO:      %1d\n", (THE_CPU.registers[FLAG] >> 0) & 1);
+  printf("  OVERFLOW:  %1d\n", (THE_CPU.registers[FLAG] >> 1) & 1);
+  printf("  CARRY:     %1d\n\n\n", (THE_CPU.registers[FLAG] >> 2) & 1);
+  //printf("  INTERRUPT: %1d\n\n\n", THE_CPU.registers[FLAG] >> 0) & 1);
 }

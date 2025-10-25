@@ -7,41 +7,46 @@
 #define UNSET_FLAG 0
 #define MEM_START 0
 
-typedef struct {
-  int ZERO;
-  int CARRY;
-  int OVERFLOW;
-  int INTERRUPT;
-} Flags;
-
+// Interupt codes
 enum
 {
-    AX = 0,
-    BX,
-    CX,
-    DX,
-    EX,
-    PC,
-    IR,
-    ACC,
-    COUNT
+  INT_GETC = 0x20,  /* get character from keyboard, not echoed onto the terminal */
+  INT_OUT = 0x21,   /* output a character */
+  INT_PUTS = 0x22,  /* output a word string */
+  INT_IN = 0x23,    /* get character from keyboard, echoed onto the terminal */
+  INT_PUTSP = 0x24, /* output a byte string */
+  INT_HALT = 0x25   /* halt the program */
 };
 
-typedef struct {
-  word registers[COUNT];
-  Flags flags;
-} Cpu;
+// CPU flags
+enum
+{
+  F_ZERO  = 1 << 0, /* zero flag */
+  F_OVFLW = 1 << 1, /* overflow flag */
+  F_CARRY = 1 << 2, /* carry flag */
+  F_POS   = 1 << 3, /* positive flag */
+  F_NEG   = 1 << 4  /* negative flag */
+};
 
-/**
- * Represents the lower 4 and upper 12 bits from a instruction.
- *
-typedef struct {
-  word op;
-  word addr;
-} Decoded;
-*/
+// Registers
+enum
+{
+  AX = 0,
+  BX,
+  CX,
+  DX,
+  EX,
+  PC,
+  IR,
+  ACC,
+  FLAG,
+  COUNT
+};
+
+typedef struct Cpu { word registers[COUNT]; } Cpu;
+
 //CPU to control execution
-extern Cpu CPU;
+extern Cpu THE_CPU;
 
 //initialize a CPU to fetch, decode, and execute instructions
 void init_cpu(Cpu* cpu);
