@@ -5,7 +5,7 @@
 - [✓] Module 3: Process Scheduling and Multitasking
 - [✓] Module 4: Interrupt Handling and Dispatcher
 - [✓] Module 5: Multithreading or Forking
-- [ ] Documentation
+- [✓] Documentation
 
 ## To Install 
 To compile this project, it is recommended to install `make`.
