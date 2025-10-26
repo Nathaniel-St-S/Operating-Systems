@@ -74,6 +74,10 @@ void cpu_run(const int program_size, dword* mem) {
 // Prints the state of the given CPU
 void cpu_print_state() {
   printf("CPU STATE\n");
+  printf("  AX: 0x%X\n", THE_CPU.registers[AX]);
+  printf("  BX: 0x%X\n", THE_CPU.registers[BX]);
+  printf("  CX: 0x%X\n", THE_CPU.registers[CX]);
+  printf("  DX: 0x%X\n", THE_CPU.registers[DX]);
   printf("PC:  %X\n", THE_CPU.registers[PC]);
   printf("ACC: %X\n", THE_CPU.registers[ACC]);
   printf("IR:  %X\n", THE_CPU.registers[IR]);

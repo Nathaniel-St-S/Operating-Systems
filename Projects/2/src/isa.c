@@ -7,20 +7,28 @@
 /*-----------------------------Flag Setters-----------------------------*/
 
 // Sets the zero flag of the given cpu to 1 if the value is 0, 0 otherwise
-void set_nzp_flag(dword value) {
-  CLEAR_ALL_FLAGS;
+// void set_nzp_flag(dword value) {
+//   CLEAR_ALL_FLAGS;
+// 
+//   sdword svalue = (sdword)value;
+// 
+//   if (svalue == 0){
+//     SET_FLAG(F_ZERO);
+//   }
+//   else if (svalue < 0){
+//     SET_FLAG(F_NEG);
+//   }
+//   else
+//   {SET_FLAG(F_POS);
+//   }
+// }
 
-  sdword svalue = (sdword)value;
+// Sets the zero flag of the given cpu to 1 if the value is 0, 0 otherwise
+void set_zero_flag(dword value)
+{
+  CLEAR_FLAG(F_ZERO);
 
-  if (svalue == 0){
-    SET_FLAG(F_ZERO);
-  }
-  else if (svalue < 0){
-    SET_FLAG(F_NEG);
-  }
-  else
-  {SET_FLAG(F_POS);
-  }
+  if(value == 0){SET_FLAG(F_ZERO); return;}
 }
 
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a + b = r
@@ -40,7 +48,7 @@ void set_add_flags(dword a, dword b, dword r) {
     SET_FLAG(F_OVFLW);
   }
   
-  set_nzp_flag(r);
+  set_zero_flag(r);
 }
 
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a - b = r
@@ -63,7 +71,7 @@ void set_sub_flags(dword a, dword b, dword r) {
     SET_FLAG(F_OVFLW);
   }
 
-  set_nzp_flag(r);
+  set_zero_flag(r);
 }
 
 // Set the zero, carry, and OF :P flags for multiplication
@@ -83,7 +91,7 @@ void set_mul_flags(dword a, dword b, dword r)
     SET_FLAG(F_OVFLW);
   }
 
-  set_nzp_flag(r);
+  set_zero_flag(r);
 }
 
 // Set the flags for division
@@ -95,7 +103,7 @@ void set_div_flags(dword a, dword b, dword r)
 
   if((sdword)a == INT32_MIN && (sdword)b == -1){SET_FLAG(F_OVFLW);}
 
-  set_nzp_flag(r);
+  set_zero_flag(r);
 }
 
 /*-----------------------------Helpers-----------------------------*/
@@ -262,7 +270,7 @@ void bit_and(const dword instruction)
     dword sr2 = instruction & 0xF;
     THE_CPU.registers[dr] = THE_CPU.registers[sr1] & THE_CPU.registers[sr2];
   }
-  set_nzp_flag(THE_CPU.registers[dr]);
+  set_zero_flag(THE_CPU.registers[dr]);
 }
 
 // Performs bitwise or on the cpu's ACC rgister and the value at the given
@@ -289,7 +297,7 @@ void bit_or(const dword instruction)
     dword sr2 = instruction & 0xF;
     THE_CPU.registers[dr] = THE_CPU.registers[sr1] | THE_CPU.registers[sr2];
   }
-  set_nzp_flag(THE_CPU.registers[dr]); 
+  set_zero_flag(THE_CPU.registers[dr]); 
 }
 
 // Perform bitwise xor on the source register and loads it into destination register
@@ -317,7 +325,7 @@ void bit_xor(dword instruction)
     THE_CPU.registers[dr] = THE_CPU.registers[sr1] ^ THE_CPU.registers[sr2];
   }
 
-  set_nzp_flag(THE_CPU.registers[dr]);
+  set_zero_flag(THE_CPU.registers[dr]);
 }
 
 // Performs bitwise not on the source register and loads it into destination register
@@ -332,7 +340,7 @@ void bit_not(const dword instruction)
 
   THE_CPU.registers[dr] = ~THE_CPU.registers[sr1];
 
-  set_nzp_flag(THE_CPU.registers[dr]);
+  set_zero_flag(THE_CPU.registers[dr]);
 }
 
 // Conditionally branch the CPU depending on the status of the zero, overflow
@@ -437,7 +445,7 @@ void load(const dword instruction)
   sdword offset = sign_extend(instruction & IMM_MASK, 20);
 
   THE_CPU.registers[dr] = read_mem(THE_CPU.registers[PC] + offset);
-  set_nzp_flag(THE_CPU.registers[dr]);
+  set_zero_flag(THE_CPU.registers[dr]);
 }
 
 // An address is computed by sign-extending bits [8:0] to 16 bits and adding this
@@ -449,7 +457,7 @@ void load_effective_address(const dword instruction)
   sdword offset = sign_extend(instruction & IMM_MASK, 20);
 
   THE_CPU.registers[dr] = THE_CPU.registers[PC] + offset;
-  set_nzp_flag(THE_CPU.registers[dr]);
+  set_zero_flag(THE_CPU.registers[dr]);
 }
 
 // An address is computed by sign-extending bits [5:0] to 16 bits and adding this
@@ -463,7 +471,7 @@ void load_register(const dword instruction)
   sdword offset = sign_extend(instruction & REG_MASK, 16);
 
   THE_CPU.registers[dr] = read_mem(THE_CPU.registers[br] + offset);
-  set_nzp_flag(THE_CPU.registers[dr]); 
+  set_zero_flag(THE_CPU.registers[dr]); 
 }
 
 // An address is computed by sign-extending bits [8:0] to 16 bits and adding this
@@ -477,7 +485,7 @@ void load_indirect(const dword instruction)
 
   THE_CPU.registers[dr] = read_mem(read_mem(THE_CPU.registers[PC] + offset));
 
-  set_nzp_flag(THE_CPU.registers[dr]);
+  set_zero_flag(THE_CPU.registers[dr]);
 }
 
 // get a single ascii charachter from BX

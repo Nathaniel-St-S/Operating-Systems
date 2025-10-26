@@ -24,8 +24,8 @@ enum
   F_ZERO  = 1 << 0, /* zero flag */
   F_OVFLW = 1 << 1, /* overflow flag */
   F_CARRY = 1 << 2, /* carry flag */
-  F_POS   = 1 << 3, /* positive flag */
-  F_NEG   = 1 << 4  /* negative flag */
+  //F_POS   = 1 << 3, /* positive flag */
+  //F_NEG   = 1 << 4  /* negative flag */
 };
 
 // Registers
@@ -35,7 +35,6 @@ enum
   BX,
   CX,
   DX,
-  EX,
   PC,
   IR,
   ACC,
@@ -50,18 +49,6 @@ extern Cpu THE_CPU;
 
 //initialize a CPU to fetch, decode, and execute instructions
 void init_cpu(Cpu* cpu);
-
-// Sets the zero flag of the given cpu to 1 if the value is 0, 0 otherwise
-//void set_zero_flag(dword value);
-
-//Sets the interrupt flag of the cpu to the given interrupt irq
-//void set_interrupt_flag(bool enabled);
-
-// Sets the carry, overflow, and zero flags of the given cpu based on the given a + b = r
-//void set_add_flags(dword a, dword b, dword r);
-
-// Sets the carry, overflow, and zero flags of the given cpu based on the given a - b = r
-//void set_sub_flags(dword a, dword b, dword r);
 
 // Fetch the next instruction from the given memory and cpu
 // and increments the program counter
