@@ -2,6 +2,26 @@
 #include "../include/memory.h"
 #include "../include/interrupts.h"
 #include "../include/dma.h"
+#include "../include/processes.h"
+#include <pthread.h>
+#include <unistd.h>
+
+void* timer_thread(void* arg) {
+    while (1) {
+        sleep(1);
+        add_interrupt(SAY_HI, 3);
+    }
+    return NULL;
+}
+
+void* io_thread(void* arg) {
+    while (1) {
+        sleep(2);
+        add_interrupt(SAY_GOODBYE, 2);
+    }
+    return NULL;
+}
+
 
 int main()
 {
@@ -20,41 +40,15 @@ int main()
   //initialize the cpu
 	init_cpu(&THE_CPU);
 
-  //memory adresses for later
-  write_mem(0x0100, 0x0100);
+  // TODO - Create a threads for each of the modules
 
-	//write some random instructions to memory
-	write_mem(0x0, 0x5001);
-	write_mem(0x1, 0x5002);
-	write_mem(0x2, 0x5003);
+  // Launch asynchronous interrupt sources
+  pthread_t timer_thrd, io_thrd;
+  pthread_create(&timer_thrd, NULL, timer_thread, NULL);
+  pthread_create(&io_thrd, NULL, io_thread, NULL);
 
-	initiateDMA(RAM, HDD, 100);
+  // TODO - execute the cpu and threads in a multithreaded environment
 
-	write_mem(0x3, 0x5004);
-	write_mem(0x4, 0x6004);
-	write_mem(0x5, 0x6003);
-
-  add_interrupt(0x0001, 5);
-
-	write_mem(0x6, 0x6002);
-	write_mem(0x7, 0x6001);
-
-	initiateDMA(HDD, SSD, 25);
-
-	write_mem(0x8, 0x1100);
-	write_mem(0x9, 0x5050);
-
-	initiateDMA(RAM, SSD, 50);
-
-	write_mem(0xA, 0x200C);
-
-  add_interrupt(0x0002, 1);
-
-	initiateDMA(SSD, HDD, 200);
-
-	write_mem(0xB, 0xF000);
-	
-  
   cpu_run(20, RAM);
   print_cache_stats();
   printf("saved memory value == %X", read_mem(0x000C));
@@ -65,5 +59,11 @@ int main()
 	free(RAM);
   free(HDD);
   free(SSD);
+
+  pthread_cancel(timer_thrd);
+  pthread_cancel(io_thrd);
+  pthread_join(timer_thrd, NULL);
+  pthread_join(io_thrd, NULL);
+
 	return 0;
 }
