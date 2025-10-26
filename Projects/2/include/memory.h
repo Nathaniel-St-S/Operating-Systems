@@ -13,7 +13,7 @@
 
 #define EMPTY_ADDR -1
 #define NO_PID -1
-#define NO_VAL ((word) - 1)
+#define NO_VAL ((dword) - 1)
 
 /*
 Individual entries in the cache
@@ -21,8 +21,8 @@ stores data as a key value pair
 of memory adress and associated value
 */
 typedef struct {
-  word val;
-  mem_addr addr;
+  dword val;
+  dword addr;
 } Entry;
 
 /*
@@ -49,8 +49,8 @@ of wether the memory is safe to be free'd
 */
 typedef struct {
   int pid;
-  mem_addr start_addr;
-  mem_addr end_addr;
+  dword start_addr;
+  dword end_addr;
   bool is_free;
 } MemoryBlock;
 
@@ -76,7 +76,7 @@ extern Cache L1;
 extern Cache L2;
 
 // Ram, large amounts of storage but very slow
-extern word *RAM;
+extern dword *RAM;
 
 /*
 Table to keep track of all the processes
@@ -85,10 +85,10 @@ and their associated memory blocks
 //extern MemoryBlock *MEMORY_TABLE;
 
 // HDD,
-extern word *HDD;
+extern dword *HDD;
 
 // SSD
-extern word *SSD;
+extern dword *SSD;
 
 // Initialize the cache to the given size
 void init_cache(Cache *cache, int size);
@@ -103,16 +103,16 @@ void init_SSD(const int size);
 void init_HDD(const int size);
 
 // return the value at the given memory adress
-word read_mem(mem_addr addr);
+dword read_mem(dword addr);
 
 // write the given value to the given memory adress.
-void write_mem(mem_addr addr, const word val);
+void write_mem(dword addr, const dword val);
 
 // print the number of cache hits & misses
 void print_cache_stats(void);
 
 // allocate some memory for a process
-mem_addr mallocate(int pid, int size);
+dword mallocate(int pid, int size);
 
 // free up memory associated with a process
 void liberate(int pid);

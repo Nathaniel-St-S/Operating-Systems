@@ -26,24 +26,24 @@ void fetch() {
   THE_CPU.registers[PC]++;
 }
 
-word decode(word instruction)
+dword decode(dword instruction)
 {
-  word op = instruction >> 12;
+  dword op = (instruction >> OPCODE_SHIFT);
   return op;
 }
 // Executes the instruction in the given cpu's IR with the given RAM
 void execute() {
-  word instruction = THE_CPU.registers[IR];
+  dword instruction = THE_CPU.registers[IR];
   //Decoded d = decode(instruction);
   //OP opcode = d.op;
   //mem_addr operand = d.addr;
-  word op = decode(instruction);
+  dword op = decode(instruction);
 
   execute_instruction(op, instruction);
 }
 
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
-void cpu_run(const int program_size, word* mem) {
+void cpu_run(const int program_size, dword* mem) {
   (void)mem; // unused here
 
   int i = 0;

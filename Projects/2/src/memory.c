@@ -11,13 +11,13 @@ Cache L1;
 //L2 cache
 Cache L2;
 //RAM
-word* RAM = NULL;
+dword* RAM = NULL;
 //Memory Table
 MemoryTable MEMORY_TABLE;
 //HDD
-word* HDD = NULL;
+dword* HDD = NULL;
 //SSD
-word* SSD = NULL;
+dword* SSD = NULL;
 //working ram size
 int WRS;
 
@@ -65,7 +65,7 @@ void init_memtable(const int size)
 void init_ram(const int size)
 {
   WRS = size;
-	RAM = (word*)malloc(sizeof(word) * size);
+	RAM = (dword*)malloc(sizeof(dword) * size);
 	for(int i = 0; i < size; i++)
 	{
 		RAM[i] = NO_VAL;
@@ -76,7 +76,7 @@ void init_ram(const int size)
 
 //initializes the SSD to the given size 
 void init_SSD(const int size) {
-	SSD = (word*)malloc(sizeof(word) * size);
+	SSD = (dword*)malloc(sizeof(dword) * size);
 	for(int i = 0; i < size; i++)
 	{
 		SSD[i] = NO_VAL;
@@ -85,7 +85,7 @@ void init_SSD(const int size) {
 
 //initializes the HDD to the given size 
 void init_HDD(const int size) {
-	HDD = (word*)malloc(sizeof(word) * size);
+	HDD = (dword*)malloc(sizeof(dword) * size);
 	for(int i = 0; i < size; i++)
 	{
 		HDD[i] = NO_VAL;
@@ -95,7 +95,7 @@ void init_HDD(const int size) {
 /*------------------------------------Helper Functions------------------------------------*/
 
 //find the address of the value if it exists in cache
-int cache_search(Cache* cache, const mem_addr addr)
+int cache_search(Cache* cache, const dword addr)
 {
 	for(int i = 0; i < cache->size; i++)
 	{
@@ -111,7 +111,7 @@ int cache_search(Cache* cache, const mem_addr addr)
 }
 
 //Update the given cache in case of misses
-void update_cache(Cache* cache, const mem_addr addr, const word val)
+void update_cache(Cache* cache, const dword addr, const dword val)
 {
 	//calculate where in the cache to store the value
 	int index = (cache->front + cache->count) % cache->size;
@@ -136,7 +136,7 @@ void update_cache(Cache* cache, const mem_addr addr, const word val)
 /*------------------------------------External Functions / API------------------------------------*/
 
 //return the value at the given memory address
-word read_mem(const mem_addr addr)
+dword read_mem(const dword addr)
 {
 	int index;
 	index = cache_search(&L1, addr);
@@ -155,7 +155,7 @@ word read_mem(const mem_addr addr)
 	{
 		//Cache hit at l2
 		L2cache_hit++;
-		word val = L2.items[index].val;
+		dword val = L2.items[index].val;
 		//Update L1 cache to prevent future cache misses
 		update_cache(&L1, addr, val);
 		return val;
@@ -164,14 +164,14 @@ word read_mem(const mem_addr addr)
 	L2cache_miss++;
 
 	//Complete cache miss, so read RAM and update cache
-	word val = RAM[addr];
+	dword val = RAM[addr];
 	update_cache(&L1, addr, val);
 	update_cache(&L2, addr, val);
 	return val;
 }
 
 //write the given value to the given memory address.
-void write_mem(const mem_addr addr, const word val)
+void write_mem(const dword addr, const dword val)
 {
 	RAM[addr] = val;
 
@@ -194,7 +194,7 @@ void write_mem(const mem_addr addr, const word val)
 
 // allocate memory for a specific process
 // using the best fit method
-mem_addr mallocate(int pid, int size)
+dword mallocate(int pid, int size)
 {
   int best_size = WRS + 1;
   int index = -1;
@@ -224,10 +224,10 @@ mem_addr mallocate(int pid, int size)
   MemoryBlock* best_fit = &MEMORY_TABLE.blocks[index];
 
   //save the old start and end addresses
-  mem_addr old_start_addr = best_fit->start_addr;
-  mem_addr old_end_addr = best_fit->end_addr;
+  dword old_start_addr = best_fit->start_addr;
+  dword old_end_addr = best_fit->end_addr;
 
-  mem_addr new_end_addr = (old_start_addr + size) - 1;
+  dword new_end_addr = (old_start_addr + size) - 1;
 
   //give the process the space
   best_fit->pid = pid;

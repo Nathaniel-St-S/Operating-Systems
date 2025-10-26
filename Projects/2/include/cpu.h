@@ -3,7 +3,7 @@
 
 #include "isa.h"
 
-#define EMPTY_REG ((word) - 1)
+#define EMPTY_REG ((dword) - 1)
 #define UNSET_FLAG 0
 #define MEM_START 0
 
@@ -43,7 +43,7 @@ enum
   COUNT
 };
 
-typedef struct Cpu { word registers[COUNT]; } Cpu;
+typedef struct Cpu { dword registers[COUNT]; } Cpu;
 
 //CPU to control execution
 extern Cpu THE_CPU;
@@ -52,29 +52,29 @@ extern Cpu THE_CPU;
 void init_cpu(Cpu* cpu);
 
 // Sets the zero flag of the given cpu to 1 if the value is 0, 0 otherwise
-//void set_zero_flag(word value);
+//void set_zero_flag(dword value);
 
 //Sets the interrupt flag of the cpu to the given interrupt irq
 //void set_interrupt_flag(bool enabled);
 
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a + b = r
-//void set_add_flags(word a, word b, word r);
+//void set_add_flags(dword a, dword b, dword r);
 
 // Sets the carry, overflow, and zero flags of the given cpu based on the given a - b = r
-//void set_sub_flags(word a, word b, word r);
+//void set_sub_flags(dword a, dword b, dword r);
 
 // Fetch the next instruction from the given memory and cpu
 // and increments the program counter
 void fetch(void);
 
 // Decodes the given instruction into its operator and operand
-word decode(word instruction);
+dword decode(dword instruction);
 
 // Executes the instruction in the given cpu's IR with the given RAM
 void execute(void);
 
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
-void cpu_run(int program_size, word* mem);
+void cpu_run(int program_size, dword* mem);
 
 // Prints the state of the given CPU
 void cpu_print_state(void);

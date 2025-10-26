@@ -23,8 +23,8 @@ typedef struct
 typedef struct
 {
   int pid;
-  // word start_addr;
-  // word end_addr;
+  // dword start_addr;
+  // dword end_addr;
   ProcessState state;
   Cpu cpu_state;
   //Thread* threads;

@@ -7,6 +7,7 @@ int current_process = 0;
 //RUNNING
 //WAITING
 //READY
+//FINISHED
 int num_processes = 0;
 
 //Get the next process

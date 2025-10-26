@@ -39,6 +39,9 @@ int main()
 
   //initialize the cpu
 	init_cpu(&THE_CPU);
+  
+  //initialize the process table
+  init_processes();
 
   // TODO - Create a threads for each of the modules
 
