@@ -1,11 +1,11 @@
 
-### Project 1 - Basic Computer System Simulator
-- [✓] Module 1: CPU and Instruction Cycle
-- [✓] Module 2: Memory Management
-- [✓] Module 3: Process Scheduling and Multitasking
-- [✓] Module 4: Interrupt Handling and Dispatcher
-- [✓] Module 5: Multithreading or Forking
-- [✓] Documentation
+### Project 2
+- [x] Module 1: CPU and Instruction Cycle
+- [x] Module 2: Memory Management
+- [x] Module 3: Process Scheduling and Multitasking
+- [x] Module 4: Interrupt Handling and Dispatcher
+- [x] Module 5: Multithreading or Forking
+- [x] Documentation
 
 ## To Install 
 To compile this project, it is recommended to install `make`.
