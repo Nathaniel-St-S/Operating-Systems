@@ -9,9 +9,11 @@
 #define RAM_SIZE 500
 #define SSD_SIZE 250
 #define HDD_SIZE 1000
+#define MAX_MEM_BLOCKS 500
 
 #define EMPTY_ADDR -1
-#define NO_VAL ((word) - 1)
+#define NO_PID -1
+#define NO_VAL ((dword) - 1)
 
 /*
 Individual entries in the cache
@@ -19,8 +21,8 @@ stores data as a key value pair
 of memory adress and associated value
 */
 typedef struct {
-  word val;
-  mem_addr addr;
+  dword val;
+  dword addr;
 } Entry;
 
 /*
@@ -38,9 +40,34 @@ typedef struct {
   int size;
 } Cache;
 
+/*
+Memory block data structure that tracks
+the appropriate starting and ending adresses
+for the memory associated with a specific process
+will also have a boolean 'isfree' for keeping track
+of wether the memory is safe to be free'd
+*/
+typedef struct {
+  int pid;
+  dword start_addr;
+  dword end_addr;
+  bool is_free;
+} MemoryBlock;
+
+/*
+Memory Table data structure to keep track of
+the number of memory blocks and where they're
+allocated
+*/
+typedef struct
+{
+  MemoryBlock *blocks;
+  int block_count;
+} MemoryTable;
+
 // Track the number of misses for stats
-extern int L1cache_hit, L1cache_miss;
-extern int L2cache_hit, L2cache_miss;
+//extern int L1cache_hit, L1cache_miss;
+//extern int L2cache_hit, L2cache_miss;
 
 // Level 1 cache, small and quick
 extern Cache L1;
@@ -49,13 +76,19 @@ extern Cache L1;
 extern Cache L2;
 
 // Ram, large amounts of storage but very slow
-extern word *RAM;
+extern dword *RAM;
+
+/*
+Table to keep track of all the processes
+and their associated memory blocks
+*/
+//extern MemoryBlock *MEMORY_TABLE;
 
 // HDD,
-extern word *HDD;
+extern dword *HDD;
 
 // SSD
-extern word *SSD;
+extern dword *SSD;
 
 // Initialize the cache to the given size
 void init_cache(Cache *cache, int size);
@@ -70,12 +103,17 @@ void init_SSD(const int size);
 void init_HDD(const int size);
 
 // return the value at the given memory adress
-word read_mem(mem_addr addr);
+dword read_mem(dword addr);
 
 // write the given value to the given memory adress.
-void write_mem(mem_addr addr, const word val);
+void write_mem(dword addr, const dword val);
 
 // print the number of cache hits & misses
 void print_cache_stats(void);
 
+// allocate some memory for a process
+dword mallocate(int pid, int size);
+
+// free up memory associated with a process
+void liberate(int pid);
 #endif

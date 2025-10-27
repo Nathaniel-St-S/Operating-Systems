@@ -2,28 +2,55 @@
 #define ISA_H
 #include "types.h"
 
-#define CPU_HALT (word)0xFFFF
+#define CPU_HALT (dword)0xFFFFFFFF
+#define SET_FLAG(flag)   (THE_CPU.registers[FLAG] |= (flag))
+#define CLEAR_FLAG(flag) (THE_CPU.registers[FLAG] &= ~(flag))
+#define CLEAR_ALL_FLAGS  (THE_CPU.registers[FLAG] = 0)
 
-/**
- * The supported operations of the CPU
- */
-typedef enum {
-  LOAD = 0x1,
-  STORE = 0x2,
-  ADD = 0x3,    // ACC + x
-  SUB = 0x4,    // ACC - x
-  MUL = 0x5,    // ACC * x
-  DIV = 0x6,    // ACC / x
-  AND = 0x7,    // ACC & x
-  OR = 0x8,     // ACC | x
-  JMP = 0x9,    // Jump to a specified memory address
-  JZ = 0xA,     // My favorite rapper
-  INTR = 0xB,   // Interrupt
-  ENDINT = 0xC, // End Interrupt
-  HALT = 0xF
-} OP;
+#define OPCODE_SHIFT 24
+#define OPCODE_MASK  0xFF000000
+
+#define DR_SHIFT     20
+#define DR_MASK      0x00F00000
+
+#define SR1_SHIFT    16
+#define SR1_MASK     0x000F0000
+
+#define MODE_SHIFT   12
+#define MODE_MASK    0x0000F000
+
+#define OPERAND_MASK 0x00000FFF
+
+#define IMM_MASK 0xFFFFF
+#define REG_MASK 0xFFFF
+
+
+// Opcodes
+enum
+{
+  ADD = 0x0,
+  SUB,
+  MUL,
+  DIV,
+  AND,
+  OR,
+  XOR,
+  NOT,
+  BRANCH,
+  JUMP,
+  JUMPR,
+  JUMPZ,
+  STORE,
+  STRR,
+  STRI,
+  LOAD,
+  LEA,
+  LDR,
+  LDI,
+  INTR,
+};
 
 // execute instruction based off of opcode
-void execute_instruction(OP op, mem_addr addr);
+void execute_instruction(dword op, dword isntruction);
 
 #endif

@@ -4,6 +4,6 @@
 #include "types.h"
 
 //Starts the DMA transfer
-void initiateDMA(word* source, word* destination, int size);
+void initiateDMA(dword* source, dword* destination, int size);
 
 #endif

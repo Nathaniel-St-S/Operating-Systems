@@ -4,9 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef int16_t word;
-typedef uint16_t uword;
-typedef uint16_t instr;
-typedef uint16_t mem_addr;
+typedef int16_t  sword;
+typedef uint16_t word;
+typedef uint32_t dword;
+typedef int32_t sdword;
 
+//typedef uint32_t instr;
+//typedef uint32_t mem_addr;
 #endif

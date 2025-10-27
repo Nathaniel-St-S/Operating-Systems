@@ -2,7 +2,7 @@
 #include "../include/dma.h"
 
 //Transfers size amount of memory from source location to destination location
-void dmaTransfer(word* source, word* destination, int size) {
+void dmaTransfer(dword* source, dword* destination, int size) {
     for (int i = 0; i < size; i++) {
         *destination = *source;
         destination++;
@@ -11,6 +11,6 @@ void dmaTransfer(word* source, word* destination, int size) {
 }
 
 //Starts the DMA transfer
-void initiateDMA(word* source, word* destination, int size) {
+void initiateDMA(dword* source, dword* destination, int size) {
     dmaTransfer(source, destination, size);
 }
