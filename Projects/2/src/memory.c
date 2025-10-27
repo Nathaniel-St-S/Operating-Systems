@@ -49,14 +49,6 @@ void init_memtable(const int size)
   MEMORY_TABLE.blocks[0].start_addr = 0;
   MEMORY_TABLE.blocks[0].end_addr = (size - 1);
 
- // for(int i = 1; i < size; i ++)
- // {
- //  MEMORY_TABLE.blocks[i].pid = NO_PID;
- //  MEMORY_TABLE.blocks[i].is_free = true;
- //  MEMORY_TABLE.blocks[i].start_addr = EMPTY_ADDR;
- //  MEMORY_TABLE.blocks[i].end_addr = EMPTY_ADDR;
- // }
-
   MEMORY_TABLE.block_count = 1;
   printf("initialized memory table with size %d\n" , size);
 }
@@ -95,7 +87,7 @@ void init_HDD(const int size) {
 /*------------------------------------Helper Functions------------------------------------*/
 
 //find the address of the value if it exists in cache
-int cache_search(Cache* cache, const dword addr)
+int cache_search(Cache* cache, const dword addr, int* hit_counter, int* miss_counter)
 {
 	for(int i = 0; i < cache->size; i++)
 	{
@@ -103,11 +95,26 @@ int cache_search(Cache* cache, const dword addr)
 		//so return the index of that address
 		if(cache->items[i].addr == addr)
 		{
+      (*hit_counter)++;
 			return i;
 		}
 	}
 	//address not found so return signifier
+  (*miss_counter)++;
 	return EMPTY_ADDR;
+}
+// Searches the L1 cache and updates it's hit/miss counters
+static int L1_cache_search(const dword addr) {
+  return cache_search(&L1, addr, &L1cache_hit, &L1cache_miss);
+}
+// Searches the L2 cache and updates it's hit/miss counters
+static int L2_cache_search(const dword addr) {
+  return cache_search(&L2, addr, &L2cache_hit, &L2cache_miss);
+}
+// Does a cache search w/o tracking hits or misses
+static int cache_search_no_hit_miss(Cache* cache, const dword addr) {
+  int x = 0; int* dummy = &x;
+  return cache_search(cache, addr, dummy, dummy);
 }
 
 //Update the given cache in case of misses
@@ -139,29 +146,20 @@ void update_cache(Cache* cache, const dword addr, const dword val)
 dword read_mem(const dword addr)
 {
 	int index;
-	index = cache_search(&L1, addr);
+  // L1 Cache Search
+	index = L1_cache_search(addr);
 	if(index != EMPTY_ADDR)
-	{
-		//Cache hit at L1
-		L1cache_hit++;
 		return L1.items[index].val;
-	}
 
-	//cache miss at L1
-	L1cache_miss++;
-
-	index = cache_search(&L2, addr);
+  // L2 Cache Search
+	index = L2_cache_search(addr);
 	if(index != EMPTY_ADDR)
 	{
-		//Cache hit at l2
-		L2cache_hit++;
 		dword val = L2.items[index].val;
 		//Update L1 cache to prevent future cache misses
 		update_cache(&L1, addr, val);
 		return val;
 	}
-	//Cache miss at L2
-	L2cache_miss++;
 
 	//Complete cache miss, so read RAM and update cache
 	dword val = RAM[addr];
@@ -178,14 +176,14 @@ void write_mem(const dword addr, const dword val)
 	int index;
 	
 	//Update L1 Cache
-	index = cache_search(&L1, addr);
+	index = cache_search_no_hit_miss(&L1, addr);
 	if(index != EMPTY_ADDR)
 	{
 		L1.items[index].val = val;
 	}
 
 	//Update L2 Cache
-	index = cache_search(&L2, addr);
+	index = cache_search_no_hit_miss(&L2, addr);
 	if(index != EMPTY_ADDR)
 	{
 		L2.items[index].val = val;
