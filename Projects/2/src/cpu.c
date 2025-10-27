@@ -4,6 +4,11 @@
 #include "../include/isa.h"
 #include "../include/interrupts.h"
 
+// Decodes the given instruction into its operator and operand
+static dword decode(dword instruction);
+// Prints the state of the given CPU
+static void cpu_print_state(void);
+
 //CPU to control execution
 Cpu THE_CPU;
 
@@ -26,30 +31,26 @@ void fetch() {
   THE_CPU.registers[PC]++;
 }
 
-dword decode(dword instruction)
+static dword decode(dword instruction)
 {
   dword op = (instruction >> OPCODE_SHIFT);
   return op;
 }
+
 // Executes the instruction in the given cpu's IR with the given RAM
 void execute() {
   dword instruction = THE_CPU.registers[IR];
-  //Decoded d = decode(instruction);
-  //OP opcode = d.op;
-  //mem_addr operand = d.addr;
   dword op = decode(instruction);
 
   execute_instruction(op, instruction);
 }
 
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
-void cpu_run(const int program_size, dword* mem) {
-  (void)mem; // unused here
-
+void cpu_run(const int program_size) {
   int i = 0;
 
   start:
-    if (!(i < program_size && THE_CPU.registers[PC] != CPU_HALT))
+    if ((i >= program_size) || (THE_CPU.registers[PC] != CPU_HALT))
       goto end;
 
     printf("=== Cycle %d ===\n", i + 1);
@@ -72,7 +73,7 @@ void cpu_run(const int program_size, dword* mem) {
     ;
 }
 // Prints the state of the given CPU
-void cpu_print_state() {
+static void cpu_print_state() {
   printf("CPU STATE\n");
   printf("  AX: 0x%X\n", THE_CPU.registers[AX]);
   printf("  BX: 0x%X\n", THE_CPU.registers[BX]);

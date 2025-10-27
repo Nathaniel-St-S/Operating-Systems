@@ -54,16 +54,10 @@ void init_cpu(Cpu* cpu);
 // and increments the program counter
 void fetch(void);
 
-// Decodes the given instruction into its operator and operand
-dword decode(dword instruction);
-
 // Executes the instruction in the given cpu's IR with the given RAM
 void execute(void);
 
 // Runs the fetch-execution cycle program_size times or until a halt is encountered
-void cpu_run(int program_size, dword* mem);
-
-// Prints the state of the given CPU
-void cpu_print_state(void);
+void cpu_run(int program_size);
 
 #endif

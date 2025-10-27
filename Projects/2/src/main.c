@@ -256,7 +256,7 @@ int main() {
     printf("║        Advanced Operating System Simulator Demo              ║\n");
     printf("║              Project 2 - Fall 2025                           ║\n");
     printf("╚══════════════════════════════════════════════════════════════╝\n");
-    
+
     // ========== INITIALIZATION ==========
     printf("\n[INITIALIZATION PHASE]\n");
     printf("═══════════════════════\n");
@@ -302,7 +302,7 @@ int main() {
     printf("\nExecuting loaded CPU program...\n\n");
     
     // Run the CPU with the loaded program
-    cpu_run(7, RAM);
+    cpu_run(7);
     
     // ========== RESULTS AND STATISTICS ==========
     printf("\n[RESULTS AND STATISTICS]\n");
