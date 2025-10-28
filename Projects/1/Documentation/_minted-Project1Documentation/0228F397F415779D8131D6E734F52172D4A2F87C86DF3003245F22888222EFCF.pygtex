@@ -1,0 +1,19 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{// Runs the fetch\PYGZhy{}execution cycle program\PYGZus{}size times}
+\PYG{c+c1}{// or until a halt is encountered}
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{cpu\PYGZus{}run}\PYG{p}{(}\PYG{k}{const}\PYG{+w}{ }\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{program\PYGZus{}size}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{word}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{mem}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{k}{for}\PYG{+w}{ }\PYG{p}{(}\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{i}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mi}{0}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{i}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{program\PYGZus{}size}\PYG{+w}{ }\PYG{o}{\PYGZam{}\PYGZam{}}\PYG{+w}{ }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{PC}\PYG{+w}{ }\PYG{o}{!=}\PYG{+w}{ }\PYG{n}{CPU\PYGZus{}HALT}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{i}\PYG{o}{++}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}=== Cycle \PYGZpc{}d ===}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{i}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+m+mi}{1}\PYG{p}{);}
+
+\PYG{+w}{    }\PYG{k}{if}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{PC}\PYG{+w}{ }\PYG{o}{==}\PYG{+w}{ }\PYG{n}{CPU\PYGZus{}HALT}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{      }\PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}CPU Halted!}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+\PYG{+w}{      }\PYG{k}{break}\PYG{p}{;}
+\PYG{+w}{    }\PYG{p}{\PYGZcb{}}
+\PYG{+w}{    }\PYG{n}{fetch}\PYG{p}{();}
+\PYG{+w}{    }\PYG{n}{execute}\PYG{p}{();}
+\PYG{+w}{    }\PYG{n}{check\PYGZus{}for\PYGZus{}interrupt}\PYG{p}{();}
+
+\PYG{+w}{    }\PYG{n}{cpu\PYGZus{}print\PYGZus{}state}\PYG{p}{();}
+\PYG{+w}{  }\PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

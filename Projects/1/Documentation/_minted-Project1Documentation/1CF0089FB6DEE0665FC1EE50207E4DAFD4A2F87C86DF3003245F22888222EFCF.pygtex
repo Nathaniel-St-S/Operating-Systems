@@ -1,0 +1,15 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k+kt}{void}\PYG{+w}{ }\PYG{n+nf}{execute\PYGZus{}instruction}\PYG{p}{(}\PYG{k}{const}\PYG{+w}{ }\PYG{n}{OP}\PYG{+w}{ }\PYG{n}{opcode}\PYG{p}{,}\PYG{+w}{ }\PYG{k}{const}\PYG{+w}{ }\PYG{n}{mem\PYGZus{}addr}\PYG{+w}{ }\PYG{n}{operand}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{k}{switch}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{opcode}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{k}{case}\PYG{+w}{ }\PYG{n+no}{OP\PYGZus{}LOAD}\PYG{p}{:}\PYG{+w}{  }\PYG{n}{load}\PYG{p}{(}\PYG{n}{operand}\PYG{p}{);}\PYG{+w}{       }\PYG{k}{break}\PYG{p}{;}
+\PYG{+w}{    }\PYG{k}{case}\PYG{+w}{ }\PYG{n+no}{OP\PYGZus{}STORE}\PYG{p}{:}\PYG{+w}{ }\PYG{n}{store}\PYG{p}{(}\PYG{n}{operand}\PYG{p}{);}\PYG{+w}{      }\PYG{k}{break}\PYG{p}{;}
+\PYG{+w}{    }\PYG{k}{case}\PYG{+w}{ }\PYG{n+no}{OP\PYGZus{}ADD}\PYG{p}{:}\PYG{+w}{   }\PYG{n}{add}\PYG{p}{(}\PYG{n}{operand}\PYG{p}{);}\PYG{+w}{        }\PYG{k}{break}\PYG{p}{;}
+\PYG{+w}{    }\PYG{k}{case}\PYG{+w}{ }\PYG{n+no}{OP\PYGZus{}SUB}\PYG{p}{:}\PYG{+w}{   }\PYG{n}{sub}\PYG{p}{(}\PYG{n}{operand}\PYG{p}{);}\PYG{+w}{        }\PYG{k}{break}\PYG{p}{;}
+\PYG{+w}{    }\PYG{k}{case}\PYG{+w}{ }\PYG{n+no}{OP\PYGZus{}INTR}\PYG{p}{:}\PYG{+w}{  }\PYG{n}{interrupt}\PYG{p}{(}\PYG{n}{operand}\PYG{p}{);}\PYG{+w}{  }\PYG{k}{break}\PYG{p}{;}
+\PYG{+w}{    }\PYG{k}{case}\PYG{+w}{ }\PYG{n+no}{OP\PYGZus{}HALT}\PYG{p}{:}\PYG{+w}{  }\PYG{n}{halt}\PYG{p}{();}\PYG{+w}{              }\PYG{k}{break}\PYG{p}{;}
+\PYG{+w}{    }\PYG{k}{default}\PYG{o}{:}
+\PYG{+w}{      }\PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}ERROR: Invalid opcode \PYGZpc{}u (IR=0x\PYGZpc{}04X)}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{p}{(}\PYG{k+kt}{unsigned}\PYG{p}{)}\PYG{n}{opcode}\PYG{p}{,}
+\PYG{+w}{      }\PYG{p}{(}\PYG{k+kt}{unsigned}\PYG{p}{)}\PYG{n}{operand}\PYG{p}{);}
+\PYG{+w}{      }\PYG{n}{CPU}\PYG{p}{.}\PYG{n}{PC}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{CPU\PYGZus{}HALT}\PYG{p}{;\PYGZcb{}\PYGZcb{}}
+\end{Verbatim}

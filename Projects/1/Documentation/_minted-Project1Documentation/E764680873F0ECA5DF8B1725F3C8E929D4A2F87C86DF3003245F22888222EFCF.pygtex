@@ -1,0 +1,7 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{typedef}\PYG{+w}{ }\PYG{k}{enum}\PYG{+w}{ }\PYG{n}{irq}\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n}{SAY\PYGZus{}HI}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mh}{0x1}\PYG{p}{,}
+\PYG{+w}{    }\PYG{n}{SAY\PYGZus{}GOODBYE}\PYG{p}{,}
+\PYG{+w}{    }\PYG{n}{EOI}\PYG{p}{,}\PYG{+w}{ }\PYG{c+c1}{//end of interrupt}
+\PYG{p}{\PYGZcb{}}\PYG{+w}{ }\PYG{n}{IRQ}\PYG{p}{;}
+\end{Verbatim}

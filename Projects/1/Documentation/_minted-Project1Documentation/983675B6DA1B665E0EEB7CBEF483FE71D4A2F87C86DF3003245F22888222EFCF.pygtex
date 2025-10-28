@@ -1,0 +1,8 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{typedef}\PYG{+w}{ }\PYG{k}{struct}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{n}{word}\PYG{+w}{ }\PYG{n}{PC}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{word}\PYG{+w}{ }\PYG{n}{ACC}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{word}\PYG{+w}{ }\PYG{n}{IR}\PYG{p}{;}
+\PYG{+w}{  }\PYG{n}{Flags}\PYG{+w}{ }\PYG{n}{flags}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}\PYG{+w}{ }\PYG{n}{Cpu}\PYG{p}{;}\PYG{o}{\PYGZca{}\PYGZca{}}\PYG{n}{I}
+\end{Verbatim}

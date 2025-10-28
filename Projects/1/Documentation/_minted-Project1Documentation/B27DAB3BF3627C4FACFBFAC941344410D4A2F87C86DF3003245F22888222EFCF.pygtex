@@ -1,0 +1,6 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{typedef}\PYG{+w}{ }\PYG{k}{struct}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{    }\PYG{n}{Interrupt}\PYG{+w}{ }\PYG{n}{data}\PYG{p}{[}\PYG{n}{MAX\PYGZus{}INTERRUPTS}\PYG{p}{];}
+\PYG{+w}{    }\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{size}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}\PYG{+w}{ }\PYG{n}{InterruptHeap}\PYG{p}{;}
+\end{Verbatim}

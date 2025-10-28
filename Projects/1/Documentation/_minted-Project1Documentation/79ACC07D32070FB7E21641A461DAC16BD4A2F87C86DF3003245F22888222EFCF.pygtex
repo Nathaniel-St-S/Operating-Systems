@@ -1,0 +1,63 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n+nf}{main}\PYG{p}{()}
+\PYG{p}{\PYGZob{}}
+\PYG{+w}{  }\PYG{c+c1}{//initialize the cache for use}
+\PYG{+w}{  }\PYG{n}{init\PYGZus{}cache}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{L1}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{L1CACHE\PYGZus{}SIZE}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{init\PYGZus{}cache}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{L2}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{L2CACHE\PYGZus{}SIZE}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{c+c1}{//initialize the ram}
+\PYG{+w}{  }\PYG{n}{init\PYGZus{}ram}\PYG{p}{(}\PYG{n}{RAM\PYGZus{}SIZE}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{init\PYGZus{}HDD}\PYG{p}{(}\PYG{n}{HDD\PYGZus{}SIZE}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{init\PYGZus{}SSD}\PYG{p}{(}\PYG{n}{SSD\PYGZus{}SIZE}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{c+c1}{//initialize the interrupt controller}
+\PYG{+w}{  }\PYG{n}{init\PYGZus{}interrupt\PYGZus{}controller}\PYG{p}{();}
+
+\PYG{+w}{  }\PYG{c+c1}{//initialize the cpu}
+\PYG{+w}{  }\PYG{n}{init\PYGZus{}cpu}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{CPU}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{c+c1}{//memory adresses for later}
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x0100}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x0100}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{c+c1}{//write some random instructions to memory}
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x0}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x5001}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x1}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x5002}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x2}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x5003}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{initiateDMA}\PYG{p}{(}\PYG{n}{RAM}\PYG{p}{,}\PYG{+w}{ }\PYG{o}{*}\PYG{n}{HDD}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{100}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x3}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x5004}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x4}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x6004}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x5}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x6003}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{add\PYGZus{}interrupt}\PYG{p}{(}\PYG{l+m+mh}{0x0001}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{5}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x6}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x6002}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x7}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x6001}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{initiateDMA}\PYG{p}{(}\PYG{n}{HDD}\PYG{p}{,}\PYG{+w}{ }\PYG{o}{*}\PYG{n}{SSD}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{25}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x8}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x1100}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x9}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x5050}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{initiateDMA}\PYG{p}{(}\PYG{n}{RAM}\PYG{p}{,}\PYG{+w}{ }\PYG{o}{*}\PYG{n}{SSD}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{50}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0xA}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0x200C}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{add\PYGZus{}interrupt}\PYG{p}{(}\PYG{l+m+mh}{0x0002}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{1}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{initiateDMA}\PYG{p}{(}\PYG{n}{SSD}\PYG{p}{,}\PYG{+w}{ }\PYG{o}{*}\PYG{n}{HDD}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{200}\PYG{p}{);}
+
+\PYG{+w}{  }\PYG{n}{write\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0xB}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mh}{0xF000}\PYG{p}{);}
+
+
+\PYG{+w}{  }\PYG{n}{cpu\PYGZus{}run}\PYG{p}{(}\PYG{l+m+mi}{20}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{RAM}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{print\PYGZus{}cache\PYGZus{}stats}\PYG{p}{();}
+\PYG{+w}{  }\PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}saved memory value == \PYGZpc{}X\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{read\PYGZus{}mem}\PYG{p}{(}\PYG{l+m+mh}{0x000C}\PYG{p}{));}
+
+\PYG{+w}{  }\PYG{n}{free}\PYG{p}{(}\PYG{n}{L1}\PYG{p}{.}\PYG{n}{items}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{free}\PYG{p}{(}\PYG{n}{L2}\PYG{p}{.}\PYG{n}{items}\PYG{p}{);}
+\PYG{+w}{  }\PYG{n}{free}\PYG{p}{(}\PYG{n}{RAM}\PYG{p}{);}
+\PYG{+w}{  }\PYG{k}{return}\PYG{+w}{ }\PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

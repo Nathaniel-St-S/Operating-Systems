@@ -1,0 +1,172 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+Initialized cache at \PYGZhy{}\PYGZgt{} \PYGZsq{}0x5dfa437b94a0\PYGZsq{} \PYGZlt{}\PYGZhy{} with size: 5
+Initialized cache at \PYGZhy{}\PYGZgt{} \PYGZsq{}0x5dfa437b94c0\PYGZsq{} \PYGZlt{}\PYGZhy{} with size: 20
+initialized ram with size: 500
+initialized interrupt controller
+Initialized the cpu!
+CPU STATE
+PC:  0
+ACC: 0
+IR:  FFFFFFFF
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 1 ===
+INTERRUPT: goodbye
+CPU STATE
+PC:  1
+ACC: 1
+IR:  5001
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 1
+
+
+=== Cycle 2 ===
+INTERRUPT: hello
+CPU STATE
+PC:  2
+ACC: 3
+IR:  5002
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 3 ===
+CPU STATE
+PC:  3
+ACC: 6
+IR:  5003
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 4 ===
+CPU STATE
+PC:  4
+ACC: A
+IR:  5004
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 5 ===
+CPU STATE
+PC:  5
+ACC: 6
+IR:  6004
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 6 ===
+CPU STATE
+PC:  6
+ACC: 3
+IR:  6003
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 7 ===
+CPU STATE
+PC:  7
+ACC: 1
+IR:  6002
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 8 ===
+CPU STATE
+PC:  8
+ACC: 0
+IR:  6001
+FLAGS:
+  ZERO:      1
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 9 ===
+CPU STATE
+PC:  9
+ACC: 100
+IR:  1100
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 10 ===
+CPU STATE
+PC:  A
+ACC: 150
+IR:  5050
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 11 ===
+CPU STATE
+PC:  B
+ACC: 150
+IR:  200C
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 12 ===
+HALT
+CPU STATE
+PC:  FFFFFFFF
+ACC: 150
+IR:  FFFFF000
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+
+Cache statistics:
+L1 hits:   0
+L1 misses: 13
+L2 hits:   0
+L2 misses: 13
+saved memory value == 150
+\end{Verbatim}

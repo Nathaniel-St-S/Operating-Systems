@@ -1,0 +1,19 @@
+\contentsline {section}{\numberline {1}Outline}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Problem Statement}{2}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Introduction}{2}{subsection.1.2}%
+\contentsline {section}{\numberline {2}Module 1: Central Processing Unit}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Problem Statement}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Implementation}{3}{subsection.2.2}%
+\contentsline {section}{\numberline {3}Module 2: Memory Management System}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Problem Statement}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Implementation}{5}{subsection.3.2}%
+\contentsline {section}{\numberline {4}Module 3: Instructions Set Architecture}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Problem Statement}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Implementation}{9}{subsection.4.2}%
+\contentsline {section}{\numberline {5}Module 4: Interrupts}{11}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Problem Statement}{11}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Implementation}{11}{subsection.5.2}%
+\contentsline {section}{\numberline {6}Module 5: Direct Memory Access}{14}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Problem Statement}{14}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Implementation}{14}{subsection.6.2}%
+\contentsline {section}{\numberline {7}The Simulation}{15}{section.7}%
