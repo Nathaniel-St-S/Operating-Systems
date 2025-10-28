@@ -26,12 +26,13 @@
 \setlist[description]{leftmargin=\parindent,labelindent=\parindent}
 \usepackage{doi}
 \usepackage{bm}
-\usepackage{listings}
+\usepackage{minted}
 
 \newcommand{\ADD}{\texttt{ADD}}
 \newcommand{\SUB}{\texttt{SUB}}
 \newcommand{\LOAD}{\texttt{LOAD}}
 \newcommand{\STORE}{\texttt{STORE}}
+\newcommand{\HALT}{\texttt{HALT}}
 \newcommand{\PC}{\texttt{PC}}
 \newcommand{\IR}{\texttt{IR}}
 \newcommand{\ACC}{\texttt{ACC}}
@@ -39,36 +40,19 @@
 \newcommand{\N}{\texttt{n}}
 
 \begin{document}
-	\title{Project 1 Documentation}
-	
-	
-	\author{Brysen Pfingsten, Nathaniel Savoury, David Anthony Fields}
-%	\affiliation{\institution{Seton Hall University}
-%		%\streetaddress{400 South Orange Avenue}
-%		\city{South Orange}
-%		\state{NJ}
-%		\country{USA}}
-%	\email{pfingsbr@shu.edu}
-		
-	%\author{Nathaniel Savoury}
-%	\affiliation{\institution{Seton Hall University}
-%		%\streetaddress{400 South Orange Avenue}
-%		\city{South Orange}
-%		\state{NJ}
-%		\country{USA}}
-%	\email{savourna@shu.edu}
-	
-	%\author{David Anthony Fields}
-%	\affiliation{\institution{Seton Hall University}
-%		%\streetaddress{400 South Orange Avenue}
-%		\city{South Orange}
-%		\state{NJ}
-%		\country{USA}}
-%	\email{fieldsda@shu.edu}
 
-	\newcommand{\shortauthors}{Pfingsten, Savoury and Fields}
-	\maketitle
-	
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\Huge\bfseries Project 1 Documentation \\ CPU Simulation\par}
+  \vspace{2cm}
+  {\Large\itshape Brysen Pfingsten, Nathaniel Savoury, David Anthony Fields\par}
+  \vfill
+  {\large \today\par}
+  \vspace{1cm}
+  {\large CSAS 3111, Seton Hall University}
+  \vspace*{2cm}
+\end{titlepage}
 
 \tableofcontents
 
@@ -107,47 +91,47 @@ Simulate the \PC{}, which stores the address of the next instruction to be execu
 \label{IMP-m1}
 To implement the core components of the CPU, we first chose to represent the CPU as a structure: 
 
-\begin{alltt}
-typedef struct \{
-	word PC;
-	word ACC;
-	word IR;	
-	Flags flags;
-\} Cpu;	
-\end{alltt}
-
+\begin{minted}{c}
+typedef struct {
+  word PC;
+  word ACC;
+  word IR;
+  Flags flags;
+} Cpu;	
+\end{minted}
+%
 where the \PC{}, \ACC{} and, \IR{} are all represented as \texttt{word}s and the flags is a structure: 
-\begin{alltt}
-typedef struct \{
-	int ZERO;
-	int CARRY;
-	int OVERFLOW;
-	int INTERRUPT;
-\} Flags;
-\end{alltt}
-
+%
+\begin{minted}{c}
+typedef struct {
+  int ZERO;
+  int CARRY;
+  int OVERFLOW;
+  int INTERRUPT;
+} Flags;
+\end{minted}
+%
 The main function for the implementation of the CPU is: 
-
-\begin{alltt}
-	
-// Runs the fetch-execution cycle program\_size times 
+%
+\begin{minted}{c}
+// Runs the fetch-execution cycle program_size times 
 // or until a halt is encountered
-void cpu\_run(const int program\_size, word* mem) \{
-	for (int i = 0; i < program\_size \&\& CPU.PC != CPU\_HALT; i++) \{
-		printf("=== Cycle \%d === \textbackslash{}n", i + 1);
-		
-		if (CPU.PC == CPU\_HALT) \{
-			printf("CPU Halted! \textbackslash{}n");
-			break;
-		\}
-		fetch();
-		execute();
-		check\_for\_interrupt();
-		
-		cpu\_print\_state();
-	\}
-\}
-\end{alltt}
+void cpu_run(const int program_size, word* mem) {
+  for (int i = 0; i < program_size && CPU.PC != CPU_HALT; i++) {
+    printf("=== Cycle %d ===\n", i + 1);
+
+    if (CPU.PC == CPU_HALT) {
+      printf("CPU Halted!\n");
+      break;
+    }
+    fetch();
+    execute();
+    check_for_interrupt();
+
+    cpu_print_state();
+  }
+}
+\end{minted}
 
 The design idea behind this function leverages the fact that the CPU runs for at most \texttt{program\_size} amount of times unless a halt is encounter. Since the CPU cycles a variable amount of times, we decided to use a for-loop. Within the body of the for-loop we print the cycle number, fetch the instruction using \texttt{fetch}, execute the instruction using \texttt{execute}, check for and handle system interrupts using \texttt{check\_for\_interrupt}, and finally printing the CPU state using \texttt{cpu\_print\_state}. Within \texttt{fetch}, we read the instruction from the \PC{} and load it into the \IR{} then increment the \PC{} by 1. For \texttt{execute}, we decode the instruction by extracting the opcode and operand then execute the instruction using the extracted opcode and operand. After the instruction has been executed, we check for interrupts and handle any interrupts accordingly.\footnote{For more information on how we execute instructions and check for interrupts, see \Cref{IMP-m3} and \Cref{IMP-m4} respectively.} To close the cycle, print the CPU state where we show the values of the \PC{}, \ACC{}, \IR{}, and the flags. 
 \pagebreak
@@ -162,26 +146,143 @@ Simulate a hierarchical memory system, including RAM as the main memory for stor
 \label{IMP-m2}
 To simulate a hierarchical memory system, we implemented the RAM as an array of \texttt{word} and the L1 and L2 caches are structures: 
 
-\begin{alltt}
-typedef struct \{
-	Entry* items;
-	int front;
-	int count;
-	int size;
-\} Cache;
-\end{alltt}
-
+\begin{minted}{c}
+typedef struct
+{
+  Entry* items;
+  int front;
+  int count;
+  int size;
+} Cache;
+\end{minted}
+%
 where \texttt{Entry} is a structure: 
+%
+\begin{minted}{c}
+typedef struct
+{
+  word val;
+  mem_addr addr;
+} Entry;
+\end{minted}
 
-\begin{alltt}
-typedef struct \{
-	word val;
-	mem\_addr addr;
-\} Entry;
-\end{alltt}
+The two main functions for this module is \texttt{read\_mem} and \texttt{write\_mem}. 
+%
+The former takes in as input a memory and returns the value at that address.
+%
+It first checks the L1 cache, then the L2 cache, then finally the RAM.
+%
+It also updates the hit/miss stats for the different caches.
+%
+The latter takes a memory address and a value and writes that value at the given memory address.
+%
+These are the core operations used to fetch and store information from the CPU to the main memory and vice versa.
+\begin{minted}{c}
+//return the value at the given memory address
+word read_mem(const mem_addr addr)
+{
+  int index;
+  index = cache_search(&L1, addr);
+  if(index != EMPTY_ADDR)
+  {
+    //Cache hit at L1
+    L1cache_hit++;
+    return L1.items[index].val;
+  }
 
-The two main functions for this module is \texttt{read\_mem} and \texttt{write\_mem}. The former takes in as input a memory 
+  //cache miss at L1
+  L1cache_miss++;
 
+  index = cache_search(&L2, addr);
+  if(index != EMPTY_ADDR)
+  {
+    //Cache hit at l2
+    L2cache_hit++;
+    word val = L2.items[index].val;
+    //Update L1 cache to prevent future cache misses
+    update_cache(&L1, addr, val);
+    return val;
+  }
+
+  //Cache miss at L2
+  L2cache_miss++;
+
+  //Complete cache miss, so read RAM and update cache
+  word val = RAM[addr];
+  update_cache(&L1, addr, val);
+  update_cache(&L2, addr, val);
+  return val;
+}
+
+//write the given value to the given memory address.
+void write_mem(const mem_addr addr, const word val)
+{
+  RAM[addr] = val;
+
+  int index;
+
+  //Update L1 Cache
+  index = cache_search(&L1, addr);
+  if(index != EMPTY_ADDR)
+  {
+    L1.items[index].val = val;
+  }
+
+  //Update L2 Cache
+  index = cache_search(&L2, addr);
+  if(index != EMPTY_ADDR)
+  {
+    L2.items[index].val = val;
+  }
+}
+\end{minted}
+%
+The helper functions \texttt{cache\_search} and \texttt{update\_cache} are used to manage interfacing with the caches.
+%
+The former checks if the data can be found in the cache and if so returns the index.
+%
+The latter inserts data into the cache following the interface of a double ended queue.
+%
+\begin{minted}{c}
+//find the address of the value if it exists in cache
+int cache_search(Cache* cache, const mem_addr addr)
+{
+  for(int i = 0; i < cache->size; i++)
+  {
+    //the address we want was found in cache
+    //so return the index of that address
+    if(cache->items[i].addr == addr)
+    {
+      return i;
+    }
+  }
+  //address not found so return signifier
+  return EMPTY_ADDR;
+}
+
+//Update the given cache in case of misses
+void update_cache(Cache* cache, const mem_addr addr, const word val)
+{
+  //calculate where in the cache to store the value
+  int index = (cache->front + cache->count) \% cache->size;
+  cache->items[index].addr = addr;
+  cache->items[index].val = val;
+
+  //update the size and count of the cache
+  if(cache->count < cache->size)
+  {
+    //cache isn't full so we can just put the new
+    //value in the next index in the cache
+    cache->count++;
+  }
+  else
+  {
+    //cache is full, so loop around to put the new
+    //value at the front
+    cache->front = (cache->front + 1) % cache->size;
+  }
+}
+\end{minted}
 
 \pagebreak
 \section{Module 3: Instructions Set Architecture}
@@ -193,6 +294,85 @@ Define a simple ISA with basic operations like \ADD{}, \SUB{}, \LOAD{}, and \STO
 
 \subsection{Implementation}
 \label{IMP-m3}
+To implement our ISA, we define an enumeration type for the different opcodes and functions to handle each one.
+%
+Our enum is defined as:
+%
+\begin{minted}{c}
+typedef enum op {
+  OP_LOAD   = 0x1,
+  OP_STORE  = 0x2,
+  OP_ADD    = 0x5,
+  OP_SUB    = 0x6,
+  OP_HALT   = 0xF,
+  OP_INTR   = 0x9,
+  OP_ENDINT = 0xA,
+} OP;
+\end{minted}
+%
+The opcodes are dispatched to their functions by the \texttt{execute\_instruction} function.
+%
+Invalid opcodes are treated as an error and the CPU is halted.
+%
+\begin{minted}{c}
+void execute_instruction(const OP opcode, const mem_addr operand)
+{
+  switch (opcode) {
+    case OP_LOAD:  load(operand);       break;
+    case OP_STORE: store(operand);      break;
+    case OP_ADD:   add(operand);        break;
+    case OP_SUB:   sub(operand);        break;
+    case OP_INTR:  interrupt(operand);  break;
+    case OP_HALT:  halt();              break;
+    default:
+      printf("ERROR: Invalid opcode %u (IR=0x%04X)\n", (unsigned)opcode, 
+      (unsigned)operand);
+      CPU.PC = CPU_HALT;}}
+\end{minted}
+%
+All functions except for \HALT{} take as input an operand which represents the address where the relevant data is to be found.
+%
+The ISA functions are defined as follows:
+%
+\begin{minted}{c}
+// Loads the data at the given memory address into cpu's ACC register
+void load(const mem_addr operand) {
+  CPU.ACC = read_mem(operand);
+  set_zero_flag(CPU.ACC);
+}
+
+// Stores the data in cpu's ACC register at the given memory address
+void store(const mem_addr operand) {
+  write_mem(operand, CPU.ACC);
+}
+
+// Adds the value in the cpu's ACC register with the given value
+// The sum is stored in ACC and the appropriate flags are set
+void add(const mem_addr operand) {
+  word init = CPU.ACC;
+  CPU.ACC += operand;
+  set_add_flags(init, operand, CPU.ACC);
+}
+
+// Subtracts the value in the cpu's ACC register with the given value
+// The difference is stored in ACC and the appropriate flags are set
+void sub(const mem_addr operand) {
+  word init = CPU.ACC;
+  CPU.ACC -= operand;
+  set_sub_flags(init, operand, CPU.ACC);
+}
+
+//Initiates and handles CPU interrupts
+void interrupt(const mem_addr operand) { 
+  set_interrupt_flag(operand);
+}
+
+// Halts execution of the given cpu
+void halt() {
+  printf("HALT\n");
+  CPU.PC = CPU_HALT;
+}
+\end{minted}
 
 \pagebreak
 \section{Module 4: Interrupts}
@@ -204,7 +384,112 @@ Implement a mechanism for interrupts that allows the CPU to pause its current ta
 
 \subsection{Implementation}
 \label{IMP-m4}
+We provide three types of interrupt opcodes \texttt{SAY\_HI}, \texttt{SAY\_GOODBYE}, and \texttt{EOI}.
+%
+\begin{minted}{c}
+typedef enum irq{
+    SAY_HI = 0x1,
+    SAY_GOODBYE,
+    EOI, //end of interrupt
+} IRQ;
+\end{minted}
+%
+Each interrupt instance contains one of these opcodes and a priority with 0 being the most important.
+%
+\begin{minted}{c}
+typedef struct {
+    IRQ irq;
+    int priority;
+} Interrupt;
+\end{minted}
+%
+The interrupt controller is structured as an \texttt{InterruptHeap} which is a min-heap with constant time access to the highest priority interrupt and logarithmic insertion for new interrupts.
+%
+\begin{minted}{c}
+typedef struct {
+    Interrupt data[MAX_INTERRUPTS];
+    int size;
+} InterruptHeap;
+\end{minted}
+%
+Finally, we store CPU states in a stack which allows for the pausing and resumption of processes by storing the information necessary to restart them.
+%
+\begin{minted}{c}
+typedef struct {
+    Cpu* items;
+    int SP;
+} stack;
+\end{minted}
+%
 
+Interrupts are checked for every CPU cycle.
+%
+If there is no interrupt then nothing happens.
+%
+If there is an interrupt, its priority is checked against the potential current interrupt; if its priority is higher then it is immediately executed, if not it is added to the heap.
+%
+\begin{minted}{c}
+void check_for_interrupt() {
+  if (!CPU.flags.INTERRUPT) return;
+  if (INTERRUPTCONTROLLER.size == 0){
+    //no more interrupts in que, so clear flag
+    set_interrupt_flag(false);
+    return;
+  }
+    
+  Interrupt intrpt = next_interrupt();
+  if(curr_intrrpt.irq == -1 || intrpt.priority < curr_intrrpt.priority){
+    curr_intrrpt = intrpt;
+    interrupt_handler(curr_intrrpt);
+  }else{
+    interrupt_handler(curr_intrrpt);
+    add_interrupt(intrpt.irq, intrpt.priority);
+  }
+
+  //clear flag if heap is empty after handle
+  if(INTERRUPTCONTROLLER.size == 0) set_interrupt_flag(false);
+}
+\end{minted}
+%
+Interrupts are dispatched to their appropriate functions via the \texttt{interrupt\_handler}:
+%
+\begin{minted}{c}
+void interrupt_handler(Interrupt intrpt) {
+    //push the current CPU state to stack
+    Cpu init_cpu_state = CPU;
+    callstack.items[callstack.SP] = init_cpu_state;
+    callstack.SP++;
+
+    //decode the given interupt and handle it
+    switch(intrpt.irq) {
+    case SAY_HI :
+      printf("INTERRUPT: hello\n");
+      set_interrupt_flag(false);
+      reset_curr_interrupt();
+      break;
+    case SAY_GOODBYE :
+      printf("INTERRUPT: goodbye\n");
+      set_interrupt_flag(false);
+      reset_curr_interrupt();
+      break;
+    case EOI : 
+      set_interrupt_flag(false); 
+      reset_curr_interrupt();
+      break;
+    default:
+      printf("ERROR: Invalid irq -> %u <-\n", (unsigned)intrpt.irq);
+      CPU.PC = CPU_HALT;
+      break;
+    }
+
+    //decrement the CPU stack
+    callstack.SP--;
+    //reset the CPU to it's original state
+    CPU = callstack.items[callstack.SP];
+    //increment the PC to start normal execution
+    //CPU.PC++;
+}
+\end{minted}
 \pagebreak
 \section{Module 5: Direct Memory Access}
 \label{module5}
@@ -213,18 +498,270 @@ Implement a mechanism for interrupts that allows the CPU to pause its current ta
 \label{PS-m5}
 Simulate a DMA system that allows for data transfer between memory and I/O devices without CPU intervention. Implement a DMA controller that manages data transfers between RAM and devices like disk storage or network interfaces. The CPU will initiate the DMA transfer, but the actual data movement should proceed without using CPU cycles, demonstrating how DMA improves system efficiency by freeing up the CPU for other tasks.
 
-
 \subsection{Implementation}
 \label{IMP-m5}
-\pagebreak
+Our DMA implementation revolves around two functions: \texttt{initiateDMA} and \texttt{dmaTransfer}.
+%
+\texttt{initiateDMA} is invoked when a transfer between memory and I/O devices is required.
+%
+Once the request has been initiated, \texttt{dmaTransfer} handles the actual transfer of values.
+%
+\begin{minted}{c}
+void dmaTransfer(word* source, word destination, int size) {
+    for (int i = 0; i < size; i++) {
+        //get the value source is pointing to
+        word val = *source;
+        write_mem(destination, val);
+        destination++;
+        source++;
+    }
+}
 
-\section{Debugging and Testing}
-\label{test and debug}
+void initiateDMA(word* source, word destination, int size) {
+    dmaTransfer(source, destination, size);
+}
+\end{minted}
 
 \pagebreak
 
 \section{The Simulation}
 \label{simulation}
+\begin{minted}{c}
+int main()
+{
+  //initialize the cache for use
+  init_cache(&L1, L1CACHE_SIZE);
+  init_cache(&L2, L2CACHE_SIZE);
+
+  //initialize the ram
+  init_ram(RAM_SIZE);
+  init_HDD(HDD_SIZE);
+  init_SSD(SSD_SIZE);
+
+  //initialize the interrupt controller
+  init_interrupt_controller();
+
+  //initialize the cpu
+  init_cpu(&CPU);
+
+  //memory adresses for later
+  write_mem(0x0100, 0x0100);
+
+  //write some random instructions to memory
+  write_mem(0x0, 0x5001);
+  write_mem(0x1, 0x5002);
+  write_mem(0x2, 0x5003);
+
+  initiateDMA(RAM, *HDD, 100);
+
+  write_mem(0x3, 0x5004);
+  write_mem(0x4, 0x6004);
+  write_mem(0x5, 0x6003);
+
+  add_interrupt(0x0001, 5);
+
+  write_mem(0x6, 0x6002);
+  write_mem(0x7, 0x6001);
+
+  initiateDMA(HDD, *SSD, 25);
+
+  write_mem(0x8, 0x1100);
+  write_mem(0x9, 0x5050);
+
+  initiateDMA(RAM, *SSD, 50);
+
+  write_mem(0xA, 0x200C);
+
+  add_interrupt(0x0002, 1);
+
+  initiateDMA(SSD, *HDD, 200);
+
+  write_mem(0xB, 0xF000);
 
 
+  cpu_run(20, RAM);
+  print_cache_stats();
+  printf("saved memory value == %X", read_mem(0x000C));
+
+  free(L1.items);
+  free(L2.items);
+  free(RAM);
+  return 0;
+}
+\end{minted}
+%
+Results...
+%
+\begin{minted}{text}
+Initialized cache at -> '0x5dfa437b94a0' <- with size: 5
+Initialized cache at -> '0x5dfa437b94c0' <- with size: 20
+initialized ram with size: 500
+initialized interrupt controller
+Initialized the cpu!
+CPU STATE
+PC:  0
+ACC: 0
+IR:  FFFFFFFF
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 1 ===
+INTERRUPT: goodbye
+CPU STATE
+PC:  1
+ACC: 1
+IR:  5001
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 1
+
+
+=== Cycle 2 ===
+INTERRUPT: hello
+CPU STATE
+PC:  2
+ACC: 3
+IR:  5002
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 3 ===
+CPU STATE
+PC:  3
+ACC: 6
+IR:  5003
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 4 ===
+CPU STATE
+PC:  4
+ACC: A
+IR:  5004
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 5 ===
+CPU STATE
+PC:  5
+ACC: 6
+IR:  6004
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 6 ===
+CPU STATE
+PC:  6
+ACC: 3
+IR:  6003
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 7 ===
+CPU STATE
+PC:  7
+ACC: 1
+IR:  6002
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 8 ===
+CPU STATE
+PC:  8
+ACC: 0
+IR:  6001
+FLAGS:
+  ZERO:      1
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 9 ===
+CPU STATE
+PC:  9
+ACC: 100
+IR:  1100
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 10 ===
+CPU STATE
+PC:  A
+ACC: 150
+IR:  5050
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 11 ===
+CPU STATE
+PC:  B
+ACC: 150
+IR:  200C
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+=== Cycle 12 ===
+HALT
+CPU STATE
+PC:  FFFFFFFF
+ACC: 150
+IR:  FFFFF000
+FLAGS:
+  ZERO:      0
+  CARRY:     0
+  OVERFLOW:  0
+  INTERRUPT: 0
+
+
+
+Cache statistics:
+L1 hits:   0
+L1 misses: 13
+L2 hits:   0
+L2 misses: 13
+saved memory value == 150
+\end{minted}
 \end{document}

@@ -1,0 +1,26 @@
+\documentclass[12pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\onehalfspacing
+
+\title{Operating System: Reading Assignment 1}
+\author{Brysen Pfingsten}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+The operating system can be viewed as the entity responsible for managing system resources on behalf of processes. To do this, it maintains several sets of control structures in the form of tables. Memory tables track both main and virtual memory, recording how they are allocated to processes, what protection attributes exist, and any information needed for virtual memory management. I/O tables manage devices and channels, keeping the OS informed of the status of operations and the memory locations involved. File tables store information about the existence, location, and status of files, although this task may be delegated to a file management system. Finally, process tables keep information about each process, and all of these tables must be cross-referenced because memory, I/O, and files are ultimately managed in relation to processes.
+
+To manage processes, the OS must know their location and attributes. Each process has a process image, consisting of its program and data, one or more stacks for procedure calls, and a set of attributes stored in a process control block (PCB). The process image is usually stored on disk, with portions loaded into main or virtual memory during execution. Process tables track the location of each page of each process image to support execution.
+
+Process attributes can be grouped into three categories. First, identifiers uniquely label a process, its parent, and its associated user. Second, state information captures the contents of processor registers, including user-visible registers, control and status registers such as the program counter and condition codes, and the program status word. Third, control information includes all additional data the OS needs to manage execution, such as the process state, priority, scheduling details, and events it is waiting for. It may also include structuring information for linking processes in queues or trees, interprocess communication mechanisms, privilege levels, memory management pointers, and records of resource ownership and usage.
+
+At the center of this system is the process control block (PCB), which defines the state of the OS. Since every major OS function interacts with PCBs, their integrity is critical. However, this also introduces two challenges: a single faulty routine could corrupt them and compromise system stability, and any design changes to the PCB structure could ripple through the entire OS.
+
+\end{document}

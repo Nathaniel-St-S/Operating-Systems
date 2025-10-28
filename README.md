@@ -6,12 +6,12 @@ Instructed by Ashlin Johnsy John Angel
 > [!NOTE]
 > David Anthony Keith Fields
 
-![David](https://media.licdn.com/dms/image/v2/D5603AQGduZ3pBwXxCg/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1704217652323?e=1760572800&v=beta&t=APMSqWXCXON3oaFVE033qT730TZ5pByvO-8f0NHt56c)
+![David](https://www.reviewjournal.com/wp-content/uploads/2020/12/14615777_web1_BKN-FIELDS-DEC22-20-bh-015.jpg)
 
 >[!IMPORTANT]
 > Brysen Bradley Pfingsten
 
-![BronzoBall Chess Superstar](https://i0.wp.com/tigermedianet.com/wp-content/uploads/2023/01/Chess-Tournament-10.jpg?resize=790%2C527)
+![BronzoBall Chess Superstar](https://www.shutterstock.com/image-photo/handsome-young-mans-face-portrait-600nw-211381648.jpg)
 
 > [!WARNING]
 > Nathaniel St.Clair Savoury

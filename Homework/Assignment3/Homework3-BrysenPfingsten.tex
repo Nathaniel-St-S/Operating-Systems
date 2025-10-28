@@ -1,0 +1,247 @@
+\documentclass[12pt]{article}
+
+\usepackage[a4paper,margin=0.5in]{geometry}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb}
+\usepackage{float}
+
+\onehalfspacing
+
+\title{Operating System: Assignment 3}
+\author{Brysen Pfingsten}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Question 1}
+\textbf{a) Gantt Chart} \\
+\includegraphics[width=0.9\textwidth]{"./gantt_fcfs_q1.png"}
+
+\textbf{b) Table}
+\begin{table}[htbp]
+    \centering
+    \footnotesize
+    \begin{tabular}{| c | c | c | c | c | c | c |}
+        \hline
+        Process & Arrival Time & Burst Time & Completion Time & Turnaround Time & Wait Time & Response Time \\
+        \hline
+        P1 & 2 & 20 & 35 & 33 & 13 & 13 \\ \hline
+        P2 & 5 & 14 & 65 & 60 & 46 & 46 \\ \hline
+        P3 & 0 & 15 & 15 & 15 & 0 & 0 \\ \hline
+        P4 & 8 & 11 & 100 & 92 & 81 & 81 \\ \hline
+        P5 & 6 & 24 & 89 & 83 & 59 & 59 \\ \hline
+        P6 & 3 & 16 & 51 & 48 & 32 & 32 \\ \hline
+    \end{tabular}
+\end{table}
+
+\textbf{c) Work}
+\paragraph{Policy.} Non-preemptive FCFS (First-Come, First-Served).  
+Let $A_i$ be arrival, $B_i$ be burst, $S_i$ start, $C_i$ completion, $T_i$ turnaround, $W_i$ waiting, $R_i$ response.  
+For FCFS:
+\[
+\begin{aligned}
+S_i &= \max\{C_{\,\text{prev}},\,A_i\},\qquad \\
+C_i &= S_i + B_i,\\
+T_i &= C_i - A_i,\qquad \\
+W_i &= T_i - B_i,\qquad \\
+R_i &= S_i - A_i\quad(\text{for FCFS, }R_i=W_i). \\
+\end{aligned}
+\]
+
+\subsection*{Determine execution order (by arrival)}
+Sorted by arrival time: \fbox{$P_3 \to P_1 \to P_6 \to P_2 \to P_5 \to P_4$}.
+
+\subsection*{Compute $S_i$ and $C_i$}
+\[
+\begin{aligned}
+&\textbf{For }P_3:\quad
+S_{3}=\max\{0,0\}=0,\quad
+C_{3}=0+15=15.\\[4pt]
+&\textbf{For }P_1:\quad
+S_{1}=\max\{C_3, A_1\}=\max\{15,2\}=15,\quad
+C_{1}=15+20=35.\\[4pt]
+&\textbf{For }P_6:\quad
+S_{6}=\max\{C_1, A_6\}=\max\{35,3\}=35,\quad
+C_{6}=35+16=51.\\[4pt]
+&\textbf{For }P_2:\quad
+S_{2}=\max\{C_6, A_2\}=\max\{51,5\}=51,\quad
+C_{2}=51+14=65.\\[4pt]
+&\textbf{For }P_5:\quad
+S_{5}=\max\{C_2, A_5\}=\max\{65,6\}=65,\quad
+C_{5}=65+24=89.\\[4pt]
+&\textbf{For }P_4:\quad
+S_{4}=\max\{C_5, A_4\}=\max\{89,8\}=89,\quad
+C_{4}=89+11=100.
+\end{aligned}
+\]
+
+\subsection*{Per-process calculations}
+\[
+\begin{aligned}
+\textbf{P}_1:\;&
+T_1=C_1-A_1=35-2=33,\quad
+W_1=T_1-B_1=33-20=13,\quad
+R_1=S_1-A_1=15-2=13.\\[4pt]
+\textbf{P}_2:\;&
+T_2=C_2-A_2=65-5=60,\quad
+W_2=T_2-B_2=60-14=46,\quad
+R_2=S_2-A_2=51-5=46.\\[4pt]
+\textbf{P}_3:\;&
+T_3=C_3-A_3=15-0=15,\quad
+W_3=T_3-B_3=15-15=0,\quad
+R_3=S_3-A_3=0-0=0.\\[4pt]
+\textbf{P}_4:\;&
+T_4=C_4-A_4=100-8=92,\quad
+W_4=T_4-B_4=92-11=81,\quad
+R_4=S_4-A_4=89-8=81.\\[4pt]
+\textbf{P}_5:\;&
+T_5=C_5-A_5=89-6=83,\quad
+W_5=T_5-B_5=83-24=59,\quad
+R_5=S_5-A_5=65-6=59.\\[4pt]
+\textbf{P}_6:\;&
+T_6=C_6-A_6=51-3=48,\quad
+W_6=T_6-B_6=48-16=32,\quad
+R_6=S_6-A_6=35-3=32.
+\end{aligned}
+\]
+\textbf{d) Averages} \\
+
+\[
+\begin{aligned}
+\overline{W} &= \frac{13+46+0+81+59+32}{6} = \frac{231}{6}=38.5,\\
+\overline{T} &= \frac{33+60+15+92+83+48}{6} = \frac{331}{6}\approx 55.17,\\
+\end{aligned}
+\]
+\vspace{-0.75\baselineskip}
+\section*{Question 2}
+\textbf{a) Gantt Chart} \\
+\includegraphics[width=0.9\textwidth]{"./gannt_rr_q2.png"}
+
+\textbf{b) Table}
+\begin{table}[htbp]
+    \centering
+    \footnotesize
+    \begin{tabular}{| c | c | c | c | c | c | c |}
+        \hline
+        Process & Arrival Time & Burst Time & Completion Time & Turnaround Time & Wait Time & Response Time \\
+        \hline
+        P1 & 2 & 11 & 56 & 54 & 43 & 4 \\ \hline
+        P2 & 1 & 18 & 74 & 73 & 55 & 2 \\ \hline
+        P3 & 3 & 7 & 45 & 42 & 35 & 6 \\ \hline
+        P4 & 0 & 24 & 80 & 80 & 56 & 0 \\ \hline
+        P5 & 6 & 5 & 35 & 29 & 24 & 9 \\ \hline
+        P6 & 4 & 15 & 68 & 64 & 49 & 8 \\ \hline
+    \end{tabular}
+\end{table}
+
+\textbf{c) Work}
+\subsection*{Execution Times}
+
+\begin{center}Round 1
+  \[
+\begin{array}{l}
+\boxed{0\!-\!3: P_4},\;
+\boxed{3\!-\!6: P_2},\;
+\boxed{6\!-\!9: P_1},\;
+\boxed{9\!-\!12: P_3},\\[2pt]
+\boxed{12\!-\!15: P_6},\;
+\boxed{15\!-\!18: P_5}.
+\end{array}
+\]
+\end{center}
+
+
+\begin{center}Round 2
+\[
+\begin{array}{l}
+\boxed{18\!-\!21: P_4},\;
+\boxed{21\!-\!24: P_2},\;
+\boxed{24\!-\!27: P_1},\;
+\boxed{27\!-\!30: P_3},\\[2pt]
+\boxed{30\!-\!33: P_6},\;
+\boxed{33\!-\!35: P_5\ (\text{finishes at }35)},\\[6pt]
+\end{array}
+\]
+\end{center} \\
+
+\begin{center}Round 3
+  \[
+  \begin{array}{l}
+\boxed{35\!-\!38: P_4},\;
+\boxed{38\!-\!41: P_2},\;
+\boxed{41\!-\!44: P_1},\;\\[6pt]
+\boxed{44\!-\!45: P_3\ (\text{finishes at }45)},
+\boxed{45\!-\!48: P_6},\;
+\end{array}
+\]
+\end{center}
+
+
+\begin{center}Round4
+  \[
+    \begin{array}{l}
+\boxed{48\!-\!51: P_4},\;
+\boxed{51\!-\!54: P_2},\;
+\boxed{54\!-\!56: P_1\ (\text{finishes at }56)},
+\boxed{56\!-\!59: P_6},\;
+\end{array}
+\]
+\end{center}
+
+\begin{center}Round5
+  \[\begin{array}{l}
+\boxed{59\!-\!62: P_4},\;
+\boxed{62\!-\!65: P_2},\;
+\boxed{65\!-\!68: P_6\ (\text{finishes at }68)},\\[6pt]
+\end{array}
+\end{center}
+\]%\]
+\begin{center}Round 6
+  \[\begin{array}{l}
+\boxed{68\!-\!71: P_4},\;
+\boxed{71\!-\!74: P_2\ (\text{finishes at }74)},\;
+\boxed{74\!-\!80: P_4\ (\text{finishes at }80)}.
+\end{array}\]
+\end{center}
+\subsection*{First response times}
+\[
+\begin{aligned}
+R_1 &= 6 - 2 = 4, &
+R_2 &= 3 - 1 = 2, &
+R_3 &= 9 - 3 = 6,\\
+R_4 &= 0 - 0 = 0, &
+R_5 &= 15 - 6 = 9, &
+R_6 &= 12 - 4 = 8.
+\end{aligned}
+\]
+
+\subsection*{Completion $\Rightarrow$ Turnaround, Waiting}
+From the Gantt above:
+\[
+C_1=56,\; C_2=74,\; C_3=45,\; C_4=80,\; C_5=35,\; C_6=68.
+\]
+Then
+\[
+\begin{aligned}
+T_1 &= C_1 - A_1 = 56-2 = 54, & W_1 &= T_1 - B_1 = 54-11 = 43,\\
+T_2 &= 74-1 = 73, & W_2 &= 73-18 = 55,\\
+T_3 &= 45-3 = 42, & W_3 &= 42-7 = 35,\\
+T_4 &= 77-0 = 80, & W_4 &= 80-24 = 56,\\
+T_5 &= 35-6 = 29, & W_5 &= 29-5 = 24,\\
+T_6 &= 68-4 = 64, & W_6 &= 64-15 = 49.
+\end{aligned}
+\]
+\subsection*{Averages}
+\[
+\begin{aligned}
+  \overline{W}&=\frac{43+55+35+56+24+49}{6}=\frac{262}{6}\approx 43.67 \\ 
+\overline{T}&=\frac{54+73+42+80+29+64}{6}=\frac{342}{6}=57.00,\quad
+\end{aligned}
+\]
+
+\end{document}

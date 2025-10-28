@@ -53,3 +53,22 @@ dkms.conf
 
 # debug information files
 *.dwo
+Projects/2/Documentation/_minted
+Projects/2/Documentation/Project1Documentation.aux
+Projects/2/Documentation/Project1Documentation.fdb_latexmk
+Projects/2/Documentation/Project1Documentation.fls
+Projects/2/Documentation/Project1Documentation.log
+Projects/2/Documentation/Project1Documentation.synctex.gz
+Projects/2/Documentation/Project1Documentation.toc
+Projects/2/Documentation/texput.fls
+Projects/2/Documentation/texput.log
+Projects/2/demo
+Projects/2/tests
+
+# Latex Files
+*.aux
+*.fls
+*.out
+*.synctex.gz
+*.fdb_latexmk
+*.log

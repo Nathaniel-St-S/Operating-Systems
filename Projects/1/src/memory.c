@@ -67,7 +67,7 @@ int cache_search(Cache* cache, const mem_addr addr)
 	for(int i = 0; i < cache->size; i++)
 	{
 		//the address we want was found in cache
-		//so return the index of that adress
+		//so return the index of that address
 		if(cache->items[i].addr == addr)
 		{
 			return i;
@@ -100,7 +100,7 @@ void update_cache(Cache* cache, const mem_addr addr, const word val)
 	}
 }
 
-//return the value at the given memory adress
+//return the value at the given memory address
 word read_mem(const mem_addr addr)
 {
 	int index;
@@ -135,7 +135,7 @@ word read_mem(const mem_addr addr)
 	return val;
 }
 
-//write the given value to the given memory adress.
+//write the given value to the given memory address.
 void write_mem(const mem_addr addr, const word val)
 {
 	RAM[addr] = val;
