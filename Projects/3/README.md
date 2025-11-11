@@ -1,28 +1,28 @@
 
 ### Final Project
 - [] Module 1: Process Simulation
-- - [] Component 1: Core CPU Components and Registers
-- - [] Component 2: Process Control Block
-- - [] Component 3: Fetch-Decode-Execute Cycle
+    - [] Component 1: Core CPU Components and Registers
+    - [] Component 2: Process Control Block
+    - [] Component 3: Fetch-Decode-Execute Cycle
 - [] Module 2: Advanced Memory Management
-- - [] Component 1: Hierarchical Memory System 
-- - [] Component 2: Memory Table
-- - [] Component 3: Dynamic Memory Allocation and Deallocation
+    - [] Component 1: Hierarchical Memory System 
+    - [] Component 2: Memory Table
+    - [] Component 3: Dynamic Memory Allocation and Deallocation
 - [] Module 3: Process Scheduling and Context Switching
-- - [] Component 1: Process Control Block Enhancements 
-- - [] Component 2: Scheduling Algorithms 
-- - [] Component 3: Context Switching
-- - [] Component 4: Integration with Fetch-Decode-Execute Cycle
+    - [] Component 1: Process Control Block Enhancements 
+    - [] Component 2: Scheduling Algorithms 
+    - [] Component 3: Context Switching
+    - [] Component 4: Integration with Fetch-Decode-Execute Cycle
 - [] Module 4: Interrupt Handling and Dispatcher
-- - [] Component 1: Types of Interrupts
-- - [] Component 2: Interrupt Vector Table
-- - [] Component 3: Interrupt Handlers and Dispatcher
+    - [] Component 1: Types of Interrupts
+    - [] Component 2: Interrupt Vector Table
+    - [] Component 3: Interrupt Handlers and Dispatcher
 - [] Module 5: Efficiency Analysis of Concurrency
-- - [] Component 1: Performance Metrics Setup
-- - [] Component 2: Implement Time Tracking
-- - [] Component 3: Data Comparison
-- - [] Component 4: Performance Comparison
-- - [] Component 5: Visualization and Reporting
+    - [] Component 1: Performance Metrics Setup
+    - [] Component 2: Implement Time Tracking
+    - [] Component 3: Data Comparison
+    - [] Component 4: Performance Comparison
+    - [] Component 5: Visualization and Reporting
 - [] Documentation
 
 ## To Install 
