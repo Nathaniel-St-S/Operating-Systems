@@ -1,0 +1,45 @@
+\contentsline {section}{\numberline {1}Introduction}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Problem Statement}{3}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Outline}{3}{subsection.1.2}%
+\contentsline {section}{\numberline {2}Key Concepts and Features}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Project 1}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Project 2}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Project 3}{3}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Project 4}{3}{subsection.2.4}%
+\contentsline {section}{\numberline {3}Module 1: Process Simulation}{4}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Problem Statement}{4}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Implementation}{4}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Core CPU Components and Registers}{4}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Process Control Block}{4}{subsubsection.3.2.2}%
+\contentsline {subsubsection}{\numberline {3.2.3}Fetch-Decode-Execute Cycle}{4}{subsubsection.3.2.3}%
+\contentsline {section}{\numberline {4}Module 2: Advanced Memory Management}{5}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Problem Statement}{5}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Implementation}{5}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}Hierarchical Memory System}{5}{subsubsection.4.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2}Memory Table}{5}{subsubsection.4.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.3}Dynamic Memory Allocation and Deallocation}{5}{subsubsection.4.2.3}%
+\contentsline {section}{\numberline {5}Module 3: Process Scheduling and Context Switching}{6}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Problem Statement}{6}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Implementation}{6}{subsection.5.2}%
+\contentsline {subsubsection}{\numberline {5.2.1}Process Control Block Enhancements}{6}{subsubsection.5.2.1}%
+\contentsline {subsubsection}{\numberline {5.2.2}Scheduling Algorithms}{6}{subsubsection.5.2.2}%
+\contentsline {subsubsection}{\numberline {5.2.3}Context Switching}{6}{subsubsection.5.2.3}%
+\contentsline {subsubsection}{\numberline {5.2.4}Integration with Fetch-Decode-Execute Cycle}{6}{subsubsection.5.2.4}%
+\contentsline {section}{\numberline {6}Module 4: Interrupt Handling and Dispatcher}{7}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Problem Statement}{7}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Implementation}{7}{subsection.6.2}%
+\contentsline {subsubsection}{\numberline {6.2.1}Types of Interruption}{7}{subsubsection.6.2.1}%
+\contentsline {subsubsection}{\numberline {6.2.2}Interrupt Vector Table}{7}{subsubsection.6.2.2}%
+\contentsline {subsubsection}{\numberline {6.2.3}Context Switching}{7}{subsubsection.6.2.3}%
+\contentsline {section}{\numberline {7}Module 5: Efficiency Analysis of Concurrency}{8}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Problem Statement}{8}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Implementation}{8}{subsection.7.2}%
+\contentsline {subsubsection}{\numberline {7.2.1}Performance Metrics Setup}{8}{subsubsection.7.2.1}%
+\contentsline {subsubsection}{\numberline {7.2.2}Implementation of Time Tracking}{8}{subsubsection.7.2.2}%
+\contentsline {subsubsection}{\numberline {7.2.3}Data Comparison}{8}{subsubsection.7.2.3}%
+\contentsline {subsubsection}{\numberline {7.2.4}Performance Comparison}{8}{subsubsection.7.2.4}%
+\contentsline {subsubsection}{\numberline {7.2.5}Visualization and Reporting}{8}{subsubsection.7.2.5}%
+\contentsline {section}{\numberline {8}The Simulation}{9}{section.8}%
+\contentsline {section}{\numberline {9}Testing and Debugging}{10}{section.9}%
+\contentsline {section}{\numberline {10}Conclusion}{11}{section.10}%
+\contentsline {section}{\numberline {11}Appendix A: Screenshots}{12}{section.11}%
