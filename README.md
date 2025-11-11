@@ -19,4 +19,4 @@ Instructed by Ashlin Johnsy John Angel
 ![Nate](https://www.jw.com/wp-content/uploads/2018/06/Nate-St-Clair-Crop.jpg)
 
 
-Me, David Anthony Kieth Fields, have added this line to make it look like i've done something.
+Crazy? I was crazy once. They locked me in a room, a rubber room, a rubber room with rats and rats make me crazy.
