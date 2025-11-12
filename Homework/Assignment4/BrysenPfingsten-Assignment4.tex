@@ -1,0 +1,206 @@
+\documentclass[12pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{setspace}
+\usepackage{xcolor}
+\setstretch{1.2}
+
+\begin{document}
+
+\begin{center}
+  \Large\textbf{CSAS 3111 – Operating Systems}\\[4pt]
+  \large\textbf{Assignment 4 – Banker’s Algorithm}\\[8pt]
+  \normalsize Brysen Pfingsten
+\end{center}
+
+\section*{Question 1}
+
+\noindent
+\begin{center}
+  \begin{tabular}{c|cccc|cccc|cccc}
+    \toprule
+ & \multicolumn{4}{c|}{\textbf{Maximum}} 
+ & \multicolumn{4}{c|}{\textbf{Allocation}} 
+ & \multicolumn{4}{c}{\textbf{Available}}\\
+    \textbf{Process} & A & B & C & D & A & B & C & D & A & B & C & D\\
+    \midrule
+    P1 & 4 & 2 & 1 & 2 & 2 & 0 & 0 & 1 & 3 & 3 & 2 & 1\\
+    P2 & 5 & 2 & 5 & 2 & 3 & 1 & 2 & 1 &  &  &  &  \\
+    P3 & 2 & 3 & 1 & 6 & 2 & 1 & 0 & 3 &  &  &  &  \\
+    P4 & 1 & 4 & 2 & 4 & 1 & 3 & 1 & 2 &  &  &  &  \\
+    P5 & 3 & 6 & 6 & 5 & 1 & 4 & 3 & 2 &  &  &  &  \\
+    P6 & 4 & 2 & 3 & 5 & 1 & 0 & 2 & 2 &  &  &  &  \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+\subsection*{(A) Need Matrix}
+
+The Need matrix is calculated using: $\text{Need} = \text{Max} - \text{Allocation}$
+
+\begin{center}
+  \begin{tabular}{c|cccc}
+    \toprule
+    \textbf{Process} & A & B & C & D\\
+    \midrule
+    P1 & 2 & 2 & 1 & 1\\
+    P2 & 2 & 1 & 3 & 1\\
+    P3 & 0 & 2 & 1 & 3\\
+    P4 & 0 & 1 & 1 & 2\\
+    P5 & 2 & 2 & 3 & 3\\
+    P6 & 3 & 2 & 1 & 3\\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+\subsection*{(B) Safety Check Using Banker's Algorithm}
+
+\paragraph{Step 1: Initial \(\text{Available} = (3,3,2,1)\)}
+\[
+\begin{aligned}
+P_1 &: (2,2,1,1) \le (3,3,2,1) \quad \Rightarrow \text{can run}\\
+\textcolor{red}{P_2} &: \textcolor{red}{(2,1,3,1) \nleq (3,3,2,1) \text{ (since } 3 > 2 \text{ for C)}}\\
+\textcolor{red}{P_3} &: \textcolor{red}{(0,2,1,3) \nleq (3,3,2,1) \text{ (since } 3 > 1 \text{ for D)}}\\
+\textcolor{red}{P_4} &: \textcolor{red}{(0,1,1,2) \nleq (3,3,2,1) \text{ (since } 2 > 1 \text{ for D)}}\\
+\textcolor{red}{P_5} &: \textcolor{red}{(2,2,3,3) \nleq (3,3,2,1) \text{ (C,D too large)}}\\
+\textcolor{red}{P_6} &: \textcolor{red}{(3,2,1,3) \nleq (3,3,2,1) \text{ (since } 3 > 1 \text{ for D)}}\\
+\end{aligned}
+\]
+
+Only \(P_1\) can safely run first.
+
+After \(P_1\) finishes, release its allocation \((2,0,0,1)\):
+\[
+\text{Available} = (3,3,2,1) + (2,0,0,1) = (5,3,2,2)
+\]
+
+\paragraph{Step 2: \(\text{Available} = (5,3,2,2)\)}
+\[
+\begin{aligned}
+\textcolor{red}{P_2} &: \textcolor{red}{(2,1,3,1) \nleq (5,3,2,2) \text{ (since } 3 > 2 \text{ for C)}}\\
+\textcolor{red}{P_3} &: \textcolor{red}{(0,2,1,3) \nleq (5,3,2,2) \text{ (since } 3 > 2 \text{ for D)}}\\
+P_4 &: (0,1,1,2) \le (5,3,2,2) \quad \Rightarrow \text{can run}\\
+\textcolor{red}{P_5} &: \textcolor{red}{(2,2,3,3) \nleq (5,3,2,2) \text{ (C,D too large)}}\\
+\textcolor{red}{P_6} &: \textcolor{red}{(3,2,1,3) \nleq (5,3,2,2) \text{ (since } 3 > 2 \text{ for D)}}\\
+\end{aligned}
+\]
+
+Choose \(P_4\).
+
+After \(P_4\) finishes, release \((1,3,1,2)\):
+\[
+\text{Available} = (5,3,2,2) + (1,3,1,2) = (6,6,3,4)
+\]
+
+\paragraph{Step 3: \(\text{Available} = (6,6,3,4)\)}
+\[
+\begin{aligned}
+P_2 &: (2,1,3,1) \le (6,6,3,4) \quad \Rightarrow \text{can run}\\
+P_3 &: (0,2,1,3) \le (6,6,3,4) \\
+P_5 &: (2,2,3,3) \le (6,6,3,4) \\
+P_6 &: (3,2,1,3) \le (6,6,3,4)
+\end{aligned}
+\]
+After \(P_2\) finishes, release \((3,1,2,1)\):
+\[
+\text{Available} = (6,6,3,4) + (3,1,2,1) = (9,7,5,5)
+\]
+
+\paragraph{Step 4: \(\text{Available} = (9,7,5,5)\)}
+\[
+P_3: (0,2,1,3) \le (9,7,5,5) \Rightarrow \text{run } P_3.
+\]
+Release \((2,1,0,3)\):
+\[
+\text{Available} = (9,7,5,5) + (2,1,0,3) = (11,8,5,8)
+\]
+
+\paragraph{Step 5: \(\text{Available} = (11,8,5,8)\)}
+\[
+P_5: (2,2,3,3) \le (11,8,5,8) \Rightarrow \text{run } P_5.
+\]
+Release \((1,4,3,2)\):
+\[
+\text{Available} = (11,8,5,8) + (1,4,3,2) = (12,12,8,10)
+\]
+
+\paragraph{Step 6: \(\text{Available} = (12,12,8,10)\)}
+\[
+P_6: (3,2,1,3) \le (12,12,8,10) \Rightarrow \text{run } P_6.
+\]
+
+All processes can finish.
+
+\[
+\boxed{\text{Safe sequence: } P_1 \rightarrow P_4 \rightarrow P_2 \rightarrow P_3 \rightarrow P_5 \rightarrow P_6}
+\]
+
+\noindent
+The system is in a \textbf{safe state}.
+
+\subsection*{(C) Request from {P2}: (1, 1, 0, 1)}
+
+\subsubsection*{Step 1: Check against Need and Available}
+
+\[
+\text{Need}(P_2) = (2,1,3,1), \quad
+\text{Allocation}(P_2) = (3,1,2,1), \quad
+\text{Available} = (3,3,2,1).
+\]
+
+\paragraph{1) Request $\leq$ Need}
+
+\[
+(1,1,0,1) \le (2,1,3,1)
+\]
+
+\[
+1 \le 2,\quad 1 \le 1,\quad 0 \le 3,\quad 1 \le 1
+\]
+\paragraph{2) Request $\leq$ Available}
+
+\[
+(1,1,0,1) \le (3,3,2,1)
+\]
+
+\[
+1 \le 3,\quad 1 \le 3,\quad 0 \le 2,\quad 1 \le 1
+\]
+
+\subsubsection*{Step 2: Pretend we grant the request}
+\[
+\begin{aligned}
+\text{Available}' &= (3,3,2,1) - (1,1,0,1) = (2,2,2,0),\\[4pt]
+\text{Allocation}'(P_2) &= (3,1,2,1) + (1,1,0,1) = (4,2,2,2),\\[4pt]
+\text{Need}'(P_2) &= (2,1,3,1) - (1,1,0,1) = (1,0,3,0).
+\end{aligned}
+\]
+
+\subsubsection*{Step 3: Who can finish?}
+
+\[
+\begin{aligned}
+P_1 &: (2,2,1,1) 
+    &&\textcolor{red}{\nleq (2,2,2,0)} 
+    &&\textcolor{red}{\text{(needs 1 of D, but D = 0)}}\\[2pt]
+P_2 &: (1,0,3,0) 
+    &&\textcolor{red}{\nleq (2,2,2,0)} 
+    &&\textcolor{red}{\text{(needs 3 of C, but C = 2)}}\\[2pt]
+P_3 &: (0,2,1,3) 
+    &&\textcolor{red}{\nleq (2,2,2,0)} 
+    &&\textcolor{red}{\text{(needs 3 of D, but D = 0)}}\\[2pt]
+P_4 &: (0,1,1,2) 
+    &&\textcolor{red}{\nleq (2,2,2,0)} 
+    &&\textcolor{red}{\text{(needs 2 of D, but D = 0)}}\\[2pt]
+P_5 &: (2,2,3,3) 
+    &&\textcolor{red}{\nleq (2,2,2,0)} 
+    &&\textcolor{red}{\text{(needs more C and D than available)}}\\[2pt]
+P_6 &: (3,2,1,3) 
+    &&\textcolor{red}{\nleq (2,2,2,0)} 
+    &&\textcolor{red}{\text{(needs 3 of A and 3 of D, not available)}}\\
+\end{aligned}
+\]
+Since no process can safely run, the system would be \textbf{unsafe} and not granted immediately.
+\end{document}
