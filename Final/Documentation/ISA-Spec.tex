@@ -1,0 +1,469 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=0.5in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{enumitem}
+
+\title{MIPS-I Subset 32-bit ISA Specification}
+\author{Operating Systems Final}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+\pagebreak
+
+\section{Overview}
+
+This document specifies a small, real 32-bit ISA based closely on the original MIPS~I architecture. 
+%
+All instructions are 32 bits wide and follow one of three formats: R-type, I-type, or J-type.
+%
+The ISA includes:
+%
+\begin{itemize}[noitemsep]
+  \item 32 general-purpose registers (GPRs).
+  \item Special registers: \texttt{PC}, \texttt{HI}, \texttt{LO}.
+  \item Basic system control registers: \texttt{Status}, \texttt{Cause}, \texttt{EPC}.
+  \item Integer arithmetic and logical operations.
+  \item Multiply and divide.
+  \item Shift operations.
+  \item Load and store instructions for bytes, halfwords, and words.
+  \item Branch and jump instructions.
+  \item System call and exception/interrupt return.
+\end{itemize}
+
+\section{Registers}
+
+\subsection{General-Purpose Registers}
+
+There are 32 general-purpose registers, each 32 bits wide.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Number & Name & Role / Convention \\ \midrule
+\$0  & \texttt{zero} & Constant zero, reads as 0, writes ignored \\
+\$1  & \texttt{at}   & Assembler temporary \\
+\$2--\$3  & \texttt{v0--v1} & Function return values \\
+\$4--\$7  & \texttt{a0--a3} & Function arguments \\
+\$8--\$15 & \texttt{t0--t7} & Temporaries (caller-saved) \\
+\$16--\$23 & \texttt{s0--s7} & Saved registers (callee-saved) \\
+\$24--\$25 & \texttt{t8--t9} & Temporaries \\
+\$26--\$27 & \texttt{k0--k1} & Reserved for kernel / OS use \\
+\$28 & \texttt{gp} & Global pointer \\
+\$29 & \texttt{sp} & Stack pointer \\
+\$30 & \texttt{fp/s8} & Frame pointer or extra saved register \\
+\$31 & \texttt{ra} & Return address for calls (\texttt{JAL}, \texttt{JALR}) \\ \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Special Registers}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{PC} (Program Counter): 32-bit address of the current instruction.
+  \item \textbf{HI}, \textbf{LO}: 32-bit registers used to hold results of
+        multiply and divide.
+  \item \textbf{Status}: System status register (holds interrupt enable and mode bits).
+  \item \textbf{Cause}: Encodes reason for last exception or interrupt.
+  \item \textbf{EPC} (Exception Program Counter): Holds the address to return to after
+        an exception, used by \texttt{ERET}.
+\end{itemize}
+
+\section{Instruction Formats}
+
+All instructions are 32 bits. Bit 31 is the most significant bit (MSB).
+
+\subsection{R-Type Format}
+
+\begin{center}
+\begin{tabular}{@{}cccccc@{}}
+\toprule
+31--26 & 25--21 & 20--16 & 15--11 & 10--6 & 5--0 \\
+\texttt{opcode} & \texttt{rs} & \texttt{rt} & \texttt{rd} & \texttt{shamt} & \texttt{funct} \\ \midrule
+6 bits & 5 bits & 5 bits & 5 bits & 5 bits & 6 bits \\ \bottomrule
+\end{tabular}
+\end{center}
+
+For all R-type instructions:
+\[
+\texttt{opcode} = 0.
+\]
+
+\subsection{I-Type Format}
+
+\begin{center}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+31--26 & 25--21 & 20--16 & 15--0 \\
+\texttt{opcode} & \texttt{rs} & \texttt{rt} & \texttt{immediate} \\ \midrule
+6 bits & 5 bits & 5 bits & 16 bits \\ \bottomrule
+\end{tabular}
+\end{center}
+
+The 16-bit immediate is sign-extended or zero-extended depending on the instruction.
+
+\subsection{J-Type Format}
+
+\begin{center}
+\begin{tabular}{@{}cc@{}}
+\toprule
+31--26 & 25--0 \\
+\texttt{opcode} & \texttt{target} \\ \midrule
+6 bits & 26 bits \\ \bottomrule
+\end{tabular}
+\end{center}
+
+The effective jump address is formed as:
+\[
+\text{PC}_{\text{next}} = \bigl(\text{PC}_{\text{current}}[31{:}28] \ll 28\bigr)
+                         \;|\; (\texttt{target} \ll 2).
+\]
+
+\section{Instruction Encoding and Semantics}
+
+This section lists the instructions in the ISA, along with their encoding and semantic meaning.
+%
+All arithmetic is on 32-bit two's complement integers unless otherwise stated.
+%
+For brevity, we use the following notation:
+\begin{itemize}[noitemsep]
+  \item \(\mathrm{GPR}[i]\): contents of general-purpose register \(i\).
+  \item \(\mathrm{PC}\): program counter.
+  \item \(\mathrm{HI}, \mathrm{LO}\): special multiply/divide registers.
+  \item \(\mathrm{Mem}[a]\): memory access at byte address \(a\).
+  \item \(\mathrm{sext}_n(x)\): sign extension of \(x\) from \(n\) bits to 32 bits.
+  \item \(\mathrm{zext}_n(x)\): zero extension of \(x\) from \(n\) bits to 32 bits.
+\end{itemize}
+
+\subsection{Integer Arithmetic (R-Type)}
+
+All of these have \texttt{opcode} = 0.
+
+\begin{longtable}{@{}lllll@{}}
+\toprule
+Mnemonic & Format & Encoding & Description & Semantics \\ \midrule
+\endhead
+ADD  & R & \texttt{funct} = 0x20 &
+  Add (signed) &
+  \(\mathrm{GPR}[rd] = \mathrm{GPR}[rs] + \mathrm{GPR}[rt]\) \\[0.2em]
+ADDU & R & \texttt{funct} = 0x21 &
+  Add (unsigned) &
+  Same as \texttt{ADD} but ignore signed overflow \\[0.2em]
+SUB  & R & \texttt{funct} = 0x22 &
+  Subtract (signed) &
+  \(\mathrm{GPR}[rd] = \mathrm{GPR}[rs] - \mathrm{GPR}[rt]\) \\[0.2em]
+SUBU & R & \texttt{funct} = 0x23 &
+  Subtract (unsigned) &
+  Same as \texttt{SUB} but ignore signed overflow \\[0.2em]
+\bottomrule
+\end{longtable}
+
+\subsection{Multiply and Divide (R-Type)}
+
+{
+\scriptsize
+\begin{longtable}{@{}lllll@{}}
+\toprule
+Mnemonic & Format & Encoding & Description & Semantics \\ \midrule
+\endhead
+MULT  & R & \texttt{funct} = 0x18 &
+  Signed multiply &
+  \(\{\mathrm{HI}, \mathrm{LO}\} = \mathrm{sext}_{64}\bigl(\mathrm{GPR}[rs]\bigr) \times \mathrm{sext}_{64}\bigl(\mathrm{GPR}[rt]\bigr)\) \\[0.2em]
+MULTU & R & \texttt{funct} = 0x19 &
+  Unsigned multiply &
+  \(\{\mathrm{HI}, \mathrm{LO}\} = \mathrm{zext}_{64}\bigl(\mathrm{GPR}[rs]\bigr) \times \mathrm{zext}_{64}\bigl(\mathrm{GPR}[rt]\bigr)\) \\[0.2em]
+DIV   & R & \texttt{funct} = 0x1A &
+  Signed divide &
+  \(\mathrm{LO} = \mathrm{GPR}[rs] / \mathrm{GPR}[rt]\), \(\mathrm{HI} = \mathrm{GPR}[rs] \bmod \mathrm{GPR}[rt]\) \\[0.2em]
+DIVU  & R & \texttt{funct} = 0x1B &
+  Unsigned divide &
+  \(\mathrm{LO} = \mathrm{GPR}[rs]_{u} / \mathrm{GPR}[rt]_{u}\), \(\mathrm{HI} = \mathrm{GPR}[rs]_{u} \bmod \mathrm{GPR}[rt]_{u}\) \\[0.2em]
+MFHI  & R & \texttt{funct} = 0x10, \texttt{rs} = \texttt{rt} = 0 &
+  Move from HI &
+  \(\mathrm{GPR}[rd] = \mathrm{HI}\) \\[0.2em]
+MFLO  & R & \texttt{funct} = 0x12, \texttt{rs} = \texttt{rt} = 0 &
+  Move from LO &
+  \(\mathrm{GPR}[rd] = \mathrm{LO}\) \\[0.2em]
+MTHI  & R & \texttt{funct} = 0x11, \texttt{rt} = \texttt{rd} = 0 &
+  Move to HI &
+  \(\mathrm{HI} = \mathrm{GPR}[rs]\) \\[0.2em]
+MTLO  & R & \texttt{funct} = 0x13, \texttt{rt} = \texttt{rd} = 0 &
+  Move to LO &
+  \(\mathrm{LO} = \mathrm{GPR}[rs]\) \\[0.2em]
+\bottomrule
+\end{longtable}
+}
+
+\subsection{Logical and Bitwise (R-Type)}
+
+\begin{longtable}{@{}lllll@{}}
+\toprule
+Mnemonic & Format & Encoding & Description & Semantics \\ \midrule
+\endhead
+AND & R & \texttt{funct} = 0x24 &
+  Bitwise AND &
+  \(\mathrm{GPR}[rd] = \mathrm{GPR}[rs] \land \mathrm{GPR}[rt]\) \\[0.2em]
+OR  & R & \texttt{funct} = 0x25 &
+  Bitwise OR &
+  \(\mathrm{GPR}[rd] = \mathrm{GPR}[rs] \lor \mathrm{GPR}[rt]\) \\[0.2em]
+XOR & R & \texttt{funct} = 0x26 &
+  Bitwise XOR &
+  \(\mathrm{GPR}[rd] = \mathrm{GPR}[rs] \oplus \mathrm{GPR}[rt]\) \\[0.2em]
+NOR & R & \texttt{funct} = 0x27 &
+  Bitwise NOR &
+  \(\mathrm{GPR}[rd] = \neg(\mathrm{GPR}[rs] \lor \mathrm{GPR}[rt])\) \\[0.2em]
+\bottomrule
+\end{longtable}
+
+\subsection{Shift Instructions (R-Type)}
+
+{
+\footnotesize
+\begin{longtable}{@{}lllll@{}}
+\toprule
+Mnemonic & Format & Encoding & Description & Semantics \\ \midrule
+\endhead
+SLL  & R & \texttt{funct} = 0x00 &
+  Shift left logical (immediate) &
+  \(\mathrm{GPR}[rd] = \mathrm{GPR}[rt] \ll \texttt{shamt}\) \\[0.2em]
+SRL  & R & \texttt{funct} = 0x02 &
+  Shift right logical (immediate) &
+  \(\mathrm{GPR}[rd] = \mathrm{GPR}[rt] \gg \texttt{shamt}\) (logical) \\[0.2em]
+SRA  & R & \texttt{funct} = 0x03 &
+  Shift right arithmetic (immediate) &
+  Arithmetic right shift, preserving sign bit \\[0.2em]
+SLLV & R & \texttt{funct} = 0x04 &
+  Shift left logical (variable) &
+  \(\mathrm{GPR}[rd] = \mathrm{GPR}[rt] \ll (\mathrm{GPR}[rs] \,\&\, 0x1F)\) \\[0.2em]
+SRLV & R & \texttt{funct} = 0x06 &
+  Shift right logical (variable) &
+  \(\mathrm{GPR}[rd] = \mathrm{GPR}[rt] \gg (\mathrm{GPR}[rs] \,\&\, 0x1F)\) (logical) \\[0.2em]
+SRAV & R & \texttt{funct} = 0x07 &
+  Shift right arithmetic (variable) &
+  Arithmetic right shift by low 5 bits of \(\mathrm{GPR}[rs]\) \\[0.2em]
+\bottomrule
+\end{longtable}
+}
+
+\subsection{Immediate Arithmetic and Logical (I-Type)}
+
+\begin{longtable}{@{}lllll@{}}
+\toprule
+Mnemonic & Format & Opcode & Description & Semantics \\ \midrule
+\endhead
+ADDI  & I & 0x08 &
+  Add immediate (signed) &
+  \(\mathrm{GPR}[rt] = \mathrm{GPR}[rs] + \mathrm{sext}_{16}(\texttt{imm})\) \\[0.2em]
+ADDIU & I & 0x09 &
+  Add immediate (unsigned) &
+  Same as \texttt{ADDI} but ignore signed overflow \\[0.2em]
+ANDI  & I & 0x0C &
+  And immediate &
+  \(\mathrm{GPR}[rt] = \mathrm{GPR}[rs] \land \mathrm{zext}_{16}(\texttt{imm})\) \\[0.2em]
+ORI   & I & 0x0D &
+  Or immediate &
+  \(\mathrm{GPR}[rt] = \mathrm{GPR}[rs] \lor \mathrm{zext}_{16}(\texttt{imm})\) \\[0.2em]
+XORI  & I & 0x0E &
+  Xor immediate &
+  \(\mathrm{GPR}[rt] = \mathrm{GPR}[rs] \oplus \mathrm{zext}_{16}(\texttt{imm})\) \\[0.2em]
+SLTI  & I & 0x0A &
+  Set less than immediate (signed) &
+  \(\mathrm{GPR}[rt] = (\mathrm{GPR}[rs] < \mathrm{sext}_{16}(\texttt{imm})) ? 1 : 0\) \\[0.2em]
+SLTIU & I & 0x0B &
+  Set less than immediate (unsigned) &
+  Unsigned comparison version of \texttt{SLTI} \\[0.2em]
+LUI   & I & 0x0F &
+  Load upper immediate &
+  \(\mathrm{GPR}[rt] = \texttt{imm} \ll 16\) \\[0.2em]
+\bottomrule
+\end{longtable}
+
+\subsection{Load and Store (I-Type)}
+
+Effective address:
+\[
+\text{EA} = \mathrm{GPR}[rs] + \mathrm{sext}_{16}(\texttt{imm}).
+\]
+
+\noindent
+Memory is typically treated as byte-addressed, little-endian.
+
+\begin{longtable}{@{}lllll@{}}
+\toprule
+Mnemonic & Format & Opcode & Description & Semantics \\ \midrule
+\endhead
+LW  & I & 0x23 &
+  Load word &
+  \(\mathrm{GPR}[rt] = \text{Mem32}[\text{EA}]\) \\[0.2em]
+SW  & I & 0x2B &
+  Store word &
+  \(\text{Mem32}[\text{EA}] = \mathrm{GPR}[rt]\) \\[0.2em]
+LB  & I & 0x20 &
+  Load byte (signed) &
+  \(\mathrm{GPR}[rt] = \mathrm{sext}_{8}(\text{Mem8}[\text{EA}])\) \\[0.2em]
+LBU & I & 0x24 &
+  Load byte (unsigned) &
+  \(\mathrm{GPR}[rt] = \mathrm{zext}_{8}(\text{Mem8}[\text{EA}])\) \\[0.2em]
+LH  & I & 0x21 &
+  Load halfword (signed) &
+  \(\mathrm{GPR}[rt] = \mathrm{sext}_{16}(\text{Mem16}[\text{EA}])\) \\[0.2em]
+LHU & I & 0x25 &
+  Load halfword (unsigned) &
+  \(\mathrm{GPR}[rt] = \mathrm{zext}_{16}(\text{Mem16}[\text{EA}])\) \\[0.2em]
+SB  & I & 0x28 &
+  Store byte &
+  \(\text{Mem8}[\text{EA}] = \mathrm{GPR}[rt] \,\&\, 0xFF\) \\[0.2em]
+SH  & I & 0x29 &
+  Store halfword &
+  \(\text{Mem16}[\text{EA}] = \mathrm{GPR}[rt] \,\&\, 0xFFFF\) \\[0.2em]
+\bottomrule
+\end{longtable}
+
+\subsection{Branches (I-Type)}
+
+The branch target address is computed relative to the address of the instruction
+\emph{following} the branch.
+%
+Let \(\text{PC}_{\text{next}}\) be the PC after fetching the branch (i.e., \(\text{PC}+4\)).
+Then:
+\[
+\text{Target} = \text{PC}_{\text{next}} + \bigl(\mathrm{sext}_{16}(\texttt{imm}) \ll 2 \bigr).
+\]
+
+\begin{longtable}{@{}lllll@{}}
+\toprule
+Mnemonic & Format & Opcode & Description & Semantics \\ \midrule
+\endhead
+BEQ & I & 0x04 &
+  Branch if equal &
+  If \(\mathrm{GPR}[rs] = \mathrm{GPR}[rt]\), then \(\mathrm{PC} = \text{Target}\) \\[0.2em]
+BNE & I & 0x05 &
+  Branch if not equal &
+  If \(\mathrm{GPR}[rs] \neq \mathrm{GPR}[rt]\), then \(\mathrm{PC} = \text{Target}\) \\[0.2em]
+\bottomrule
+\end{longtable}
+
+\subsection{Jumps (J-Type and R-Type)}
+
+\begin{longtable}{@{}lllll@{}}
+\toprule
+Mnemonic & Format & Opcode/Funct & Description & Semantics \\ \midrule
+\endhead
+J   & J & \texttt{opcode} = 0x02 &
+  Jump &
+  \(\mathrm{PC} = (\mathrm{PC}_{\text{current}}[31{:}28] \ll 28) \;|\; (\texttt{target} \ll 2)\) \\[0.2em]
+JAL & J & \texttt{opcode} = 0x03 &
+  Jump and link &
+  \(\mathrm{GPR}[31] = \mathrm{PC}_{\text{next}};\) then same as \texttt{J} \\[0.2em]
+JR  & R & \texttt{funct} = 0x08 &
+  Jump register &
+  \(\mathrm{PC} = \mathrm{GPR}[rs]\) \\[0.2em]
+JALR & R & \texttt{funct} = 0x09 &
+  Jump and link register &
+  \(\mathrm{GPR}[rd] = \mathrm{PC}_{\text{next}};\; \mathrm{PC} = \mathrm{GPR}[rs]\) \\[0.2em]
+\bottomrule
+\end{longtable}
+
+\subsection{System and Exception Instructions}
+
+For system and exception-related instructions, we describe them in prose rather
+than putting lists inside table cells (which can cause LaTeX errors).
+
+\begin{description}[style=nextline]
+  \item[SYSCALL] 
+    Encoded as an R-type instruction with \texttt{opcode} = 0 and
+    \texttt{funct} = 0x0C. When executed, this instruction triggers a software
+    exception. The simulator should:
+    \begin{enumerate}[noitemsep]
+      \item Save the appropriate instruction address into \texttt{EPC}
+            (either the address of the syscall or the next instruction,
+            depending on your chosen convention).
+      \item Set \texttt{Cause} to a code representing a system call exception.
+      \item Update \texttt{Status} to indicate kernel mode and (optionally)
+            disable further interrupts.
+      \item Set \texttt{PC} to the configured exception vector address
+            (e.g.\ \texttt{0x80000180}).
+    \end{enumerate}
+
+  \item[BREAK]
+    Encoded as an R-type instruction with \texttt{opcode} = 0 and
+    \texttt{funct} = 0x0D. When executed, this triggers a breakpoint exception,
+    which is handled similarly to \texttt{SYSCALL}, but with a different
+    \texttt{Cause} code to distinguish it (e.g.\ for debugging or traps).
+\end{description}
+
+\subsection{Exception Return (ERET)}
+
+In real MIPS this is encoded as a coprocessor 0 instruction. For this ISA we
+define:
+
+\begin{itemize}[noitemsep]
+  \item \texttt{opcode} = 0x10 (COP0),
+  \item \texttt{rs} = 0x10,
+  \item bits 5--0 (funct) = 0x18,
+  \item all other fields zero.
+\end{itemize}
+
+Decoding is implemented as a special case: ``if opcode is 0x10 and \texttt{funct} = 0x18, execute \texttt{ERET}.''
+
+\paragraph{Semantics.}
+\begin{itemize}[noitemsep]
+  \item \(\mathrm{PC} \leftarrow \texttt{EPC}\).
+  \item Restore user/kernel mode and interrupt enable bits in \texttt{Status}
+        as appropriate.
+\end{itemize}
+
+\section{Exception and Interrupt Model}
+
+\subsection{Exception Types}
+
+Typical exception causes include:
+\begin{itemize}[noitemsep]
+  \item System call (\texttt{SYSCALL}).
+  \item Breakpoint (\texttt{BREAK}).
+  \item Arithmetic overflow (e.g., \texttt{ADD} with overflow).
+  \item Invalid instruction.
+  \item Address error on load/store.
+  \item External interrupt (e.g., timer, I/O).
+\end{itemize}
+
+The simulator sets \texttt{Cause} to an integer code representing one of these
+reasons.
+
+\subsection{Exception Entry}
+
+On an exception or interrupt, the CPU performs:
+\begin{enumerate}[noitemsep]
+  \item Save the faulting instruction address or the following address into
+        \texttt{EPC}.
+  \item Set \texttt{Cause} to the appropriate exception code.
+  \item Modify \texttt{Status} to:
+    \begin{itemize}[noitemsep]
+      \item switch to kernel mode,
+      \item optionally disable further interrupts.
+    \end{itemize}
+  \item Set \texttt{PC} to a fixed exception vector address, e.g.\ \texttt{0x80000180}.
+\end{enumerate}
+
+The kernel's exception handler at that address can then inspect \texttt{Cause},
+\texttt{EPC}, and general registers to decide what to do.
+
+\subsection{Exception Return}
+
+When the kernel is finished handling the exception or interrupt, it executes
+\texttt{ERET}, which:
+\begin{itemize}[noitemsep]
+  \item restores \texttt{PC} from \texttt{EPC},
+  \item restores user/kernel mode (and possibly interrupt enable) from
+        \texttt{Status}.
+\end{itemize}
+
+\end{document}
+
