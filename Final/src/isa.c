@@ -1,343 +1,311 @@
 #include "../include/isa.h"
 #include "../include/cpu.h"
+#include <stdint.h>
 
 
 
-static inline uword mask_reg_index(word reg) {
-  return (uword)reg & 0x1F;
+static inline uint32_t mask_reg_index(uint32_t reg) {
+  return (uint32_t)reg & 0x1F;
 }
 
-static inline word read_gpr(word reg) {
-  uword idx = mask_reg_index(reg);
+inline int32_t read_gpr(uint32_t reg) {
+  uint32_t idx = mask_reg_index(reg);
   if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
     return 0;
   }
-  return THE_CPU.gp_registers[idx];
+  return (int32_t)THE_CPU.gp_registers[idx];
 }
 
-static inline void write_gpr(word reg, word value) {
-  uword idx = mask_reg_index(reg);
+inline void write_gpr(uint32_t reg, uint32_t value) {
+  uint32_t idx = mask_reg_index(reg);
   if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
     return;
   }
   THE_CPU.gp_registers[idx] = value;
 }
 
-static inline uword mask_shift_amount(word value) {
-  return (uword)value & 0x1F;
+static inline uint32_t mask_shift_amount(uint32_t value) {
+  return value & 0x1F;
 }
 
-static void add(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  word result = read_gpr(rs) + read_gpr(rt);
-  write_gpr(rd, result);
+static void add(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  uint32_t rhs = (uint32_t)read_gpr(rt);
+  write_gpr(rd, lhs + rhs);
 }
 
-static void addu(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  uword lhs = (uword)read_gpr(rs);
-  uword rhs = (uword)read_gpr(rt);
-  write_gpr(rd, (word)(lhs + rhs));
+static void addu(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  uint32_t rhs = (uint32_t)read_gpr(rt);
+  write_gpr(rd, (uint32_t)(lhs + rhs));
 }
 
-static void sub(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  word result = read_gpr(rs) - read_gpr(rt);
-  write_gpr(rd, result);
+static void sub(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  uint32_t rhs = (uint32_t)read_gpr(rt);
+  write_gpr(rd, lhs - rhs);
 }
 
-static void subu(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  uword lhs = (uword)read_gpr(rs);
-  uword rhs = (uword)read_gpr(rt);
-  write_gpr(rd, (word)(lhs - rhs));
+static void subu(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  uint32_t rhs = (uint32_t)read_gpr(rt);
+  write_gpr(rd, (lhs - rhs));
 }
 
-static void mult(word rs, word rt, word rd, word shamt) {
-  (void)rd;
-  (void)shamt;
-  int64_t product = (int64_t)read_gpr(rs) * (int64_t)read_gpr(rt);
-  THE_CPU.hw_registers[HI] = (word)(product >> 32);
-  THE_CPU.hw_registers[LO] = (word)product;
+static void mult(uint32_t rs, uint32_t rt) {
+  int32_t lhs = read_gpr(rs);
+  int32_t rhs = read_gpr(rt);
+  int64_t product = (int64_t)lhs * (int64_t)rhs;
+  THE_CPU.hw_registers[HI] = (uint32_t)(product >> 32);
+  THE_CPU.hw_registers[LO] = (uint32_t)product;
 }
 
-static void multu(word rs, word rt, word rd, word shamt) {
-  (void)rd;
-  (void)shamt;
-  uint64_t product = (uint64_t)(uword)read_gpr(rs) * (uint64_t)(uword)read_gpr(rt);
-  THE_CPU.hw_registers[HI] = (word)(product >> 32);
-  THE_CPU.hw_registers[LO] = (word)product;
+static void multu(uint32_t rs, uint32_t rt) {
+  uint64_t lhs = (uint64_t)(uint32_t)read_gpr(rs);
+  uint64_t rhs = (uint64_t)(uint32_t)read_gpr(rt);
+  uint64_t product = lhs * rhs;
+  THE_CPU.hw_registers[HI] = (uint32_t)(product >> 32);
+  THE_CPU.hw_registers[LO] = (uint32_t)product;
 }
 
-static void div(word rs, word rt, word rd, word shamt) {
-  (void)rd;
-  (void)shamt;
-  word divisor = read_gpr(rt);
+static void div(uint32_t rs, uint32_t rt) {
+  int32_t divisor = read_gpr(rt);
   if (divisor == 0) {
-    return;
+    return; // TODO: Throw an exception here
   }
-  word dividend = read_gpr(rs);
-  THE_CPU.hw_registers[LO] = dividend / divisor;
-  THE_CPU.hw_registers[HI] = dividend % divisor;
+  int32_t dividend = read_gpr(rs);
+  THE_CPU.hw_registers[LO] = (uint32_t)(dividend / divisor);
+  THE_CPU.hw_registers[HI] = (uint32_t)(dividend % divisor);
 }
 
-static void divu(word rs, word rt, word rd, word shamt) {
-  (void)rd;
-  (void)shamt;
-  uword divisor = (uword)read_gpr(rt);
+static void divu(uint32_t rs, uint32_t rt) {
+  uint32_t divisor = (uint32_t)read_gpr(rt);
   if (divisor == 0) {
-    return;
+    return; // TODO: Throw an exception here
   }
-  uword dividend = (uword)read_gpr(rs);
-  THE_CPU.hw_registers[LO] = (word)(dividend / divisor);
-  THE_CPU.hw_registers[HI] = (word)(dividend % divisor);
+  uint32_t dividend = (uint32_t)read_gpr(rs);
+  THE_CPU.hw_registers[LO] = (dividend / divisor);
+  THE_CPU.hw_registers[HI] = (dividend % divisor);
 }
 
-static void mfhi(word rs, word rt, word rd, word shamt) {
-  (void)rs;
-  (void)rt;
-  (void)shamt;
+static void mfhi(uint32_t rd) {
   write_gpr(rd, THE_CPU.hw_registers[HI]);
 }
 
-static void mflo(word rs, word rt, word rd, word shamt) {
-  (void)rs;
-  (void)rt;
-  (void)shamt;
+static void mflo(uint32_t rd) {
   write_gpr(rd, THE_CPU.hw_registers[LO]);
 }
 
-static void mthi(word rs, word rt, word rd, word shamt) {
-  (void)rt;
-  (void)rd;
-  (void)shamt;
-  THE_CPU.hw_registers[HI] = read_gpr(rs);
+static void mthi(uint32_t rs) {
+  THE_CPU.hw_registers[HI] = (uint32_t)read_gpr(rs);
 }
 
-static void mtlo(word rs, word rt, word rd, word shamt) {
-  (void)rt;
-  (void)rd;
-  (void)shamt;
-  THE_CPU.hw_registers[LO] = read_gpr(rs);
+static void mtlo(uint32_t rs) {
+  THE_CPU.hw_registers[LO] = (uint32_t)read_gpr(rs);
 }
 
-static void and(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  write_gpr(rd, read_gpr(rs) & read_gpr(rt));
+static void and(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  uint32_t rhs = (uint32_t)read_gpr(rt);
+  write_gpr(rd, lhs & rhs);
 }
 
-static void or(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  write_gpr(rd, read_gpr(rs) | read_gpr(rt));
+static void or(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  uint32_t rhs = (uint32_t)read_gpr(rt);
+  write_gpr(rd, lhs | rhs);
 }
 
-static void xor(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  write_gpr(rd, read_gpr(rs) ^ read_gpr(rt));
+static void xor(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  uint32_t rhs = (uint32_t)read_gpr(rt);
+  write_gpr(rd, lhs ^ rhs);
 }
 
-static void nor(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  write_gpr(rd, ~(read_gpr(rs) | read_gpr(rt)));
+static void nor(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  uint32_t rhs = (uint32_t)read_gpr(rt);
+  write_gpr(rd, ~(lhs | rhs));
 }
 
-static void sll(word rs, word rt, word rd, word shamt) {
-  (void)rs;
-  uword amount = mask_shift_amount(shamt);
-  uword value = (uword)read_gpr(rt);
-  write_gpr(rd, (word)(value << amount));
+static void sll(uint32_t rt, uint32_t rd, uint32_t shamt) {
+  uint32_t amount = mask_shift_amount(shamt);
+  uint32_t value = (uint32_t)read_gpr(rt);
+  write_gpr(rd, (uint32_t)(value << amount));
 }
 
-static void srl(word rs, word rt, word rd, word shamt) {
-  (void)rs;
-  uword amount = mask_shift_amount(shamt);
-  uword value = (uword)read_gpr(rt);
-  write_gpr(rd, (word)(value >> amount));
-}
-
-static void sra(word rs, word rt, word rd, word shamt) {
-  (void)rs;
-  uword amount = mask_shift_amount(shamt);
-  word value = read_gpr(rt);
+static void srl(uint32_t rt, uint32_t rd, uint32_t shamt) {
+  uint32_t amount = mask_shift_amount(shamt);
+  uint32_t value = (uint32_t)read_gpr(rt);
   write_gpr(rd, value >> amount);
 }
 
-static void sllv(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  uword amount = mask_shift_amount(read_gpr(rs));
-  uword value = (uword)read_gpr(rt);
-  write_gpr(rd, (word)(value << amount));
+static void sra(uint32_t rt, uint32_t rd, uint32_t shamt) {
+  uint32_t amount = mask_shift_amount(shamt);
+  int32_t value = (int32_t)read_gpr(rt);
+  write_gpr(rd, (uint32_t)(value >> amount));
 }
 
-static void srlv(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  uword amount = mask_shift_amount(read_gpr(rs));
-  uword value = (uword)read_gpr(rt);
-  write_gpr(rd, (word)(value >> amount));
+static void sllv(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t amount = mask_shift_amount((uint32_t)read_gpr(rs));
+  uint32_t value = (uint32_t)read_gpr(rt);
+  write_gpr(rd, value << amount);
 }
 
-static void srav(word rs, word rt, word rd, word shamt) {
-  (void)shamt;
-  uword amount = mask_shift_amount(read_gpr(rs));
-  word value = read_gpr(rt);
+static void srlv(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t amount = mask_shift_amount((uint32_t)read_gpr(rs));
+  uint32_t value = (uint32_t)read_gpr(rt);
   write_gpr(rd, value >> amount);
 }
 
-static void addi(uword instruction) {
+static void srav(uint32_t rs, uint32_t rt, uint32_t rd) {
+  uint32_t amount = mask_shift_amount((uint32_t)read_gpr(rs));
+  int32_t value = read_gpr(rt);
+  write_gpr(rd, (uint32_t)(value >> amount));
+}
+
+static void addi(uint32_t instruction) {
 
 }
 
-static void addiu(uword instruction) {
+static void addiu(uint32_t instruction) {
 
 }
 
-static void andi(uword instruction) {
+static void andi(uint32_t instruction) {
 
 }
 
-static void ori(uword instruction) {
+static void ori(uint32_t instruction) {
 
 }
 
-static void xori(uword instruction) {
+static void xori(uint32_t instruction) {
 
 }
 
-static void slti(uword instruction) {
+static void slti(uint32_t instruction) {
 
 }
 
-static void sltiu(uword instruction) {
+static void sltiu(uint32_t instruction) {
 
 }
 
-static void lui(uword instruction) {
+static void lui(uint32_t instruction) {
 
 }
 
-static void lw(uword instruction) {
+static void lw(uint32_t instruction) {
 
 }
 
-static void sw(uword instruction) {
+static void sw(uint32_t instruction) {
 
 }
 
-static void lb(uword instruction) {
+static void lb(uint32_t instruction) {
 
 }
 
-static void lbu(uword instruction) {
+static void lbu(uint32_t instruction) {
 
 }
 
-static void lh(uword instruction) {
+static void lh(uint32_t instruction) {
 
 }
 
-static void lhu(uword instruction) {
+static void lhu(uint32_t instruction) {
 
 }
 
-static void sb(uword instruction) {
+static void sb(uint32_t instruction) {
 
 }
 
-static void sh(uword instruction) {
+static void sh(uint32_t instruction) {
 
 }
 
-static void beq(uword instruction) {
+static void beq(uint32_t instruction) {
 
 }
 
-static void bne(uword instruction) {
+static void bne(uint32_t instruction) {
 
 }
 
-static void j(uword instruction) {
+static void j(uint32_t instruction) {
 
 }
 
-static void jal(uword instruction) {
+static void jal(uint32_t instruction) {
 
 }
 
-static void jr(word rs, word rt, word rd, word shamt) {
-  (void)rt;
-  (void)rd;
-  (void)shamt;
-  THE_CPU.hw_registers[PC] = read_gpr(rs);
+static void jr(uint32_t rs) {
+  THE_CPU.hw_registers[PC] = (uint32_t)read_gpr(rs);
 }
 
-static void jalr(word rs, word rt, word rd, word shamt) {
-  (void)rt;
-  (void)shamt;
-  word target = read_gpr(rs);
-  word next_pc = THE_CPU.hw_registers[PC];
+static void jalr(uint32_t rs, uint32_t rd) {
+  uint32_t target = (uint32_t)read_gpr(rs);
+  uint32_t next_pc = THE_CPU.hw_registers[PC];
   write_gpr(rd, next_pc);
   THE_CPU.hw_registers[PC] = target;
 }
 
-static void syscall(word rs, word rt, word rd, word shamt) {
-  (void)rs;
-  (void)rt;
-  (void)rd;
-  (void)shamt;
+static void syscall() {
   THE_CPU.hw_registers[PC] = CPU_HALT;
 }
 
-static void breakk(word rs, word rt, word rd, word shamt) {
-  (void)rs;
-  (void)rt;
-  (void)rd;
-  (void)shamt;
+static void breakk() {
   THE_CPU.hw_registers[PC] = CPU_HALT;
 }
 
-static void eret(uword instruction) {
+static void eret(uint32_t instruction) {
 
 }
 
-static void handle_r_type_instruction(uword instruction) {
-  Funct funct = (Funct)(instruction & 0x3F);
-  word rs = (instruction >> 21) & 0x1F;
-  word rt = (instruction >> 16) & 0x1F;
-  word rd = (instruction >> 11) & 0x1F;
-  word shamt = (instruction >> 6) & 0x1F;
+static void handle_r_type_instruction(uint32_t instruction) {
+  uint32_t funct = instruction & FUNCT_MASK;
+  uint32_t rs = (instruction >> RS_SHIFT) & RS_MASK;
+  uint32_t rt = (instruction >> RT_SHIFT) & RT_MASK;
+  uint32_t rd = (instruction >> RD_SHIFT) & RD_MASK;
+  uint32_t shamt = (instruction >> SHAMT_SHIFT) & SHAMT_MASK;
   switch (funct) {
-    case FUNCT_ADD: add(rs, rt, rd, shamt); break;
-    case FUNCT_ADDU: addu(rs, rt, rd, shamt); break;
-    case FUNCT_SUB: sub(rs, rt, rd, shamt); break;
-    case FUNCT_SUBU: subu(rs, rt, rd, shamt); break;
-    case FUNCT_MULT: mult(rs, rt, rd, shamt); break;
-    case FUNCT_MULTU: multu(rs, rt, rd, shamt); break;
-    case FUNCT_DIV: div(rs, rt, rd, shamt); break;
-    case FUNCT_DIVU: divu(rs, rt, rd, shamt); break;
-    case FUNCT_MFHI: mfhi(rs, rt, rd, shamt); break;
-    case FUNCT_MFLO: mflo(rs, rt, rd, shamt); break;
-    case FUNCT_MTHI: mthi(rs, rt, rd, shamt); break;
-    case FUNCT_MTLO: mtlo(rs, rt, rd, shamt); break;
-    case FUNCT_AND: and(rs, rt, rd, shamt); break;
-    case FUNCT_OR: or(rs, rt, rd, shamt); break;
-    case FUNCT_XOR: xor(rs, rt, rd, shamt); break;
-    case FUNCT_NOR: nor(rs, rt, rd, shamt); break;
-    case FUNCT_SLL: sll(rs, rt, rd, shamt); break;
-    case FUNCT_SRL: srl(rs, rt, rd, shamt); break;
-    case FUNCT_SRA: sra(rs, rt, rd, shamt); break;
-    case FUNCT_SLLV: sllv(rs, rt, rd, shamt); break;
-    case FUNCT_SRLV: srlv(rs, rt, rd, shamt); break;
-    case FUNCT_SRAV: srav(rs, rt, rd, shamt); break;
-    case FUNCT_JR: jr(rs, rt, rd, shamt); break;
-    case FUNCT_JALR: jalr(rs, rt, rd, shamt); break;
-    case FUNCT_SYSCALL: syscall(rs, rt, rd, shamt); break;
-    case FUNCT_BREAK: breakk(rs, rt, rd, shamt); break;
+    case FUNCT_ADD: add(rs, rt, rd); break;
+    case FUNCT_ADDU: addu(rs, rt, rd); break;
+    case FUNCT_SUB: sub(rs, rt, rd); break;
+    case FUNCT_SUBU: subu(rs, rt, rd); break;
+    case FUNCT_MULT: mult(rs, rt); break;
+    case FUNCT_MULTU: multu(rs, rt); break;
+    case FUNCT_DIV: div(rs, rt); break;
+    case FUNCT_DIVU: divu(rs, rt); break;
+    case FUNCT_MFHI: mfhi(rd); break;
+    case FUNCT_MFLO: mflo(rd); break;
+    case FUNCT_MTHI: mthi(rs); break;
+    case FUNCT_MTLO: mtlo(rs); break;
+    case FUNCT_AND: and(rs, rt, rd); break;
+    case FUNCT_OR: or(rs, rt, rd); break;
+    case FUNCT_XOR: xor(rs, rt, rd); break;
+    case FUNCT_NOR: nor(rs, rt, rd); break;
+    case FUNCT_SLL: sll(rt, rd, shamt); break;
+    case FUNCT_SRL: srl(rt, rd, shamt); break;
+    case FUNCT_SRA: sra(rt, rd, shamt); break;
+    case FUNCT_SLLV: sllv(rs, rt, rd); break;
+    case FUNCT_SRLV: srlv(rs, rt, rd); break;
+    case FUNCT_SRAV: srav(rs, rt, rd); break;
+    case FUNCT_JR: jr(rs); break;
+    case FUNCT_JALR: jalr(rs, rd); break;
+    case FUNCT_SYSCALL: syscall(); break;
+    case FUNCT_BREAK: breakk(); break;
   }
 }
 
 
-void execute_instruction(uword instruction) {
-  Opcode opcode = instruction >> 26;
+void execute_instruction(uint32_t instruction) {
+  uint32_t opcode = instruction >> OPCODE_SHIFT;
   switch (opcode) {
     // R type instructions
     case 0x0: handle_r_type_instruction(instruction); break;

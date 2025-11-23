@@ -1,7 +1,7 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include "types.h"
+#include <stdint.h>
 
 typedef enum GP_Register {
   REG_ZERO, // Constant zero, reads as zero, writes ignored
@@ -59,8 +59,8 @@ typedef enum FLAG {
 } FLAG;
 
 typedef struct Cpu { 
-  word gp_registers[GP_REG_COUNT]; 
-  word hw_registers[HW_REG_COUNT];
+  uint32_t gp_registers[GP_REG_COUNT]; 
+  uint32_t hw_registers[HW_REG_COUNT];
 } Cpu;
 
 extern Cpu THE_CPU;

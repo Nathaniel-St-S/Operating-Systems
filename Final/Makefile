@@ -2,6 +2,15 @@ CC = gcc
 CFLAGS = -Wall -O3 -Iinclude -pthread
 LDFLAGS = -pthread
 
+DEBUG ?= 0
+
+ifeq ($(DEBUG),1)
+    CFLAGS += -g -O0 -DDEBUG
+    BUILD_MODE = Debug
+else
+    BUILD_MODE = Release
+endif
+
 # Source files
 SRC_FILES = $(wildcard src/*.c)
 MAIN_SRC = src/main.c

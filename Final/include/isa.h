@@ -1,35 +1,35 @@
 #ifndef ISA_H
 #define ISA_H
-#include "types.h"
 
-#define CPU_HALT (dword)0xFFFFFFFF
+#include <stdint.h>
+#define CPU_HALT (uint32_t)0xFFFFFFFF
 #define SET_FLAG(flag)   (THE_CPU.registers[FLAG] |= (flag))
 #define CLEAR_FLAG(flag) (THE_CPU.registers[FLAG] &= ~(flag))
 #define CLEAR_ALL_FLAGS  (THE_CPU.registers[FLAG] = 0)
 
 // X_SHIFT is the number of bits to shift right
 // X_MASK is the number to bitwise and the instruction with
-#define OPCODE_SHIFT 21
-#define OPCODE_MASK 0x06
+#define OPCODE_SHIFT 26
 
-#define RS_SHIFT 16
-#define RS_MASK 0x05
+#define RS_SHIFT 21
+#define RS_MASK 0x1F
 
-#define RT_SHIFT 11
-#define RT_MASK 0x05
+#define RT_SHIFT 16
+#define RT_MASK 0x1F
 
 #define RD_SHIFT 11
-#define RD_MASK 0x5
+#define RD_MASK 0x1F
 
 #define SHAMT_SHIFT 6
-#define SHAMT_MASK 0x5
+#define SHAMT_MASK 0x1F
 
-#define FUNCT_MASK 0x6
+#define FUNCT_MASK 0x3F
 
 #define IMM_MASK 0xFFFFF
 #define REG_MASK 0xFFFF
 
-typedef enum Opcode {
+// Opcodes
+enum {
   OP_ADD = 0x0,
   OP_ADDU = 0x0,
   OP_SUB = 0x0,
@@ -77,9 +77,9 @@ typedef enum Opcode {
   OP_SYSCALL = 0x0,
   OP_BREAK = 0x0,
   OP_ERET = 0x10,
-} Opcode;
+};
 
-typedef enum Funct {
+enum {
   FUNCT_ADD = 0x20,
   FUNCT_ADDU = 0x21,
   FUNCT_SUB = 0x22,
@@ -106,8 +106,10 @@ typedef enum Funct {
   FUNCT_JALR = 0x09,
   FUNCT_SYSCALL = 0x0C,
   FUNCT_BREAK = 0x0D,
-} Funct;
+};
 
-void execute_instruction(uword instruction);
+void execute_instruction(uint32_t instruction);
+int32_t read_gpr(uint32_t reg);
+void write_gpr(uint32_t reg, uint32_t value);
 
 #endif // !ISA_H
