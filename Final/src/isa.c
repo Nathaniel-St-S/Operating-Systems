@@ -420,16 +420,56 @@ static int handle_immediate_instruction(uint32_t instruction) {
 }
 
 
-static void j(uint32_t instruction) {
-
+static uint32_t compute_jump_target(uint32_t target) {
+  uint32_t pc_plus_4 = THE_CPU.hw_registers[PC] + 4;
+  uint32_t upper_bits = pc_plus_4 & 0xF0000000;
+  uint32_t target_bits = (target & 0x03FFFFFF) << 2;
+  return upper_bits | target_bits;
 }
 
-static void jal(uint32_t instruction) {
-
+static void j(uint32_t target) {
+  THE_CPU.hw_registers[PC] = compute_jump_target(target);
 }
 
-static void eret(uint32_t instruction) {
+static void jal(uint32_t target) {
+  uint32_t return_address = THE_CPU.hw_registers[PC] + 4;
+  write_gpr(REG_RA, return_address);
+  THE_CPU.hw_registers[PC] = compute_jump_target(target);
+}
 
+static int handle_jump_instruction(uint32_t instruction) {
+  uint32_t opcode = get_opcode(instruction);
+  uint32_t target = instruction & 0x01FFFFFF;
+  switch (opcode) {
+    case OP_J: j(target); return 1;
+    case OP_JAL: jal(target); return 1;
+  } 
+  return 0;
+}
+
+static void eret(uint32_t target) {
+  // TODO
+}
+
+static int handle_eret_instruction(uint32_t instruction) {
+  uint32_t funct = instruction & FUNCT_MASK;
+  uint32_t rs = (instruction >> RS_SHIFT) & RS_MASK;
+  uint32_t rt = (instruction >> RT_SHIFT) & RT_MASK;
+  uint32_t rd = (instruction >> RD_SHIFT) & RD_MASK;
+  uint32_t shamt = (instruction >> SHAMT_SHIFT) & SHAMT_MASK;
+  if ((rs == 0x10) &&
+      (funct == 0x18) &&
+      !(rt || rd || shamt)) {
+    eret(instruction);
+    return 1;
+  }
+  return 0;
+}
+
+static void report_invalid_opcode(const uint32_t opcode, const uint32_t instruction) {
+  printf("ERROR: Invalid opcode %u (IR=0x%04X)\n", (unsigned)opcode,
+          (unsigned)instruction);
+   THE_CPU.hw_registers[PC] = CPU_HALT;
 }
 
 void execute_instruction(uint32_t instruction) {
@@ -443,12 +483,14 @@ void execute_instruction(uint32_t instruction) {
   if (handle_immediate_instruction(instruction)) {
     return;
   }
-
-  switch (opcode) {
-    // J type instructions
-    case OP_J: j(instruction); break;
-    case OP_JAL: jal(instruction); break;
-    // Special Case
-    case OP_ERET: eret(instruction); break;
+  // J type instructions
+  if (handle_jump_instruction(instruction)) {
+    return;
+  }
+  // Special Case
+  if ((opcode == OP_ERET) & handle_eret_instruction(instruction)) {
+    return;
+  // Else: Invalid Opcode
+  report_invalid_opcode(opcode, instruction);
   }
 }
