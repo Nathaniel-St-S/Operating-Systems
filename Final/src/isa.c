@@ -28,6 +28,11 @@ static inline uint32_t mask_shift_amount(uint32_t value) {
   return value & 0x1F;
 }
 
+static inline uint32_t get_opcode(uint32_t instruction) {
+  return instruction >> OPCODE_SHIFT;
+}
+
+// ---------------R Type Instructions---------------------
 static void add(uint32_t rs, uint32_t rt, uint32_t rd) {
   int32_t lhs = read_gpr(rs);
   int32_t rhs = read_gpr(rt);
@@ -164,36 +169,122 @@ static void srav(uint32_t rs, uint32_t rt, uint32_t rd) {
   write_gpr(rd, (uint32_t)(value >> amount));
 }
 
-static void addi(uint32_t instruction) {
-
+static void jr(uint32_t rs) {
+  THE_CPU.hw_registers[PC] = read_gpr(rs);
 }
 
-static void addiu(uint32_t instruction) {
-
+static void jalr(uint32_t rs, uint32_t rd) {
+  uint32_t target = read_gpr(rs);
+  uint32_t next_pc = THE_CPU.hw_registers[PC];
+  write_gpr(rd, next_pc);
+  THE_CPU.hw_registers[PC] = target;
 }
 
-static void andi(uint32_t instruction) {
-
+static void syscall() {
+  THE_CPU.hw_registers[PC] = CPU_HALT;
 }
 
-static void ori(uint32_t instruction) {
-
+static void breakk() {
+  THE_CPU.hw_registers[PC] = CPU_HALT;
 }
 
-static void xori(uint32_t instruction) {
-
+static void handle_r_type_instruction(uint32_t instruction) {
+  uint32_t funct = instruction & FUNCT_MASK;
+  uint32_t rs = (instruction >> RS_SHIFT) & RS_MASK;
+  uint32_t rt = (instruction >> RT_SHIFT) & RT_MASK;
+  uint32_t rd = (instruction >> RD_SHIFT) & RD_MASK;
+  uint32_t shamt = (instruction >> SHAMT_SHIFT) & SHAMT_MASK;
+  switch (funct) {
+    case FUNCT_ADD: add(rs, rt, rd); break;
+    case FUNCT_ADDU: addu(rs, rt, rd); break;
+    case FUNCT_SUB: sub(rs, rt, rd); break;
+    case FUNCT_SUBU: subu(rs, rt, rd); break;
+    case FUNCT_MULT: mult(rs, rt); break;
+    case FUNCT_MULTU: multu(rs, rt); break;
+    case FUNCT_DIV: div(rs, rt); break;
+    case FUNCT_DIVU: divu(rs, rt); break;
+    case FUNCT_MFHI: mfhi(rd); break;
+    case FUNCT_MFLO: mflo(rd); break;
+    case FUNCT_MTHI: mthi(rs); break;
+    case FUNCT_MTLO: mtlo(rs); break;
+    case FUNCT_AND: and(rs, rt, rd); break;
+    case FUNCT_OR: or(rs, rt, rd); break;
+    case FUNCT_XOR: xor(rs, rt, rd); break;
+    case FUNCT_NOR: nor(rs, rt, rd); break;
+    case FUNCT_SLL: sll(rt, rd, shamt); break;
+    case FUNCT_SRL: srl(rt, rd, shamt); break;
+    case FUNCT_SRA: sra(rt, rd, shamt); break;
+    case FUNCT_SLLV: sllv(rs, rt, rd); break;
+    case FUNCT_SRLV: srlv(rs, rt, rd); break;
+    case FUNCT_SRAV: srav(rs, rt, rd); break;
+    case FUNCT_JR: jr(rs); break;
+    case FUNCT_JALR: jalr(rs, rd); break;
+    case FUNCT_SYSCALL: syscall(); break;
+    case FUNCT_BREAK: breakk(); break;
+  }
 }
 
-static void slti(uint32_t instruction) {
+// ---------------I Type Instructions---------------------
 
+static void addi(uint32_t rs, uint32_t rt, uint16_t imm) {
+  int32_t simm = (int16_t)imm;
+  int32_t lhs = read_gpr(rs);
+  write_gpr(rt, (uint32_t)(lhs + simm));
 }
 
-static void sltiu(uint32_t instruction) {
-
+static void addiu(uint32_t rs, uint32_t rt, uint16_t imm) {
+  uint32_t simm = (uint32_t)(int32_t)(int16_t)imm;
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  write_gpr(rt, lhs + simm);
 }
 
-static void lui(uint32_t instruction) {
+static void andi(uint32_t rs, uint32_t rt, uint16_t imm) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  write_gpr(rt, lhs & imm);
+}
 
+static void ori(uint32_t rs, uint32_t rt, uint16_t imm) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  write_gpr(rt, lhs | imm);
+}
+
+static void xori(uint32_t rs, uint32_t rt, uint16_t imm) {
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  write_gpr(rt, lhs ^ imm);
+}
+
+static void slti(uint32_t rs, uint32_t rt, uint16_t imm) {
+  int32_t simm = (int16_t)imm;
+  int32_t lhs = read_gpr(rs);
+  write_gpr(rt, lhs < simm ? 1 : 0);
+}
+
+static void sltiu(uint32_t rs, uint32_t rt, uint16_t imm) {
+  uint32_t simm = (uint32_t)(int32_t)(int16_t)imm;
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  write_gpr(rt, lhs < simm ? 1 : 0);
+}
+
+static void lui(uint32_t rt, uint16_t imm) {
+  write_gpr(rt, ((uint32_t)imm) << 16);
+}
+
+static int handle_immediate_instruction(uint32_t instruction) {
+  uint32_t opcode = get_opcode(instruction);
+  uint32_t rs = (instruction >> RS_SHIFT) & RS_MASK;
+  uint32_t rt = (instruction >> RT_SHIFT) & RT_MASK;
+  uint16_t imm = instruction & 0xFFFF;
+  switch (opcode) {
+    case OP_ADDI: addi(rs, rt, imm); return 1;
+    case OP_ADDIU: addiu(rs, rt, imm); return 1;
+    case OP_ANDI: andi(rs, rt, imm); return 1;
+    case OP_ORI: ori(rs, rt, imm); return 1;
+    case OP_XORI: xori(rs, rt, imm); return 1;
+    case OP_SLTI: slti(rs, rt, imm); return 1;
+    case OP_SLTIU: sltiu(rs, rt, imm); return 1;
+    case OP_LUI: lui(rt, imm); return 1;
+    default: return 0;
+  }
 }
 
 static void lw(uint32_t instruction) {
@@ -244,80 +335,23 @@ static void jal(uint32_t instruction) {
 
 }
 
-static void jr(uint32_t rs) {
-  THE_CPU.hw_registers[PC] = read_gpr(rs);
-}
-
-static void jalr(uint32_t rs, uint32_t rd) {
-  uint32_t target = read_gpr(rs);
-  uint32_t next_pc = THE_CPU.hw_registers[PC];
-  write_gpr(rd, next_pc);
-  THE_CPU.hw_registers[PC] = target;
-}
-
-static void syscall() {
-  THE_CPU.hw_registers[PC] = CPU_HALT;
-}
-
-static void breakk() {
-  THE_CPU.hw_registers[PC] = CPU_HALT;
-}
-
 static void eret(uint32_t instruction) {
 
 }
 
-static void handle_r_type_instruction(uint32_t instruction) {
-  uint32_t funct = instruction & FUNCT_MASK;
-  uint32_t rs = (instruction >> RS_SHIFT) & RS_MASK;
-  uint32_t rt = (instruction >> RT_SHIFT) & RT_MASK;
-  uint32_t rd = (instruction >> RD_SHIFT) & RD_MASK;
-  uint32_t shamt = (instruction >> SHAMT_SHIFT) & SHAMT_MASK;
-  switch (funct) {
-    case FUNCT_ADD: add(rs, rt, rd); break;
-    case FUNCT_ADDU: addu(rs, rt, rd); break;
-    case FUNCT_SUB: sub(rs, rt, rd); break;
-    case FUNCT_SUBU: subu(rs, rt, rd); break;
-    case FUNCT_MULT: mult(rs, rt); break;
-    case FUNCT_MULTU: multu(rs, rt); break;
-    case FUNCT_DIV: div(rs, rt); break;
-    case FUNCT_DIVU: divu(rs, rt); break;
-    case FUNCT_MFHI: mfhi(rd); break;
-    case FUNCT_MFLO: mflo(rd); break;
-    case FUNCT_MTHI: mthi(rs); break;
-    case FUNCT_MTLO: mtlo(rs); break;
-    case FUNCT_AND: and(rs, rt, rd); break;
-    case FUNCT_OR: or(rs, rt, rd); break;
-    case FUNCT_XOR: xor(rs, rt, rd); break;
-    case FUNCT_NOR: nor(rs, rt, rd); break;
-    case FUNCT_SLL: sll(rt, rd, shamt); break;
-    case FUNCT_SRL: srl(rt, rd, shamt); break;
-    case FUNCT_SRA: sra(rt, rd, shamt); break;
-    case FUNCT_SLLV: sllv(rs, rt, rd); break;
-    case FUNCT_SRLV: srlv(rs, rt, rd); break;
-    case FUNCT_SRAV: srav(rs, rt, rd); break;
-    case FUNCT_JR: jr(rs); break;
-    case FUNCT_JALR: jalr(rs, rd); break;
-    case FUNCT_SYSCALL: syscall(); break;
-    case FUNCT_BREAK: breakk(); break;
-  }
-}
-
-
 void execute_instruction(uint32_t instruction) {
-  uint32_t opcode = instruction >> OPCODE_SHIFT;
+  uint32_t opcode = get_opcode(instruction);
+  // R type instructions all have an opcode of 0
+  if (opcode == 0x0) {
+    handle_r_type_instruction(instruction);
+    return;
+  }
+  // I type instructions
+  if (handle_immediate_instruction(instruction)) {
+    return;
+  }
+
   switch (opcode) {
-    // R type instructions
-    case 0x0: handle_r_type_instruction(instruction); break;
-    // I type instructions
-    case OP_ADDI: addi(instruction); break;
-    case OP_ADDIU: addiu(instruction); break;
-    case OP_ANDI: andi(instruction); break;
-    case OP_ORI: ori(instruction); break;
-    case OP_XORI: xori(instruction); break;
-    case OP_SLTI: slti(instruction); break;
-    case OP_SLTIU: sltiu(instruction); break;
-    case OP_LUI: lui(instruction); break;
     case OP_LW: lw(instruction); break;
     case OP_SW: sw(instruction); break;
     case OP_LB: lb(instruction); break;
