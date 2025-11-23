@@ -1,5 +1,7 @@
 #include "../include/isa.h"
 #include "../include/cpu.h"
+#include "../include/memory.h"
+#include <memory.h>
 #include <stdint.h>
 
 
@@ -26,6 +28,59 @@ inline void write_gpr(uint32_t reg, uint32_t value) {
 
 static inline uint32_t mask_shift_amount(uint32_t value) {
   return value & 0x1F;
+}
+
+static inline int32_t sign_extend(uint32_t value, uint32_t bits) {
+  if (bits == 0) {
+    return 0;
+  }
+  if (bits >= 32) {
+    return (int32_t)value;
+  }
+  uint32_t shift = 32 - bits;
+  return (int32_t)((int32_t)(value << shift) >> shift);
+}
+
+static inline uint32_t zero_extend(uint32_t value, uint32_t bits) {
+  if (bits >= 32) {
+    return value;
+  }
+  uint32_t mask = (1u << bits) - 1u;
+  return value & mask;
+}
+
+static uint8_t load_byte(uint32_t address) {
+  return (uint8_t)zero_extend(read_mem(address), 8);
+}
+
+static uint16_t load_halfword(uint32_t address) {
+  uint16_t lo = load_byte(address);
+  uint16_t hi = load_byte(address + 1);
+  return (uint16_t)(lo | (uint16_t)(hi << 8));
+}
+
+static uint32_t load_word(uint32_t address) {
+  uint32_t b0 = load_byte(address);
+  uint32_t b1 = load_byte(address + 1);
+  uint32_t b2 = load_byte(address + 2);
+  uint32_t b3 = load_byte(address + 3);
+  return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
+}
+
+static void store_byte(uint32_t address, uint8_t value) {
+  write_mem(address, value);
+}
+
+static void store_halfword(uint32_t address, uint16_t value) {
+  store_byte(address, (uint8_t)(value & 0xFF));
+  store_byte(address + 1, (uint8_t)((value >> 8) & 0xFF));
+}
+
+static void store_word(uint32_t address, uint32_t value) {
+  store_byte(address, (uint8_t)(value & 0xFF));
+  store_byte(address + 1, (uint8_t)((value >> 8) & 0xFF));
+  store_byte(address + 2, (uint8_t)((value >> 16) & 0xFF));
+  store_byte(address + 3, (uint8_t)((value >> 24) & 0xFF));
 }
 
 static inline uint32_t get_opcode(uint32_t instruction) {
@@ -73,7 +128,7 @@ static void multu(uint32_t rs, uint32_t rt) {
   THE_CPU.hw_registers[LO] = (uint32_t)product;
 }
 
-static void div(uint32_t rs, uint32_t rt) {
+static void divv(uint32_t rs, uint32_t rt) {
   int32_t divisor = read_gpr(rt);
   if (divisor == 0) {
     return; // TODO: Throw an exception here
@@ -201,7 +256,7 @@ static void handle_r_type_instruction(uint32_t instruction) {
     case FUNCT_SUBU: subu(rs, rt, rd); break;
     case FUNCT_MULT: mult(rs, rt); break;
     case FUNCT_MULTU: multu(rs, rt); break;
-    case FUNCT_DIV: div(rs, rt); break;
+    case FUNCT_DIV: divv(rs, rt); break;
     case FUNCT_DIVU: divu(rs, rt); break;
     case FUNCT_MFHI: mfhi(rd); break;
     case FUNCT_MFLO: mflo(rd); break;
@@ -227,46 +282,107 @@ static void handle_r_type_instruction(uint32_t instruction) {
 // ---------------I Type Instructions---------------------
 
 static void addi(uint32_t rs, uint32_t rt, uint16_t imm) {
-  int32_t simm = (int16_t)imm;
+  int32_t simm = sign_extend(imm, 16);
   int32_t lhs = read_gpr(rs);
   write_gpr(rt, (uint32_t)(lhs + simm));
 }
 
 static void addiu(uint32_t rs, uint32_t rt, uint16_t imm) {
-  uint32_t simm = (uint32_t)(int32_t)(int16_t)imm;
+  uint32_t simm = (uint32_t)sign_extend(imm, 16);
   uint32_t lhs = (uint32_t)read_gpr(rs);
   write_gpr(rt, lhs + simm);
 }
 
 static void andi(uint32_t rs, uint32_t rt, uint16_t imm) {
   uint32_t lhs = (uint32_t)read_gpr(rs);
-  write_gpr(rt, lhs & imm);
+  uint32_t zimm = zero_extend(imm, 16);
+  write_gpr(rt, lhs & zimm);
 }
 
 static void ori(uint32_t rs, uint32_t rt, uint16_t imm) {
   uint32_t lhs = (uint32_t)read_gpr(rs);
-  write_gpr(rt, lhs | imm);
+  uint32_t zimm = zero_extend(imm, 16);
+  write_gpr(rt, lhs | zimm);
 }
 
 static void xori(uint32_t rs, uint32_t rt, uint16_t imm) {
   uint32_t lhs = (uint32_t)read_gpr(rs);
-  write_gpr(rt, lhs ^ imm);
+  uint32_t zimm = zero_extend(imm, 16);
+  write_gpr(rt, lhs ^ zimm);
 }
 
 static void slti(uint32_t rs, uint32_t rt, uint16_t imm) {
-  int32_t simm = (int16_t)imm;
+  int32_t simm = sign_extend(imm, 16);
   int32_t lhs = read_gpr(rs);
   write_gpr(rt, lhs < simm ? 1 : 0);
 }
 
 static void sltiu(uint32_t rs, uint32_t rt, uint16_t imm) {
-  uint32_t simm = (uint32_t)(int32_t)(int16_t)imm;
+  uint32_t simm = (uint32_t)sign_extend(imm, 16);
   uint32_t lhs = (uint32_t)read_gpr(rs);
   write_gpr(rt, lhs < simm ? 1 : 0);
 }
 
 static void lui(uint32_t rt, uint16_t imm) {
-  write_gpr(rt, ((uint32_t)imm) << 16);
+  uint32_t zimm = zero_extend(imm, 16);
+  write_gpr(rt, zimm << 16);
+}
+
+static void lw(uint32_t rt, uint32_t effective_address) {
+  write_gpr(rt, load_word(effective_address));  
+}
+
+static void sw(uint32_t rt, uint32_t effective_address) {
+  uint32_t value = (uint32_t)read_gpr(rt);
+  store_word(effective_address, value);
+}
+
+static void lb(uint32_t rt, uint32_t effective_address) {
+  uint8_t raw = load_byte(effective_address);
+  int32_t extended = sign_extend(raw, 8);
+  write_gpr(rt, (uint32_t)extended);
+}
+
+static void lbu(uint32_t rt, uint32_t effective_address) {
+  uint8_t raw = load_byte(effective_address);
+  write_gpr(rt, zero_extend(raw, 8));
+}
+
+static void lh(uint32_t rt, uint32_t effective_address) {
+  uint16_t raw = load_halfword(effective_address);
+  int32_t extended = sign_extend(raw, 16);
+  write_gpr(rt, (uint32_t)extended);
+}
+
+static void lhu(uint32_t rt, uint32_t effective_address) {
+  uint16_t raw = load_halfword(effective_address);
+  write_gpr(rt, zero_extend(raw, 16));
+}
+
+static void sb(uint32_t rt, uint32_t effective_address) {
+  uint32_t value = (uint32_t)read_gpr(rt);
+  store_byte(effective_address, (uint8_t)(value & 0xFF));
+}
+
+static void sh(uint32_t rt, uint32_t effective_address) {
+  uint32_t value = (uint32_t)read_gpr(rt);
+  store_halfword(effective_address, (uint16_t)(value & 0xFFFF));
+}
+
+static void beq(uint32_t rs, uint32_t rt, int32_t offset) {
+  if (read_gpr(rs) == read_gpr(rt)) {
+    int32_t branch_offset = offset << 2;
+    uint32_t next_pc = THE_CPU.hw_registers[PC] + 4 + (uint32_t)branch_offset;
+    THE_CPU.hw_registers[PC] = next_pc;
+  }
+}
+
+static void bne(uint32_t rs, uint32_t rt, int32_t offset) {
+  if (read_gpr(rs) != read_gpr(rt)) {
+    int32_t branch_offset = offset << 2;
+    uint32_t next_pc = THE_CPU.hw_registers[PC] + 4 + (uint32_t)branch_offset;
+    THE_CPU.hw_registers[PC] = next_pc;
+  }
 }
 
 static int handle_immediate_instruction(uint32_t instruction) {
@@ -283,49 +399,26 @@ static int handle_immediate_instruction(uint32_t instruction) {
     case OP_SLTI: slti(rs, rt, imm); return 1;
     case OP_SLTIU: sltiu(rs, rt, imm); return 1;
     case OP_LUI: lui(rt, imm); return 1;
-    default: return 0;
   }
+
+  int32_t offset = sign_extend(imm, 16);
+  uint32_t base = (uint32_t)read_gpr(rs);
+  uint32_t effective_address = base + (uint32_t)offset;
+  switch (opcode) {
+    case OP_LW: lw(rt, effective_address); return 1;
+    case OP_SW: sw(rt, effective_address); return 1;
+    case OP_LB: lb(rt, effective_address); return 1;
+    case OP_LBU: lbu(rt, effective_address); return 1;
+    case OP_LH: lh(rt, effective_address); return 1;
+    case OP_LHU: lhu(rt, effective_address); return 1;
+    case OP_SB: sb(rt, effective_address); return 1;
+    case OP_SH: sh(rt, effective_address); return 1;
+    case OP_BEQ: beq(rs, rt, offset); return 1;
+    case OP_BNE: bne(rs, rt, offset); return 1;
+  }
+  return 0;
 }
 
-static void lw(uint32_t instruction) {
-
-}
-
-static void sw(uint32_t instruction) {
-
-}
-
-static void lb(uint32_t instruction) {
-
-}
-
-static void lbu(uint32_t instruction) {
-
-}
-
-static void lh(uint32_t instruction) {
-
-}
-
-static void lhu(uint32_t instruction) {
-
-}
-
-static void sb(uint32_t instruction) {
-
-}
-
-static void sh(uint32_t instruction) {
-
-}
-
-static void beq(uint32_t instruction) {
-
-}
-
-static void bne(uint32_t instruction) {
-
-}
 
 static void j(uint32_t instruction) {
 
@@ -352,16 +445,6 @@ void execute_instruction(uint32_t instruction) {
   }
 
   switch (opcode) {
-    case OP_LW: lw(instruction); break;
-    case OP_SW: sw(instruction); break;
-    case OP_LB: lb(instruction); break;
-    case OP_LBU: lbu(instruction); break;
-    case OP_LH: lh(instruction); break;
-    case OP_LHU: lhu(instruction); break;
-    case OP_SB: sb(instruction); break;
-    case OP_SH: sh(instruction); break;
-    case OP_BEQ: beq(instruction); break;
-    case OP_BNE: bne(instruction); break;
     // J type instructions
     case OP_J: j(instruction); break;
     case OP_JAL: jal(instruction); break;
