@@ -13,7 +13,7 @@ inline int32_t read_gpr(uint32_t reg) {
   if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
     return 0;
   }
-  return (int32_t)THE_CPU.gp_registers[idx];
+  return THE_CPU.gp_registers[idx];
 }
 
 inline void write_gpr(uint32_t reg, uint32_t value) {
@@ -29,8 +29,8 @@ static inline uint32_t mask_shift_amount(uint32_t value) {
 }
 
 static void add(uint32_t rs, uint32_t rt, uint32_t rd) {
-  uint32_t lhs = (uint32_t)read_gpr(rs);
-  uint32_t rhs = (uint32_t)read_gpr(rt);
+  int32_t lhs = read_gpr(rs);
+  int32_t rhs = read_gpr(rt);
   write_gpr(rd, lhs + rhs);
 }
 
@@ -41,8 +41,8 @@ static void addu(uint32_t rs, uint32_t rt, uint32_t rd) {
 }
 
 static void sub(uint32_t rs, uint32_t rt, uint32_t rd) {
-  uint32_t lhs = (uint32_t)read_gpr(rs);
-  uint32_t rhs = (uint32_t)read_gpr(rt);
+  int32_t lhs = read_gpr(rs);
+  int32_t rhs = read_gpr(rt);
   write_gpr(rd, lhs - rhs);
 }
 
@@ -97,11 +97,11 @@ static void mflo(uint32_t rd) {
 }
 
 static void mthi(uint32_t rs) {
-  THE_CPU.hw_registers[HI] = (uint32_t)read_gpr(rs);
+  THE_CPU.hw_registers[HI] = read_gpr(rs);
 }
 
 static void mtlo(uint32_t rs) {
-  THE_CPU.hw_registers[LO] = (uint32_t)read_gpr(rs);
+  THE_CPU.hw_registers[LO] = read_gpr(rs);
 }
 
 static void and(uint32_t rs, uint32_t rt, uint32_t rd) {
@@ -245,11 +245,11 @@ static void jal(uint32_t instruction) {
 }
 
 static void jr(uint32_t rs) {
-  THE_CPU.hw_registers[PC] = (uint32_t)read_gpr(rs);
+  THE_CPU.hw_registers[PC] = read_gpr(rs);
 }
 
 static void jalr(uint32_t rs, uint32_t rd) {
-  uint32_t target = (uint32_t)read_gpr(rs);
+  uint32_t target = read_gpr(rs);
   uint32_t next_pc = THE_CPU.hw_registers[PC];
   write_gpr(rd, next_pc);
   THE_CPU.hw_registers[PC] = target;
