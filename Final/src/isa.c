@@ -1,10 +1,8 @@
 #include "../include/isa.h"
 #include "../include/cpu.h"
 #include "../include/memory.h"
-#include <memory.h>
 #include <stdint.h>
-
-
+#include <stdio.h>
 
 static inline uint32_t mask_reg_index(uint32_t reg) {
   return (uint32_t)reg & 0x1F;
@@ -50,37 +48,28 @@ static inline uint32_t zero_extend(uint32_t value, uint32_t bits) {
 }
 
 static uint8_t load_byte(uint32_t address) {
-  return (uint8_t)zero_extend(read_mem(address), 8);
+  // I don't THink we need to zero extend anymore
+  return read_byte(address);
 }
 
 static uint16_t load_halfword(uint32_t address) {
-  uint16_t lo = load_byte(address);
-  uint16_t hi = load_byte(address + 1);
-  return (uint16_t)(lo | (uint16_t)(hi << 8));
+  return read_hword(address);
 }
 
 static uint32_t load_word(uint32_t address) {
-  uint32_t b0 = load_byte(address);
-  uint32_t b1 = load_byte(address + 1);
-  uint32_t b2 = load_byte(address + 2);
-  uint32_t b3 = load_byte(address + 3);
-  return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
+  return read_word(address);
 }
 
 static void store_byte(uint32_t address, uint8_t value) {
-  write_mem(address, value);
+  write_byte(address, value);
 }
 
 static void store_halfword(uint32_t address, uint16_t value) {
-  store_byte(address, (uint8_t)(value & 0xFF));
-  store_byte(address + 1, (uint8_t)((value >> 8) & 0xFF));
+  write_hword(address, value);
 }
 
 static void store_word(uint32_t address, uint32_t value) {
-  store_byte(address, (uint8_t)(value & 0xFF));
-  store_byte(address + 1, (uint8_t)((value >> 8) & 0xFF));
-  store_byte(address + 2, (uint8_t)((value >> 16) & 0xFF));
-  store_byte(address + 3, (uint8_t)((value >> 24) & 0xFF));
+  write_word(address, value);
 }
 
 static inline uint32_t get_opcode(uint32_t instruction) {
@@ -467,7 +456,7 @@ static int handle_eret_instruction(uint32_t instruction) {
 }
 
 static void report_invalid_opcode(const uint32_t opcode, const uint32_t instruction) {
-  printf("ERROR: Invalid opcode %u (IR=0x%04X)\n", (unsigned)opcode,
+  fprintf(stderr, "ERROR: Invalid opcode %u (IR=0x%04X)\n", (unsigned)opcode,
           (unsigned)instruction);
    THE_CPU.hw_registers[PC] = CPU_HALT;
 }
