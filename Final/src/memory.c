@@ -19,10 +19,8 @@
 #define NO_PID -1
 #define NO_VAL ((uint8_t)-1)
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* ========================================= INTERNAL STRUCTS
- * ========================================= */
+/* ---------------------------------------------------------------------------------------------------- */
+/* ========================================= INTERNAL STRUCTS ========================================= */
 
 /*
  * A cache line stores data in an array
@@ -76,10 +74,8 @@ typedef struct {
   size_t capacity;
 } MemoryTable;
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* ========================================= FWD DECLARATIONS
- * ========================================= */
+/* ---------------------------------------------------------------------------------------------------- */
+/* ========================================= FWD DECLARATIONS ========================================= */
 
 // Initialize the memory and storage for the system
 void init_memory();
@@ -117,10 +113,8 @@ void liberate(int pid);
 // the process with access rights
 void set_current_process(int pid);
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* ========================================= GLOBAL VARIABLES
- * ========================================= */
+/* ---------------------------------------------------------------------------------------------------- */
+/* ========================================= GLOBAL VARIABLES ========================================= */
 
 // values for tracking cache stats
 static unsigned long L1cache_hit = 0, L1cache_miss = 0;
@@ -141,10 +135,8 @@ static MemoryTable MEMORY_TABLE = {0};
 // Current process with memory acess rights
 static int current_process_id = -1;
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* ========================================== UTILITY FUNCTS
- * ========================================== */
+/* ---------------------------------------------------------------------------------------------------- */
+/* ========================================== UTILITY FUNCTS ========================================== */
 
 static inline uint32_t line_base(const uint32_t addr) {
   return addr & ~(CACHE_LINE_SIZE - 1u);
@@ -195,19 +187,27 @@ static int load_line(Cache *cache, const uint32_t base) {
 }
 
 static bool check_access(uint32_t addr) {
-  if (current_process_id == -1) {
+  if (current_process_id == SYSTEM_PROCESS_ID) {
     return true; // System/kernel mode - allow all access
   }
-
-  // Check if address is in current process's memory blocks
-  for (size_t i = 0; i < MEMORY_TABLE.block_count; i++) {
-    MemoryBlock *b = &MEMORY_TABLE.blocks[i];
-    if (!b->is_free && b->pid == current_process_id) {
-      if (addr >= b->start_addr && addr <= b->end_addr) {
-        return true;
-      }
+  
+  MemoryBlock *b = {0};
+  bool valid_id = false;
+  // Check if the process id is a valid id
+  for (size_t i = 0; i < MEMORY_TABLE.block_count; i++){
+    b = &MEMBLOCK(i);
+    if (b->pid == current_process_id){
+      valid_id = true;
+      break;
     }
   }
+
+  if (!valid_id){
+    fprintf(stderr, "Pocess read/write access: Invalid process id\n");
+    return false;
+  }
+
+  if (!b->is_free && addr >= b->start_addr && addr <= b->end_addr) return true;
 
   // Also check if address is in process's TEXT/DATA segments
   // Process 0: TEXT_BASE (0x00400000) to TEXT_BASE + 0x00100000
@@ -230,10 +230,8 @@ static bool check_access(uint32_t addr) {
   return false;
 }
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* =========================================== INITIALIZERS
- * =========================================== */
+/* ---------------------------------------------------------------------------------------------------- */
+/* =========================================== INITIALIZERS =========================================== */
 
 // Initialize the ram to the given size
 static void init_ram(const size_t size) {
@@ -307,10 +305,8 @@ void init_memory() {
   init_memtab(MAX_MEM_BLOCKS);
 }
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* =========================================== DEALLOCATORS
- * =========================================== */
+/* ---------------------------------------------------------------------------------------------------- */
+/* =========================================== DEALLOCATORS =========================================== */
 
 static void free_cache(Cache *c) {
   free(c->lines);
@@ -332,10 +328,8 @@ void free_memory(void) {
   MEMORY_TABLE.block_count = MEMORY_TABLE.capacity = 0;
 }
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* ============================================ API FUNCTS
- * ============================================ */
+/* ---------------------------------------------------------------------------------------------------- */
+/* ============================================ API FUNCTS ============================================ */
 
 void set_current_process(const int pid) { current_process_id = pid; }
 
