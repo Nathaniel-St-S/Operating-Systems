@@ -267,8 +267,8 @@ static void handle_space(AssemblyContext *ctx, int bytes) {
 static void init_context(AssemblyContext *ctx, int process_id) {
   memset(ctx, 0, sizeof(AssemblyContext));
   ctx->process_id = process_id;
-  ctx->text_base = TEXT_BASE + (process_id * 0x00100000);  // 1MB per process
-  ctx->data_base = DATA_BASE + (process_id * 0x00100000);
+  ctx->text_base = TEXT_BASE + (process_id * MAX_PROCESS_SIZE);  // 1MB per process
+  ctx->data_base = DATA_BASE + (process_id * MAX_PROCESS_SIZE);
   ctx->current_address = ctx->text_base;
   ctx->data_segment.address = ctx->data_base;
   ctx->align_mode = 1;
@@ -685,8 +685,8 @@ AssemblyResult assemble(const char *filename, int process_id) {
   result.program->text_size = ctx.text_count * 4;
   result.program->data_start = ctx.data_base;
   result.program->data_size = ctx.data_segment.size;
-  result.program->stack_ptr= STACK_TOP - (process_id * 0x00100000);
-  result.program->globl_ptr= GLOBAL_PTR + (process_id * 0x00100000);
+  result.program->stack_ptr= STACK_TOP - (process_id * MAX_PROCESS_SIZE);
+  result.program->globl_ptr= GLOBAL_PTR + (process_id * MAX_PROCESS_SIZE);
 
   // Find entry point
   result.program->entry_point = get_symbol_address(&ctx, "main");
