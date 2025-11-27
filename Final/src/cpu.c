@@ -3,6 +3,7 @@
 #include "../include/isa.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 Cpu THE_CPU;
 
@@ -17,11 +18,16 @@ static void print_cpu_state() {
   printf("  CARRY:     %1d\n\n\n", (HW_REGISTER(FLAGS) >> 2) & 1);
 }
 
-void init_cpu()
+void init_cpu(const uint32_t entry_point)
 {
-  HW_REGISTER(PC) = TEXT_BASE;
+  memset(&THE_CPU, 0, sizeof(Cpu));
+
+  HW_REGISTER(PC) = entry_point;
   HW_REGISTER(IR) = ((uint32_t) -1);
   HW_REGISTER(FLAGS) = F_ZERO;
+
+  GP_REGISTER(REG_ZERO) = 0;
+
   printf("Initialized the cpu!\n");
   print_cpu_state();
 }
@@ -29,7 +35,7 @@ void init_cpu()
 // Fetch the next instruction from the given memory and cpu and increments the program counter
 void fetch() {
   HW_REGISTER(IR) = read_word(HW_REGISTER(PC));
-  HW_REGISTER(PC)++;
+  HW_REGISTER(PC)+= 4;
 }
 
 // Executes the instruction in the given cpu's IR with the given RAM

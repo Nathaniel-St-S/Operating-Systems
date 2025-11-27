@@ -6,7 +6,8 @@
 #define GP_REGISTER(register) (THE_CPU.gp_registers[register])
 #define HW_REGISTER(register) (THE_CPU.hw_registers[register])
 
-enum GP_Register{
+// General Purpose Registers
+enum {
   REG_ZERO, // Constant zero, reads as zero, writes ignored
   REG_AT,   // Assembler Temporary
   REG_VO,   // Function Return Values
@@ -42,7 +43,8 @@ enum GP_Register{
   GP_REG_COUNT,
 };
 
-enum HW_Register {
+// Hardware Registers
+enum {
   PC,    // Program Counter
   IR,    // Instruction Register
   MAR,   // Memory Address Register
@@ -55,7 +57,8 @@ enum HW_Register {
   HW_REG_COUNT,
 };
 
-enum FLAG {
+// Flags
+enum {
   F_ZERO     = 1 << 0,
   F_OVERFLOW = 1 << 1,
   F_CARRY    = 1 << 2,
@@ -69,7 +72,7 @@ typedef struct Cpu {
 extern Cpu THE_CPU;
 
 //initialize a CPU to fetch, decode, and execute instructions
-void init_cpu(void);
+void init_cpu(uint32_t entry_point);
 
 // Fetch the next instruction from the given memory and cpu
 // and increments the program counter

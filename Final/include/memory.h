@@ -7,8 +7,7 @@
 // Memory layout constants
 #define TEXT_BASE 0x00400000 // Location in memory to write instructions to
 #define DATA_BASE 0x10010000 // Location in memory to write data to
-#define STACK_TOP                                                              \
-  0x7ffffffc // Top of stack, but probably not used for our assembler
+#define STACK_TOP 0x7ffffffc // Top of stack, but probably not used for our assembler
 #define GLOBAL_PTR 0x10008000       // Initialize $gp to middle of .text
 #define MAX_PROCESS_SIZE 0x00100000 // 1MB per process
 #define SYSTEM_PROCESS_ID -100
