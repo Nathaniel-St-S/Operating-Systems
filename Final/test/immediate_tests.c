@@ -21,6 +21,7 @@ static void reset_cpu_and_memory(void) {
   reset_cpu_state();
   free_memory();
   init_memory();
+  set_current_process(SYSTEM_PROCESS_ID);
 }
 
 TEST_CASE(ITypeImmediate, AddiAddsSignedImmediate) {

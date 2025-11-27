@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <limits.h>
 
 static uint32_t make_r_instruction(uint32_t rs, uint32_t rt, uint32_t rd,
                                    uint32_t shamt, uint32_t funct) {
@@ -25,6 +26,8 @@ TEST_CASE(RType, Add) {
   write_gpr(REG_T1, -3);
   execute_instruction(make_r_instruction(REG_T0, REG_T1, REG_T2, 0, FUNCT_ADD));
   ASSERT_EQ(read_gpr(REG_T2), 2);
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_ZERO));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW));
 }
 
 TEST_CASE(RType, AdduWraps) {
@@ -33,6 +36,34 @@ TEST_CASE(RType, AdduWraps) {
   write_gpr(REG_T1, 1);
   execute_instruction(make_r_instruction(REG_T0, REG_T1, REG_T2, 0, FUNCT_ADDU));
   ASSERT_EQ(read_gpr(REG_T2), 0);
+  ASSERT_TRUE(THE_CPU.hw_registers[FLAGS] & F_CARRY);
+}
+
+TEST_CASE(RType, ZeroFlagSetOnZeroResult) {
+  reset_cpu_state();
+  write_gpr(REG_T0, 42);
+  write_gpr(REG_T1, 42);
+  execute_instruction(make_r_instruction(REG_T0, REG_T1, REG_T2, 0, FUNCT_SUB));
+  ASSERT_EQ(read_gpr(REG_T2), 0);
+  ASSERT_TRUE(THE_CPU.hw_registers[FLAGS] & F_ZERO);
+}
+
+TEST_CASE(RType, CarryFlagNotSetWithoutWrap) {
+  reset_cpu_state();
+  write_gpr(REG_T0, 1);
+  write_gpr(REG_T1, 1);
+  execute_instruction(make_r_instruction(REG_T0, REG_T1, REG_T2, 0, FUNCT_ADDU));
+  ASSERT_EQ(read_gpr(REG_T2), 2);
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_CARRY));
+}
+
+TEST_CASE(RType, OverflowFlagSetOnSignedAdd) {
+  reset_cpu_state();
+  write_gpr(REG_T0, 0x7FFFFFFF);
+  write_gpr(REG_T1, 1);
+  execute_instruction(make_r_instruction(REG_T0, REG_T1, REG_T2, 0, FUNCT_ADD));
+  ASSERT_EQ((uint32_t)read_gpr(REG_T2), (uint32_t)0x80000000);
+  ASSERT_TRUE(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW);
 }
 
 TEST_CASE(RType, Subtract) {
@@ -60,6 +91,9 @@ TEST_CASE(RType, MultProducesHiLo) {
   execute_instruction(make_r_instruction(REG_ZERO, REG_ZERO, REG_T3, 0, FUNCT_MFLO));
   ASSERT_EQ(read_gpr(REG_T2), -1);
   ASSERT_EQ(read_gpr(REG_T3), -6000);
+  ASSERT_TRUE(THE_CPU.hw_registers[FLAGS] & F_CARRY);
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_ZERO));
 }
 
 TEST_CASE(RType, MultuProducesHiLo) {
@@ -71,6 +105,31 @@ TEST_CASE(RType, MultuProducesHiLo) {
   execute_instruction(make_r_instruction(REG_ZERO, REG_ZERO, REG_T3, 0, FUNCT_MFLO));
   ASSERT_EQ((uint32_t)read_gpr(REG_T2), (uint32_t)1);
   ASSERT_EQ((uint32_t)read_gpr(REG_T3), (uint32_t)0xFFFFFFFE);
+  ASSERT_TRUE(THE_CPU.hw_registers[FLAGS] & F_CARRY);
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_ZERO));
+}
+
+TEST_CASE(RType, MultZeroResultSetsZeroFlag) {
+  reset_cpu_state();
+  write_gpr(REG_T0, 0);
+  write_gpr(REG_T1, 12345);
+  execute_instruction(make_r_instruction(REG_T0, REG_T1, REG_ZERO, 0, FUNCT_MULT));
+  execute_instruction(make_r_instruction(REG_ZERO, REG_ZERO, REG_T2, 0, FUNCT_MFLO));
+  ASSERT_EQ(read_gpr(REG_T2), 0);
+  ASSERT_TRUE(THE_CPU.hw_registers[FLAGS] & F_ZERO);
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_CARRY));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW));
+}
+
+TEST_CASE(RType, MultOverflowSetsCarryAndOverflow) {
+  reset_cpu_state();
+  write_gpr(REG_T0, INT32_MAX);
+  write_gpr(REG_T1, 4);
+  execute_instruction(make_r_instruction(REG_T0, REG_T1, REG_ZERO, 0, FUNCT_MULT));
+  ASSERT_TRUE(THE_CPU.hw_registers[FLAGS] & F_CARRY);
+  ASSERT_TRUE(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW);
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_ZERO));
 }
 
 TEST_CASE(RType, DivSetsQuotientAndRemainder) {
@@ -82,6 +141,9 @@ TEST_CASE(RType, DivSetsQuotientAndRemainder) {
   execute_instruction(make_r_instruction(REG_ZERO, REG_ZERO, REG_T3, 0, FUNCT_MFLO));
   ASSERT_EQ(read_gpr(REG_T3), 4);
   ASSERT_EQ(read_gpr(REG_T2), 2);
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_ZERO));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_CARRY));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW));
 }
 
 TEST_CASE(RType, DivuSetsQuotientAndRemainder) {
@@ -93,6 +155,41 @@ TEST_CASE(RType, DivuSetsQuotientAndRemainder) {
   execute_instruction(make_r_instruction(REG_ZERO, REG_ZERO, REG_T3, 0, FUNCT_MFLO));
   ASSERT_EQ((uint32_t)read_gpr(REG_T3), (uint32_t)3);
   ASSERT_EQ((uint32_t)read_gpr(REG_T2), (uint32_t)4);
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_ZERO));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_CARRY));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW));
+}
+
+TEST_CASE(RType, DivZeroQuotientSetsZeroFlag) {
+  reset_cpu_state();
+  write_gpr(REG_T0, 1);
+  write_gpr(REG_T1, 2);
+  execute_instruction(make_r_instruction(REG_T0, REG_T1, REG_ZERO, 0, FUNCT_DIV));
+  execute_instruction(make_r_instruction(REG_ZERO, REG_ZERO, REG_T2, 0, FUNCT_MFLO));
+  ASSERT_EQ(read_gpr(REG_T2), 0);
+  ASSERT_TRUE(THE_CPU.hw_registers[FLAGS] & F_ZERO);
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_CARRY));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW));
+}
+
+TEST_CASE(RType, DivOverflowSetsOverflowFlag) {
+  reset_cpu_state();
+  write_gpr(REG_T0, INT32_MIN);
+  write_gpr(REG_T1, -1);
+  execute_instruction(make_r_instruction(REG_T0, REG_T1, REG_ZERO, 0, FUNCT_DIV));
+  ASSERT_TRUE(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW);
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_ZERO));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_CARRY));
+}
+
+TEST_CASE(RType, DivuClearsCarryFlag) {
+  reset_cpu_state();
+  THE_CPU.hw_registers[FLAGS] = F_CARRY;
+  write_gpr(REG_T0, 30);
+  write_gpr(REG_T1, 5);
+  execute_instruction(make_r_instruction(REG_T0, REG_T1, REG_ZERO, 0, FUNCT_DIVU));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_CARRY));
+  ASSERT_TRUE(!(THE_CPU.hw_registers[FLAGS] & F_OVERFLOW));
 }
 
 TEST_CASE(RType, MfhiReadsHighRegister) {

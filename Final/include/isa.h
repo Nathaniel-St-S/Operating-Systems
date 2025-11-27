@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 #define CPU_HALT (uint32_t)0xFFFFFFFF
-#define SET_FLAG(flag)   (THE_CPU.registers[FLAG] |= (flag))
-#define CLEAR_FLAG(flag) (THE_CPU.registers[FLAG] &= ~(flag))
-#define CLEAR_ALL_FLAGS  (THE_CPU.registers[FLAG] = 0)
+#define SET_FLAG(flag)   (THE_CPU.hw_registers[FLAGS] |= (flag))
+#define CLEAR_FLAG(flag) (THE_CPU.hw_registers[FLAGS] &= ~(flag))
+#define CLEAR_ALL_FLAGS  (THE_CPU.hw_registers[FLAGS] = 0)
 
 // X_SHIFT is the number of bits to shift right
 // X_MASK is the number to bitwise and the instruction with
@@ -109,7 +109,5 @@ enum {
 };
 
 void execute_instruction(uint32_t instruction);
-int32_t read_gpr(uint32_t reg);
-void write_gpr(uint32_t reg, uint32_t value);
 
 #endif // !ISA_H
