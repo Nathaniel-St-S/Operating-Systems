@@ -1,3 +1,7 @@
+// TODO add write no check
+// TODO add security measures to stop execution check access fails
+// TODO add checks for proper cache policy
+// TODO addd write back cache policy
 #include "../include/memory.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -74,11 +78,12 @@ typedef struct {
   size_t capacity;
 } MemoryTable;
 
+
 /* ---------------------------------------------------------------------------------------------------- */
 /* ========================================= FWD DECLARATIONS ========================================= */
 
 // Initialize the memory and storage for the system
-void init_memory();
+void init_memory(const CachePolicy policy);
 
 // Free the memory allcoated for the system
 void free_memory();
@@ -134,6 +139,8 @@ static uint8_t *SSD = NULL;
 static MemoryTable MEMORY_TABLE = {0};
 // Current process with memory acess rights
 static int current_process_id = -1;
+
+static CachePolicy cache_policy_type = CACHE_WRITE_THROUGH;
 
 /* ---------------------------------------------------------------------------------------------------- */
 /* ========================================== UTILITY FUNCTS ========================================== */
@@ -230,6 +237,69 @@ static bool check_access(uint32_t addr) {
   return false;
 }
 
+static uint8_t read_byte_no_check(uint32_t addr){
+
+  uint32_t base = line_base(addr);
+  int idx = EMPTY_ADDR;
+
+  // L1 Cache
+  idx = find_line(&L1, base);
+  if (idx != EMPTY_ADDR) {
+    L1cache_hit++;
+    return L1.lines[idx].data[addr - base];
+  }
+  L1cache_miss++;
+
+  // L2 cache
+  idx = find_line(&L2, base);
+  if (idx != EMPTY_ADDR) {
+    L2cache_hit++;
+    // Copy to L1
+    int l1_idx;
+    if (L1.count < L1.line_count) {
+      l1_idx = (L1.front + L1.count) % L1.line_count;
+      L1.count++;
+    } else {
+      l1_idx = L1.front;
+      L1.front = (L1.front + 1) % L1.line_count;
+    }
+
+    L1.lines[l1_idx].tag = base;
+    L1.lines[l1_idx].is_valid = true;
+    memcpy(L1.lines[l1_idx].data, L2.lines[idx].data,
+        CACHE_LINE_SIZE); // Copy from L2!
+
+    return L1.lines[l1_idx].data[addr - base];
+  }
+  L2cache_miss++;
+
+  // Complete miss
+  load_line(&L2, base);
+  int l1_idx = load_line(&L1, base);
+  return L1.lines[l1_idx].data[addr - base];
+}
+
+static void write_through_no_check (uint32_t addr, uint8_t value){
+  
+  RAM[addr] = value;
+
+  uint32_t base = line_base(addr);
+  int idx;
+
+  // Update L1 if present
+  idx = find_line(&L1, base);
+  if (idx >= 0) {
+    L1.lines[idx].data[addr - base] = value;
+  }
+
+  // Update L2 if present
+  idx = find_line(&L2, base);
+  if (idx >= 0) {
+    L2.lines[idx].data[addr - base] = value;
+  }
+}
+
+static void write_back_no_check (uint32_t addr, uint8_t);
 /* ---------------------------------------------------------------------------------------------------- */
 /* =========================================== INITIALIZERS =========================================== */
 
@@ -296,7 +366,8 @@ static void init_memtab(const int num_blocks) {
   MEMORY_TABLE.block_count = 1;
 }
 
-void init_memory() {
+void init_memory(const CachePolicy policy) {
+  cache_policy_type = policy;
   init_ram(RAM_SIZE);
   init_ssd(SSD_SIZE);
   init_hdd(HDD_SIZE);
@@ -349,44 +420,7 @@ uint8_t read_byte(uint32_t addr) {
     return 0;
   }
 
-  uint32_t base = line_base(addr);
-  int idx = EMPTY_ADDR;
-
-  // L1 Cache
-  idx = find_line(&L1, base);
-  if (idx != EMPTY_ADDR) {
-    L1cache_hit++;
-    return L1.lines[idx].data[addr - base];
-  }
-  L1cache_miss++;
-
-  // L2 cache
-  idx = find_line(&L2, base);
-  if (idx != EMPTY_ADDR) {
-    L2cache_hit++;
-    // Copy to L1
-    int l1_idx;
-    if (L1.count < L1.line_count) {
-      l1_idx = (L1.front + L1.count) % L1.line_count;
-      L1.count++;
-    } else {
-      l1_idx = L1.front;
-      L1.front = (L1.front + 1) % L1.line_count;
-    }
-
-    L1.lines[l1_idx].tag = base;
-    L1.lines[l1_idx].is_valid = true;
-    memcpy(L1.lines[l1_idx].data, L2.lines[idx].data,
-           CACHE_LINE_SIZE); // Copy from L2!
-
-    return L1.lines[l1_idx].data[addr - base];
-  }
-  L2cache_miss++;
-
-  // Complete miss
-  load_line(&L2, base);
-  int l1_idx = load_line(&L1, base);
-  return L1.lines[l1_idx].data[addr - base];
+  return read_byte_no_check(addr);
 }
 
 // So called syntax sugar
@@ -396,8 +430,15 @@ uint16_t read_hword(uint32_t addr) {
     return 0;
   }
 
-  uint16_t b0 = (uint16_t)read_byte(addr);
-  uint16_t b1 = (uint16_t)read_byte(addr + 1);
+  if (!check_access(addr)) {
+    fprintf(stderr,
+            "read [hword]: access violation - PID %d cannot access 0x%08x\n",
+            current_process_id, addr);
+    return 0;
+  }
+
+  uint16_t b0 = (uint16_t)read_byte_no_check(addr);
+  uint16_t b1 = (uint16_t)read_byte_no_check(addr + 1);
   return (uint16_t)(b0 | (b1 << 8));
 }
 
@@ -406,11 +447,19 @@ uint32_t read_word(uint32_t addr) {
     fprintf(stderr, "read [word]: out of bounds addr=0x%08x\n", addr);
     return 0;
   }
+
+  if (!check_access(addr)) {
+    fprintf(stderr,
+        "read [word]: access violation - PID %d cannot access 0x%08x\n",
+        current_process_id, addr);
+    return 0;
+  }
+
   uint32_t v = 0;
-  v |= ((uint32_t)read_byte(addr + 0)) << 0;
-  v |= ((uint32_t)read_byte(addr + 1)) << 8;
-  v |= ((uint32_t)read_byte(addr + 2)) << 16;
-  v |= ((uint32_t)read_byte(addr + 3)) << 24;
+  v |= ((uint32_t)read_byte_no_check(addr + 0)) << 0;
+  v |= ((uint32_t)read_byte_no_check(addr + 1)) << 8;
+  v |= ((uint32_t)read_byte_no_check(addr + 2)) << 16;
+  v |= ((uint32_t)read_byte_no_check(addr + 3)) << 24;
   return v;
 }
 
@@ -427,22 +476,7 @@ void write_byte(uint32_t addr, uint8_t value) {
     return;
   }
 
-  RAM[addr] = value;
-
-  uint32_t base = line_base(addr);
-  int idx;
-
-  // Update L1 if present
-  idx = find_line(&L1, base);
-  if (idx >= 0) {
-    L1.lines[idx].data[addr - base] = value;
-  }
-
-  // Update L2 if present
-  idx = find_line(&L2, base);
-  if (idx >= 0) {
-    L2.lines[idx].data[addr - base] = value;
-  }
+  (cache_policy_type == CACHE_WRITE_THROUGH) ? write_through_no_check(addr, value) : write_back_no_check(addr, value);
 }
 
 void write_hword(uint32_t addr, uint16_t data) {
@@ -450,8 +484,24 @@ void write_hword(uint32_t addr, uint16_t data) {
     fprintf(stderr, "write [hword]: out of bounds addr=0x%08x\n", addr);
     return;
   }
-  write_byte(addr, (uint8_t)(data & 0xFF));
-  write_byte(addr + 1, (uint8_t)((data >> 8) & 0xFF));
+
+  if (!check_access(addr)) {
+    fprintf(stderr,
+        "write [hword]: access violation - PID %d cannot write to 0x%08x\n",
+        current_process_id, addr);
+    return;
+  }
+
+  if (cache_policy_type == CACHE_WRITE_THROUGH){
+
+    write_through_no_check(addr, (uint8_t)(data & 0xFF));
+    write_through_no_check(addr + 1, (uint8_t)((data >> 8) & 0xFF));
+  }
+  else {
+
+    write_back_no_check(addr, (uint8_t)(data & 0xFF));
+    write_back_no_check(addr + 1, (uint8_t)((data >> 8) & 0xFF));
+  }
 }
 
 void write_word(uint32_t addr, uint32_t data) {
@@ -459,10 +509,28 @@ void write_word(uint32_t addr, uint32_t data) {
     fprintf(stderr, "write [word]: out of bounds addr=0x%08x\n", addr);
     return;
   }
-  write_byte(addr + 0, (uint8_t)(data & 0xFF));
-  write_byte(addr + 1, (uint8_t)((data >> 8) & 0xFF));
-  write_byte(addr + 2, (uint8_t)((data >> 16) & 0xFF));
-  write_byte(addr + 3, (uint8_t)((data >> 24) & 0xFF));
+  
+  if (!check_access(addr)) {
+    fprintf(stderr,
+            "write [word]: access violation - PID %d cannot write to 0x%08x\n",
+            current_process_id, addr);
+    return;
+  }
+
+  if (cache_policy_type == CACHE_WRITE_THROUGH){
+
+    write_through_no_check(addr + 0, (uint8_t)(data & 0xFF));
+    write_through_no_check(addr + 1, (uint8_t)((data >> 8) & 0xFF));
+    write_through_no_check(addr + 2, (uint8_t)((data >> 16) & 0xFF));
+    write_through_no_check(addr + 3, (uint8_t)((data >> 24) & 0xFF));
+  }
+  else {
+
+    write_back_no_check(addr + 0, (uint8_t)(data & 0xFF));
+    write_back_no_check(addr + 1, (uint8_t)((data >> 8) & 0xFF));
+    write_back_no_check(addr + 2, (uint8_t)((data >> 16) & 0xFF));
+    write_back_no_check(addr + 3, (uint8_t)((data >> 24) & 0xFF));
+  }
 }
 
 // Allocate memory for a specific process

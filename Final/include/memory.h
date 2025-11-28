@@ -12,20 +12,17 @@
 #define MAX_PROCESS_SIZE 0x00100000 // 1MB per process
 #define SYSTEM_PROCESS_ID -100
 
-// Initialize the cache to the given size
-// void init_cache(Cache *cache, int size);
-
-// initialize the ram to the given size
-// void init_ram(int size);
-
-// initializes the SSD to the given size
-// void init_SSD(const int size);
-
-// initializes the HDD to the given size
-// void init_HDD(const int size);
+/*
+ * The memory sytem to be put in place
+ * could also be a boolean but this is easier to extend
+ */
+typedef enum {
+  CACHE_WRITE_THROUGH,
+  CACHE_WRITE_BACK
+} CachePolicy;
 
 // Initialize the memory and storage for the system
-void init_memory(void);
+void init_memory(const CachePolicy policy);
 
 // Free the memory allocated for the system
 void free_memory(void);
