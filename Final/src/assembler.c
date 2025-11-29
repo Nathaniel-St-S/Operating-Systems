@@ -563,7 +563,7 @@ static int parse_file(AssemblyContext *ctx, const char *filename) {
       }
       trimmed = trim(colon + 1);
       if (trimmed[0] == '\0' || trimmed[0] == '#') continue;
-      strncpy(buffer, trimmed, MAX_LINE - 1);
+      memmove(buffer, trimmed,  strlen(trimmed));
       buffer[MAX_LINE - 1] = '\0';
     }
 

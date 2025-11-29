@@ -203,7 +203,7 @@ static bool check_access(uint32_t addr) {
   }
 
   if (!valid_id){
-    fprintf(stderr, "Pocess read/write access: Invalid process id\n");
+    fprintf(stderr, "Process read/write access: Invalid process id\n");
     return false;
   }
 

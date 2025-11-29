@@ -10,7 +10,7 @@ static inline uint32_t mask_reg_index(uint32_t reg) {
   return (uint32_t)reg & 0x1F;
 }
 
-static inline int32_t read_gpr(uint32_t reg) {
+int32_t read_gpr(uint32_t reg) {
   uint32_t idx = mask_reg_index(reg);
   if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
     return 0;
@@ -18,7 +18,7 @@ static inline int32_t read_gpr(uint32_t reg) {
   return THE_CPU.gp_registers[idx];
 }
 
-static inline void write_gpr(uint32_t reg, uint32_t value) {
+void write_gpr(uint32_t reg, uint32_t value) {
   uint32_t idx = mask_reg_index(reg);
   if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
     return;

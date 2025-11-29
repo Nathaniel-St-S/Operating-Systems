@@ -1,6 +1,7 @@
 #include "../include/cpu.h"
 #include "../include/memory.h"
 #include "../include/assembler.h"
+#include "../include/processes.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,26 +15,16 @@ typedef enum {
   CACHE_WRITE_BACK
 } CachePolicy;
 
-typedef enum {
-  SCHED_FCFS,
-  SCHED_ROUND_ROBIN,
-  SCHED_PRIORITY,
-  SCHED_SRT,
-  SCHED_HRRN,
-  SCHED_SPN,
-  SCHED_MLFQ
-} SchedulingAlgorithm;
-
 typedef struct {
   CachePolicy cache_policy;
-  SchedulingAlgorithm scheduler;
+  Scheduler scheduler;
   const char **program_files;
   int program_count;
 } Options;
 
 static Options opts = {
   .cache_policy = CACHE_WRITE_THROUGH,
-  .scheduler = SCHED_ROUND_ROBIN,
+  .scheduler = NULL,
   .program_files = NULL,
   .program_count = 0
 };
@@ -43,6 +34,10 @@ static AssemblyResult *results;
 static void parse_args(int argc, char *argv[]);
 
 static void print_usage(const char *prog_name);
+
+static void ensure_scheduler_selected(void);
+
+static void run_program(const AssemblyResult *result, int pid);
 
 // For error handling since we lowkey requesting a lot of memory now
 static jmp_buf g_panic_buffer;
@@ -56,6 +51,8 @@ static void panic_handler(int sig);
 
 int main(int argc, char *argv[])
 {
+  argc = 2;
+  argv[0] = "programs/factorial.asm";
   int exit_code = EXIT_SUCCESS;
 
   // Panic handlers for signalls
@@ -93,8 +90,26 @@ int main(int argc, char *argv[])
     goto cleanup;
   }
 
-  // Write main code here
+  ensure_scheduler_selected();
+  if (opts.scheduler.init) {
+    opts.scheduler.init();
+  }
 
+  int programs_ran = 0;
+  for (int i = 0; i < opts.program_count; i++) {
+    if (!results[i].success) {
+      continue;
+    }
+    mallocate(i, 1000);
+    run_program(&results[i], i);
+    programs_ran++;
+  }
+
+  if (programs_ran == 0) {
+    fprintf(stderr, "No runnable programs were found after assembly\n");
+    exit_code = EXIT_FAILURE;
+    goto cleanup;
+  }
 
   // Part of the cleanup process
   print_cache_stats();
@@ -146,25 +161,25 @@ static void parse_args(int argc, char* argv[]){
       opts.cache_policy = CACHE_WRITE_BACK;
     }
     else if (strcmp(argv[i], "--fcfs") == 0) {
-      opts.scheduler = SCHED_FCFS;
+      opts.scheduler = fcfs;
     }
     else if (strcmp(argv[i], "--round-robin") == 0) {
-      opts.scheduler = SCHED_ROUND_ROBIN;
+      opts.scheduler = round_robin;
     }
     else if (strcmp(argv[i], "--priority") == 0) {
-      opts.scheduler = SCHED_PRIORITY;
+      opts.scheduler = priority;
     }
     else if (strcmp(argv[i], "--srt") == 0) {
-      opts.scheduler = SCHED_SRT;
+      opts.scheduler = shortest_time_remaining;
     }
     else if (strcmp(argv[i], "--hrrn") == 0) {
-      opts.scheduler = SCHED_HRRN;
+      opts.scheduler = highest_response_ratio_next;
     }
     else if (strcmp(argv[i], "--spn") == 0) {
-      opts.scheduler = SCHED_SPN;
+      opts.scheduler = shortest_process_next;
     }
     else if (strcmp(argv[i], "--mlfq") == 0) {
-      opts.scheduler = SCHED_MLFQ;
+      opts.scheduler = multilevel_feedback_queue;
     }
     else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
       print_usage(argv[0]);
@@ -193,25 +208,57 @@ static void parse_args(int argc, char* argv[]){
   }
 }
 
+static void ensure_scheduler_selected(void) {
+  if (opts.scheduler.init) {
+    return;
+  }
+
+  fprintf(stdout,
+          "No scheduling algorithm selected - defaulting to Round Robin\n");
+  opts.scheduler = round_robin;
+}
+
+static void run_program(const AssemblyResult *result, int pid) {
+  if (!result || !result->success || !result->program) {
+    return;
+  }
+
+  printf("\n=== Starting program %s (PID %d) ===\n",
+         result->program->program_name, pid);
+
+  set_current_process(pid);
+
+  init_cpu(result->program->entry_point);
+  GP_REGISTER(REG_GP) = result->program->globl_ptr;
+  GP_REGISTER(REG_SP) = result->program->stack_ptr;
+
+  cpu_run();
+
+  printf("=== Program %s completed ===\n", result->program->program_name);
+
+  set_current_process(SYSTEM_PROCESS_ID);
+}
+
 static void print_usage(const char *prog_name) {
   // program name will be argv[0]
-  printf("Usage: %s [OPTIONS] <program1.asm> <program2.asm> ...\n\n", prog_name);
-  printf("OPTIONS:\n");
-  printf("  --write-through       Use write-through cache policy (default)\n");
-  printf("  --write-back          Use write-back cache policy\n");
-  printf("\n");
-  printf("  --fcfs                First-Come First-Served scheduling\n");
-  printf("  --round-robin         Round Robin scheduling (default)\n");
-  printf("  --priority            Priority scheduling\n");
-  printf("  --srt                 Shortest Remaining Time scheduling\n");
-  printf("  --hrrn                Highest Response Ratio Next scheduling\n");
-  printf("  --spn                 Shortest Process Next scheduling\n");
-  printf("  --feedback            Multi-Level Feedback Queue scheduling\n");
-  printf("\n");
-  printf("EXAMPLES:\n");
-  printf("  %s programs/hello_world.asm\n", prog_name);
-  printf("  %s --write-back --fcfs prog1.asm prog2.asm\n", prog_name);
-  printf("  %s --round-robin programs/*.asm\n", prog_name);
+  printf("Usage: %s [OPTIONS] <program1.asm> <program2.asm> ...\n\n"
+          "OPTIONS:\n"
+          "  --write-through       Use write-through cache policy (default)\n"
+          "  --write-back          Use write-back cache policy\n"
+          "\n"
+          "  --fcfs                First-Come First-Served scheduling\n"
+          "  --round-robin         Round Robin scheduling (default)\n"
+          "  --priority            Priority scheduling\n"
+          "  --srt                 Shortest Remaining Time scheduling\n"
+          "  --hrrn                Highest Response Ratio Next scheduling\n"
+          "  --spn                 Shortest Process Next scheduling\n"
+          "  --feedback            Multi-Level Feedback Queue scheduling\n"
+          "\n"
+          "EXAMPLES:\n"
+          "  %s programs/hello_world.asm\n"
+          "  %s --write-back --fcfs prog1.asm prog2.asm\n"
+          "  %s --round-robin programs/*.asm"
+          , prog_name, prog_name,  prog_name, prog_name);
 }
 
 void panic_handler(int sig) {
