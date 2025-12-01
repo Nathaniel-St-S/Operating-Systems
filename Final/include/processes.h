@@ -1,5 +1,5 @@
-#ifndef PROCESS_H
-#define PROCESS_H
+#ifndef PROCESSES_H
+#define PROCESSES_H
 
 #include <stdint.h>
 
@@ -17,13 +17,23 @@ typedef struct PCB {
 } PCB;
 
 typedef struct List {
-    PCB first;
+    PCB* first;
     struct List* rest;
 } List;
 
-List cons(PCB elem, List L); 
+void init_Ready_Queue(const int size);
 
-int isEmpty(); 
+List* Cons(PCB* elem, List* L); 
+
+int isEmpty(List* L); 
+
+void Append(PCB elem, List* L);
+
+void Enqueue(PCB elem, List* L);
+
+List* Dequeue(List* L);
+
+List* sortWRTBurstTime(List* L);
 
 //ready_List = NULL;
 
