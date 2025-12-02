@@ -1,7 +1,4 @@
-// TODO add write no check
-// TODO add security measures to stop execution check access fails
-// TODO add checks for proper cache policy
-// TODO addd write back cache policy
+// TODO add security measures to stop execution when check access fails
 #include "../include/memory.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -35,6 +32,7 @@
 typedef struct {
   uint32_t tag;
   bool is_valid;
+  bool is_dirty;
   uint8_t data[CACHE_LINE_SIZE];
 } CacheLine;
 
@@ -124,6 +122,7 @@ void set_current_process(int pid);
 // values for tracking cache stats
 static unsigned long L1cache_hit = 0, L1cache_miss = 0;
 static unsigned long L2cache_hit = 0, L2cache_miss = 0;
+static unsigned long write_backs = 0;
 
 // L1 cache
 static Cache L1;
@@ -191,6 +190,21 @@ static int load_line(Cache *cache, const uint32_t base) {
   cache->lines[index].is_valid = true;
   memcpy(cache->lines[index].data, &RAM[base], CACHE_LINE_SIZE);
   return (int)index;
+}
+
+static void evict_line(Cache *cache, size_t index) {
+  if (!cache->lines[index].is_valid) {
+    return;
+  }
+  
+  if (cache_policy_type == CACHE_WRITE_BACK && cache->lines[index].is_dirty) {
+    uint32_t base = cache->lines[index].tag;
+    if (base + CACHE_LINE_SIZE <= RAM_SIZE) {
+      memcpy(&RAM[base], cache->lines[index].data, CACHE_LINE_SIZE);
+      write_backs++;
+    }
+    cache->lines[index].is_dirty = false;
+  }
 }
 
 static bool check_access(uint32_t addr) {
@@ -299,7 +313,75 @@ static void write_through_no_check (uint32_t addr, uint8_t value){
   }
 }
 
-static void write_back_no_check (uint32_t addr, uint8_t);
+static void write_back_no_check(uint32_t addr, uint8_t value) {
+  uint32_t base = line_base(addr);
+  int idx;
+
+  // L1 Cache
+  idx = find_line(&L1, base);
+  if (idx >= 0) {
+    L1.lines[idx].data[addr - base] = value;
+    L1.lines[idx].is_dirty = true;
+    
+    // Update L2 if present
+    idx = find_line(&L2, base);
+    if (idx >= 0) {
+      L2.lines[idx].data[addr - base] = value;
+      L2.lines[idx].is_dirty = true;
+    }
+    return;
+  }
+
+  // L2 Cache
+  idx = find_line(&L2, base);
+  if (idx >= 0) {
+    L2.lines[idx].data[addr - base] = value;
+    L2.lines[idx].is_dirty = true;
+    
+    // Load into L1
+    int l1_idx;
+    if (L1.count < L1.line_count) {
+      l1_idx = (L1.front + L1.count) % L1.line_count;
+      L1.count++;
+    } else {
+      l1_idx = L1.front;
+      evict_line(&L1, l1_idx);
+      L1.front = (L1.front + 1) % L1.line_count;
+    }
+    
+    L1.lines[l1_idx].tag = base;
+    L1.lines[l1_idx].is_valid = true;
+    L1.lines[l1_idx].is_dirty = true;
+    memcpy(L1.lines[l1_idx].data, L2.lines[idx].data, CACHE_LINE_SIZE);
+    L1.lines[l1_idx].data[addr - base] = value;
+    return;
+  }
+
+  // Complete miss - load line into cache then write
+  int l2_idx = load_line(&L2, base);
+  if (l2_idx == EMPTY_ADDR) {
+    // Fallback: write directly to RAM
+    RAM[addr] = value;
+    return;
+  }
+  
+  int l1_idx = load_line(&L1, base);
+  if (l1_idx == EMPTY_ADDR) {
+    // Write to L2 only
+    L2.lines[l2_idx].data[addr - base] = value;
+    L2.lines[l2_idx].is_dirty = true;
+    return;
+  }
+  
+  // Write to L1
+  L1.lines[l1_idx].data[addr - base] = value;
+  L1.lines[l1_idx].is_dirty = true;
+  
+  // Also mark L2 as dirty
+  L2.lines[l2_idx].data[addr - base] = value;
+  L2.lines[l2_idx].is_dirty = true;
+}
+
 /* ---------------------------------------------------------------------------------------------------- */
 /* =========================================== INITIALIZERS =========================================== */
 
@@ -374,6 +456,8 @@ void init_memory(const CachePolicy policy) {
   init_cache(&L1, L1CACHE_SIZE);
   init_cache(&L2, L2CACHE_SIZE);
   init_memtab(MAX_MEM_BLOCKS);
+  printf("Memory initialized with %s cache policy\n",
+      policy == CACHE_WRITE_THROUGH ? "write-through" : "write-back");
 }
 
 /* ---------------------------------------------------------------------------------------------------- */
@@ -651,10 +735,26 @@ void liberate(int pid) {
 }
 
 // print the number of cache hits & misses
-void print_cache_stats() {
-  printf("\nCache statistics:\n");
-  printf("L1 hits:   %lu\n", L1cache_hit);
-  printf("L1 misses: %lu\n", L1cache_miss);
-  printf("L2 hits:   %lu\n", L2cache_hit);
-  printf("L2 misses: %lu\n", L2cache_miss);
+void print_cache_stats(void) {
+  printf("\n=== Cache Statistics ===\n");
+  printf("L1 Cache:\n");
+  printf("  Hits:   %lu\n", L1cache_hit);
+  printf("  Misses: %lu\n", L1cache_miss);
+  if (L1cache_hit + L1cache_miss > 0) {
+    printf("  Hit Rate: %.2f%%\n", 
+           100.0 * L1cache_hit / (L1cache_hit + L1cache_miss));
+  }
+  
+  printf("\nL2 Cache:\n");
+  printf("  Hits:   %lu\n", L2cache_hit);
+  printf("  Misses: %lu\n", L2cache_miss);
+  if (L2cache_hit + L2cache_miss > 0) {
+    printf("  Hit Rate: %.2f%%\n", 
+           100.0 * L2cache_hit / (L2cache_hit + L2cache_miss));
+  }
+  
+  if (cache_policy_type == CACHE_WRITE_BACK) {
+    printf("\nWrite-Back Operations: %lu\n", write_backs);
+  }
+  printf("========================\n");
 }
