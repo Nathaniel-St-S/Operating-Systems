@@ -1,4 +1,5 @@
 #include "../include/processes.h"
+#include "../include/cpu.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -355,16 +356,6 @@ void context_switch(Queue* Q, int current, int next) {
     nxt->state = RUNNING;
 
     printf("Switched from process (PID: %d) to process (PID: %d)", curr->pid, nxt->pid);
-}
-
-//for compile
-void fetch() {
-    //stub
-}
-
-//for compile
-void execute() {
-    //stub -- will remove later
 }
 
 //-------------------------------------Scheduling Helpers-------------------------------------//
