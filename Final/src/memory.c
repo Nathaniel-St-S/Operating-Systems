@@ -1,3 +1,4 @@
+// TODO add security measures to stop execution when check access fails
 #include "../include/memory.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -19,10 +20,8 @@
 #define NO_PID -1
 #define NO_VAL ((uint8_t)-1)
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* ========================================= INTERNAL STRUCTS
- * ========================================= */
+/* ---------------------------------------------------------------------------------------------------- */
+/* ========================================= INTERNAL STRUCTS ========================================= */
 
 /*
  * A cache line stores data in an array
@@ -33,6 +32,7 @@
 typedef struct {
   uint32_t tag;
   bool is_valid;
+  bool is_dirty;
   uint8_t data[CACHE_LINE_SIZE];
 } CacheLine;
 
@@ -76,13 +76,12 @@ typedef struct {
   size_t capacity;
 } MemoryTable;
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* ========================================= FWD DECLARATIONS
- * ========================================= */
+
+/* ---------------------------------------------------------------------------------------------------- */
+/* ========================================= FWD DECLARATIONS ========================================= */
 
 // Initialize the memory and storage for the system
-void init_memory();
+void init_memory(const CachePolicy policy);
 
 // Free the memory allcoated for the system
 void free_memory();
@@ -117,14 +116,13 @@ void liberate(int pid);
 // the process with access rights
 void set_current_process(int pid);
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* ========================================= GLOBAL VARIABLES
- * ========================================= */
+/* ---------------------------------------------------------------------------------------------------- */
+/* ========================================= GLOBAL VARIABLES ========================================= */
 
 // values for tracking cache stats
 static unsigned long L1cache_hit = 0, L1cache_miss = 0;
 static unsigned long L2cache_hit = 0, L2cache_miss = 0;
+static unsigned long write_backs = 0;
 
 // L1 cache
 static Cache L1;
@@ -141,10 +139,10 @@ static MemoryTable MEMORY_TABLE = {0};
 // Current process with memory acess rights
 static int current_process_id = -1;
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* ========================================== UTILITY FUNCTS
- * ========================================== */
+static CachePolicy cache_policy_type = CACHE_WRITE_THROUGH;
+
+/* ---------------------------------------------------------------------------------------------------- */
+/* ========================================== UTILITY FUNCTS ========================================== */
 
 static inline uint32_t line_base(const uint32_t addr) {
   return addr & ~(CACHE_LINE_SIZE - 1u);
@@ -194,20 +192,43 @@ static int load_line(Cache *cache, const uint32_t base) {
   return (int)index;
 }
 
+static void evict_line(Cache *cache, size_t index) {
+  if (!cache->lines[index].is_valid) {
+    return;
+  }
+  
+  if (cache_policy_type == CACHE_WRITE_BACK && cache->lines[index].is_dirty) {
+    uint32_t base = cache->lines[index].tag;
+    if (base + CACHE_LINE_SIZE <= RAM_SIZE) {
+      memcpy(&RAM[base], cache->lines[index].data, CACHE_LINE_SIZE);
+      write_backs++;
+    }
+    cache->lines[index].is_dirty = false;
+  }
+}
+
 static bool check_access(uint32_t addr) {
-  if (current_process_id == -1) {
+  if (current_process_id == SYSTEM_PROCESS_ID) {
     return true; // System/kernel mode - allow all access
   }
-
-  // Check if address is in current process's memory blocks
-  for (size_t i = 0; i < MEMORY_TABLE.block_count; i++) {
-    MemoryBlock *b = &MEMORY_TABLE.blocks[i];
-    if (!b->is_free && b->pid == current_process_id) {
-      if (addr >= b->start_addr && addr <= b->end_addr) {
-        return true;
-      }
+  
+  MemoryBlock *b = {0};
+  bool valid_id = false;
+  // Check if the process id is a valid id
+  for (size_t i = 0; i < MEMORY_TABLE.block_count; i++){
+    b = &MEMBLOCK(i);
+    if (b->pid == current_process_id){
+      valid_id = true;
+      break;
     }
   }
+
+  if (!valid_id){
+    fprintf(stderr, "Pocess read/write access: Invalid process id\n");
+    return false;
+  }
+
+  if (!b->is_free && addr >= b->start_addr && addr <= b->end_addr) return true;
 
   // Also check if address is in process's TEXT/DATA segments
   // Process 0: TEXT_BASE (0x00400000) to TEXT_BASE + 0x00100000
@@ -230,10 +251,139 @@ static bool check_access(uint32_t addr) {
   return false;
 }
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* =========================================== INITIALIZERS
- * =========================================== */
+static uint8_t read_byte_no_check(uint32_t addr){
+
+  uint32_t base = line_base(addr);
+  int idx = EMPTY_ADDR;
+
+  // L1 Cache
+  idx = find_line(&L1, base);
+  if (idx != EMPTY_ADDR) {
+    L1cache_hit++;
+    return L1.lines[idx].data[addr - base];
+  }
+  L1cache_miss++;
+
+  // L2 cache
+  idx = find_line(&L2, base);
+  if (idx != EMPTY_ADDR) {
+    L2cache_hit++;
+    // Copy to L1
+    int l1_idx;
+    if (L1.count < L1.line_count) {
+      l1_idx = (L1.front + L1.count) % L1.line_count;
+      L1.count++;
+    } else {
+      l1_idx = L1.front;
+      L1.front = (L1.front + 1) % L1.line_count;
+    }
+
+    L1.lines[l1_idx].tag = base;
+    L1.lines[l1_idx].is_valid = true;
+    memcpy(L1.lines[l1_idx].data, L2.lines[idx].data,
+        CACHE_LINE_SIZE); // Copy from L2!
+
+    return L1.lines[l1_idx].data[addr - base];
+  }
+  L2cache_miss++;
+
+  // Complete miss
+  load_line(&L2, base);
+  int l1_idx = load_line(&L1, base);
+  return L1.lines[l1_idx].data[addr - base];
+}
+
+static void write_through_no_check (uint32_t addr, uint8_t value){
+  
+  RAM[addr] = value;
+
+  uint32_t base = line_base(addr);
+  int idx;
+
+  // Update L1 if present
+  idx = find_line(&L1, base);
+  if (idx >= 0) {
+    L1.lines[idx].data[addr - base] = value;
+  }
+
+  // Update L2 if present
+  idx = find_line(&L2, base);
+  if (idx >= 0) {
+    L2.lines[idx].data[addr - base] = value;
+  }
+}
+
+static void write_back_no_check(uint32_t addr, uint8_t value) {
+  uint32_t base = line_base(addr);
+  int idx;
+
+  // L1 Cache
+  idx = find_line(&L1, base);
+  if (idx >= 0) {
+    L1.lines[idx].data[addr - base] = value;
+    L1.lines[idx].is_dirty = true;
+    
+    // Update L2 if present
+    idx = find_line(&L2, base);
+    if (idx >= 0) {
+      L2.lines[idx].data[addr - base] = value;
+      L2.lines[idx].is_dirty = true;
+    }
+    return;
+  }
+
+  // L2 Cache
+  idx = find_line(&L2, base);
+  if (idx >= 0) {
+    L2.lines[idx].data[addr - base] = value;
+    L2.lines[idx].is_dirty = true;
+    
+    // Load into L1
+    int l1_idx;
+    if (L1.count < L1.line_count) {
+      l1_idx = (L1.front + L1.count) % L1.line_count;
+      L1.count++;
+    } else {
+      l1_idx = L1.front;
+      evict_line(&L1, l1_idx);
+      L1.front = (L1.front + 1) % L1.line_count;
+    }
+    
+    L1.lines[l1_idx].tag = base;
+    L1.lines[l1_idx].is_valid = true;
+    L1.lines[l1_idx].is_dirty = true;
+    memcpy(L1.lines[l1_idx].data, L2.lines[idx].data, CACHE_LINE_SIZE);
+    L1.lines[l1_idx].data[addr - base] = value;
+    return;
+  }
+
+  // Complete miss - load line into cache then write
+  int l2_idx = load_line(&L2, base);
+  if (l2_idx == EMPTY_ADDR) {
+    // Fallback: write directly to RAM
+    RAM[addr] = value;
+    return;
+  }
+  
+  int l1_idx = load_line(&L1, base);
+  if (l1_idx == EMPTY_ADDR) {
+    // Write to L2 only
+    L2.lines[l2_idx].data[addr - base] = value;
+    L2.lines[l2_idx].is_dirty = true;
+    return;
+  }
+  
+  // Write to L1
+  L1.lines[l1_idx].data[addr - base] = value;
+  L1.lines[l1_idx].is_dirty = true;
+  
+  // Also mark L2 as dirty
+  L2.lines[l2_idx].data[addr - base] = value;
+  L2.lines[l2_idx].is_dirty = true;
+}
+
+/* ---------------------------------------------------------------------------------------------------- */
+/* =========================================== INITIALIZERS =========================================== */
 
 // Initialize the ram to the given size
 static void init_ram(const size_t size) {
@@ -298,19 +448,20 @@ static void init_memtab(const int num_blocks) {
   MEMORY_TABLE.block_count = 1;
 }
 
-void init_memory() {
+void init_memory(const CachePolicy policy) {
+  cache_policy_type = policy;
   init_ram(RAM_SIZE);
   init_ssd(SSD_SIZE);
   init_hdd(HDD_SIZE);
   init_cache(&L1, L1CACHE_SIZE);
   init_cache(&L2, L2CACHE_SIZE);
   init_memtab(MAX_MEM_BLOCKS);
+  printf("Memory initialized with %s cache policy\n",
+      policy == CACHE_WRITE_THROUGH ? "write-through" : "write-back");
 }
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* =========================================== DEALLOCATORS
- * =========================================== */
+/* ---------------------------------------------------------------------------------------------------- */
+/* =========================================== DEALLOCATORS =========================================== */
 
 static void free_cache(Cache *c) {
   free(c->lines);
@@ -332,10 +483,8 @@ void free_memory(void) {
   MEMORY_TABLE.block_count = MEMORY_TABLE.capacity = 0;
 }
 
-/* ----------------------------------------------------------------------------------------------------
- */
-/* ============================================ API FUNCTS
- * ============================================ */
+/* ---------------------------------------------------------------------------------------------------- */
+/* ============================================ API FUNCTS ============================================ */
 
 void set_current_process(const int pid) { current_process_id = pid; }
 
@@ -355,44 +504,7 @@ uint8_t read_byte(uint32_t addr) {
     return 0;
   }
 
-  uint32_t base = line_base(addr);
-  int idx = EMPTY_ADDR;
-
-  // L1 Cache
-  idx = find_line(&L1, base);
-  if (idx != EMPTY_ADDR) {
-    L1cache_hit++;
-    return L1.lines[idx].data[addr - base];
-  }
-  L1cache_miss++;
-
-  // L2 cache
-  idx = find_line(&L2, base);
-  if (idx != EMPTY_ADDR) {
-    L2cache_hit++;
-    // Copy to L1
-    int l1_idx;
-    if (L1.count < L1.line_count) {
-      l1_idx = (L1.front + L1.count) % L1.line_count;
-      L1.count++;
-    } else {
-      l1_idx = L1.front;
-      L1.front = (L1.front + 1) % L1.line_count;
-    }
-
-    L1.lines[l1_idx].tag = base;
-    L1.lines[l1_idx].is_valid = true;
-    memcpy(L1.lines[l1_idx].data, L2.lines[idx].data,
-           CACHE_LINE_SIZE); // Copy from L2!
-
-    return L1.lines[l1_idx].data[addr - base];
-  }
-  L2cache_miss++;
-
-  // Complete miss
-  load_line(&L2, base);
-  int l1_idx = load_line(&L1, base);
-  return L1.lines[l1_idx].data[addr - base];
+  return read_byte_no_check(addr);
 }
 
 // So called syntax sugar
@@ -402,8 +514,15 @@ uint16_t read_hword(uint32_t addr) {
     return 0;
   }
 
-  uint16_t b0 = (uint16_t)read_byte(addr);
-  uint16_t b1 = (uint16_t)read_byte(addr + 1);
+  if (!check_access(addr)) {
+    fprintf(stderr,
+            "read [hword]: access violation - PID %d cannot access 0x%08x\n",
+            current_process_id, addr);
+    return 0;
+  }
+
+  uint16_t b0 = (uint16_t)read_byte_no_check(addr);
+  uint16_t b1 = (uint16_t)read_byte_no_check(addr + 1);
   return (uint16_t)(b0 | (b1 << 8));
 }
 
@@ -412,11 +531,19 @@ uint32_t read_word(uint32_t addr) {
     fprintf(stderr, "read [word]: out of bounds addr=0x%08x\n", addr);
     return 0;
   }
+
+  if (!check_access(addr)) {
+    fprintf(stderr,
+        "read [word]: access violation - PID %d cannot access 0x%08x\n",
+        current_process_id, addr);
+    return 0;
+  }
+
   uint32_t v = 0;
-  v |= ((uint32_t)read_byte(addr + 0)) << 0;
-  v |= ((uint32_t)read_byte(addr + 1)) << 8;
-  v |= ((uint32_t)read_byte(addr + 2)) << 16;
-  v |= ((uint32_t)read_byte(addr + 3)) << 24;
+  v |= ((uint32_t)read_byte_no_check(addr + 0)) << 0;
+  v |= ((uint32_t)read_byte_no_check(addr + 1)) << 8;
+  v |= ((uint32_t)read_byte_no_check(addr + 2)) << 16;
+  v |= ((uint32_t)read_byte_no_check(addr + 3)) << 24;
   return v;
 }
 
@@ -433,22 +560,7 @@ void write_byte(uint32_t addr, uint8_t value) {
     return;
   }
 
-  RAM[addr] = value;
-
-  uint32_t base = line_base(addr);
-  int idx;
-
-  // Update L1 if present
-  idx = find_line(&L1, base);
-  if (idx >= 0) {
-    L1.lines[idx].data[addr - base] = value;
-  }
-
-  // Update L2 if present
-  idx = find_line(&L2, base);
-  if (idx >= 0) {
-    L2.lines[idx].data[addr - base] = value;
-  }
+  (cache_policy_type == CACHE_WRITE_THROUGH) ? write_through_no_check(addr, value) : write_back_no_check(addr, value);
 }
 
 void write_hword(uint32_t addr, uint16_t data) {
@@ -456,8 +568,24 @@ void write_hword(uint32_t addr, uint16_t data) {
     fprintf(stderr, "write [hword]: out of bounds addr=0x%08x\n", addr);
     return;
   }
-  write_byte(addr, (uint8_t)(data & 0xFF));
-  write_byte(addr + 1, (uint8_t)((data >> 8) & 0xFF));
+
+  if (!check_access(addr)) {
+    fprintf(stderr,
+        "write [hword]: access violation - PID %d cannot write to 0x%08x\n",
+        current_process_id, addr);
+    return;
+  }
+
+  if (cache_policy_type == CACHE_WRITE_THROUGH){
+
+    write_through_no_check(addr, (uint8_t)(data & 0xFF));
+    write_through_no_check(addr + 1, (uint8_t)((data >> 8) & 0xFF));
+  }
+  else {
+
+    write_back_no_check(addr, (uint8_t)(data & 0xFF));
+    write_back_no_check(addr + 1, (uint8_t)((data >> 8) & 0xFF));
+  }
 }
 
 void write_word(uint32_t addr, uint32_t data) {
@@ -465,10 +593,28 @@ void write_word(uint32_t addr, uint32_t data) {
     fprintf(stderr, "write [word]: out of bounds addr=0x%08x\n", addr);
     return;
   }
-  write_byte(addr + 0, (uint8_t)(data & 0xFF));
-  write_byte(addr + 1, (uint8_t)((data >> 8) & 0xFF));
-  write_byte(addr + 2, (uint8_t)((data >> 16) & 0xFF));
-  write_byte(addr + 3, (uint8_t)((data >> 24) & 0xFF));
+  
+  if (!check_access(addr)) {
+    fprintf(stderr,
+            "write [word]: access violation - PID %d cannot write to 0x%08x\n",
+            current_process_id, addr);
+    return;
+  }
+
+  if (cache_policy_type == CACHE_WRITE_THROUGH){
+
+    write_through_no_check(addr + 0, (uint8_t)(data & 0xFF));
+    write_through_no_check(addr + 1, (uint8_t)((data >> 8) & 0xFF));
+    write_through_no_check(addr + 2, (uint8_t)((data >> 16) & 0xFF));
+    write_through_no_check(addr + 3, (uint8_t)((data >> 24) & 0xFF));
+  }
+  else {
+
+    write_back_no_check(addr + 0, (uint8_t)(data & 0xFF));
+    write_back_no_check(addr + 1, (uint8_t)((data >> 8) & 0xFF));
+    write_back_no_check(addr + 2, (uint8_t)((data >> 16) & 0xFF));
+    write_back_no_check(addr + 3, (uint8_t)((data >> 24) & 0xFF));
+  }
 }
 
 // Allocate memory for a specific process
@@ -589,10 +735,26 @@ void liberate(int pid) {
 }
 
 // print the number of cache hits & misses
-void print_cache_stats() {
-  printf("\nCache statistics:\n");
-  printf("L1 hits:   %lu\n", L1cache_hit);
-  printf("L1 misses: %lu\n", L1cache_miss);
-  printf("L2 hits:   %lu\n", L2cache_hit);
-  printf("L2 misses: %lu\n", L2cache_miss);
+void print_cache_stats(void) {
+  printf("\n=== Cache Statistics ===\n");
+  printf("L1 Cache:\n");
+  printf("  Hits:   %lu\n", L1cache_hit);
+  printf("  Misses: %lu\n", L1cache_miss);
+  if (L1cache_hit + L1cache_miss > 0) {
+    printf("  Hit Rate: %.2f%%\n", 
+           100.0 * L1cache_hit / (L1cache_hit + L1cache_miss));
+  }
+  
+  printf("\nL2 Cache:\n");
+  printf("  Hits:   %lu\n", L2cache_hit);
+  printf("  Misses: %lu\n", L2cache_miss);
+  if (L2cache_hit + L2cache_miss > 0) {
+    printf("  Hit Rate: %.2f%%\n", 
+           100.0 * L2cache_hit / (L2cache_hit + L2cache_miss));
+  }
+  
+  if (cache_policy_type == CACHE_WRITE_BACK) {
+    printf("\nWrite-Back Operations: %lu\n", write_backs);
+  }
+  printf("========================\n");
 }

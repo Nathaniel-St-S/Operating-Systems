@@ -3,12 +3,14 @@
 #include "../include/memory.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <limits.h>
+#include <stdbool.h>
 
 static inline uint32_t mask_reg_index(uint32_t reg) {
   return (uint32_t)reg & 0x1F;
 }
 
-inline int32_t read_gpr(uint32_t reg) {
+static inline int32_t read_gpr(uint32_t reg) {
   uint32_t idx = mask_reg_index(reg);
   if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
     return 0;
@@ -16,7 +18,7 @@ inline int32_t read_gpr(uint32_t reg) {
   return THE_CPU.gp_registers[idx];
 }
 
-inline void write_gpr(uint32_t reg, uint32_t value) {
+static inline void write_gpr(uint32_t reg, uint32_t value) {
   uint32_t idx = mask_reg_index(reg);
   if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
     return;
@@ -45,6 +47,82 @@ static inline uint32_t zero_extend(uint32_t value, uint32_t bits) {
   }
   uint32_t mask = (1u << bits) - 1u;
   return value & mask;
+}
+
+static void update_zero_flag(uint32_t value) {
+  if (value == 0) {
+    SET_FLAG(F_ZERO);
+  } else {
+    CLEAR_FLAG(F_ZERO);
+  }
+}
+
+static void set_add_flags(uint32_t lhs, uint32_t rhs, uint32_t result) {
+  CLEAR_FLAG(F_CARRY);
+  CLEAR_FLAG(F_OVERFLOW);
+
+  uint64_t usum = (uint64_t)lhs + (uint64_t)rhs;
+  if (usum > UINT32_MAX) {
+    SET_FLAG(F_CARRY);
+  }
+
+  int64_t ssum = (int64_t)(int32_t)lhs + (int64_t)(int32_t)rhs;
+  if (ssum > INT32_MAX || ssum < INT32_MIN) {
+    SET_FLAG(F_OVERFLOW);
+  }
+
+  update_zero_flag(result);
+}
+
+static void set_sub_flags(uint32_t lhs, uint32_t rhs, uint32_t result) {
+  CLEAR_FLAG(F_CARRY);
+  CLEAR_FLAG(F_OVERFLOW);
+
+  if (lhs < rhs) {
+    SET_FLAG(F_CARRY);
+  }
+
+  int64_t sdiff = (int64_t)(int32_t)lhs - (int64_t)(int32_t)rhs;
+  if (sdiff > INT32_MAX || sdiff < INT32_MIN) {
+    SET_FLAG(F_OVERFLOW);
+  }
+
+  update_zero_flag(result);
+}
+
+static void set_mul_flags(uint32_t lhs, uint32_t rhs, uint32_t lo,
+                          uint32_t hi, bool is_signed) {
+  CLEAR_FLAG(F_CARRY);
+  CLEAR_FLAG(F_OVERFLOW);
+
+  if (hi != 0) {
+    SET_FLAG(F_CARRY);
+  }
+
+  if (is_signed) {
+    int64_t product = (int64_t)(int32_t)lhs * (int64_t)(int32_t)rhs;
+    if (product > INT32_MAX || product < INT32_MIN) {
+      SET_FLAG(F_OVERFLOW);
+    }
+  }
+
+  update_zero_flag(lo);
+}
+
+static void set_div_flags(uint32_t lhs, uint32_t rhs, uint32_t quotient,
+                          bool is_signed) {
+  CLEAR_FLAG(F_CARRY);
+  CLEAR_FLAG(F_OVERFLOW);
+
+  if (is_signed) {
+    int32_t s_lhs = (int32_t)lhs;
+    int32_t s_rhs = (int32_t)rhs;
+    if (s_lhs == INT32_MIN && s_rhs == -1) {
+      SET_FLAG(F_OVERFLOW);
+    }
+  }
+
+  update_zero_flag(quotient);
 }
 
 static uint8_t load_byte(uint32_t address) {
@@ -80,25 +158,37 @@ static inline uint32_t get_opcode(uint32_t instruction) {
 static void add(uint32_t rs, uint32_t rt, uint32_t rd) {
   int32_t lhs = read_gpr(rs);
   int32_t rhs = read_gpr(rt);
-  write_gpr(rd, lhs + rhs);
+  int64_t sum = (int64_t)lhs + (int64_t)rhs;
+  uint32_t result = (uint32_t)sum;
+  write_gpr(rd, result);
+  set_add_flags((uint32_t)lhs, (uint32_t)rhs, result);
 }
 
 static void addu(uint32_t rs, uint32_t rt, uint32_t rd) {
   uint32_t lhs = (uint32_t)read_gpr(rs);
   uint32_t rhs = (uint32_t)read_gpr(rt);
-  write_gpr(rd, (uint32_t)(lhs + rhs));
+  uint64_t sum = (uint64_t)lhs + (uint64_t)rhs;
+  uint32_t result = (uint32_t)sum;
+  write_gpr(rd, result);
+  set_add_flags(lhs, rhs, result);
 }
 
 static void sub(uint32_t rs, uint32_t rt, uint32_t rd) {
-  int32_t lhs = read_gpr(rs);
-  int32_t rhs = read_gpr(rt);
-  write_gpr(rd, lhs - rhs);
+  uint32_t lhs = (uint32_t)read_gpr(rs);
+  uint32_t rhs = (uint32_t)read_gpr(rt);
+  int64_t diff = (int64_t)(int32_t)lhs - (int64_t)(int32_t)rhs;
+  uint32_t result = (uint32_t)diff;
+  write_gpr(rd, result);
+  set_sub_flags(lhs, rhs, result);
 }
 
 static void subu(uint32_t rs, uint32_t rt, uint32_t rd) {
   uint32_t lhs = (uint32_t)read_gpr(rs);
   uint32_t rhs = (uint32_t)read_gpr(rt);
-  write_gpr(rd, (lhs - rhs));
+  uint64_t diff = (uint64_t)lhs - (uint64_t)rhs;
+  uint32_t result = (uint32_t)diff;
+  write_gpr(rd, result);
+  set_sub_flags(lhs, rhs, result);
 }
 
 static void mult(uint32_t rs, uint32_t rt) {
@@ -107,6 +197,8 @@ static void mult(uint32_t rs, uint32_t rt) {
   int64_t product = (int64_t)lhs * (int64_t)rhs;
   THE_CPU.hw_registers[HI] = (uint32_t)(product >> 32);
   THE_CPU.hw_registers[LO] = (uint32_t)product;
+  set_mul_flags((uint32_t)lhs, (uint32_t)rhs, THE_CPU.hw_registers[LO],
+                THE_CPU.hw_registers[HI], true);
 }
 
 static void multu(uint32_t rs, uint32_t rt) {
@@ -115,6 +207,8 @@ static void multu(uint32_t rs, uint32_t rt) {
   uint64_t product = lhs * rhs;
   THE_CPU.hw_registers[HI] = (uint32_t)(product >> 32);
   THE_CPU.hw_registers[LO] = (uint32_t)product;
+  set_mul_flags((uint32_t)lhs, (uint32_t)rhs, THE_CPU.hw_registers[LO],
+                THE_CPU.hw_registers[HI], false);
 }
 
 static void divv(uint32_t rs, uint32_t rt) {
@@ -123,8 +217,18 @@ static void divv(uint32_t rs, uint32_t rt) {
     return; // TODO: Throw an exception here
   }
   int32_t dividend = read_gpr(rs);
-  THE_CPU.hw_registers[LO] = (uint32_t)(dividend / divisor);
-  THE_CPU.hw_registers[HI] = (uint32_t)(dividend % divisor);
+  uint32_t quotient;
+  uint32_t remainder;
+  if (dividend == INT32_MIN && divisor == -1) {
+    quotient = (uint32_t)INT32_MIN;
+    remainder = 0;
+  } else {
+    quotient = (uint32_t)(dividend / divisor);
+    remainder = (uint32_t)(dividend % divisor);
+  }
+  THE_CPU.hw_registers[LO] = quotient;
+  THE_CPU.hw_registers[HI] = remainder;
+  set_div_flags((uint32_t)dividend, (uint32_t)divisor, quotient, true);
 }
 
 static void divu(uint32_t rs, uint32_t rt) {
@@ -133,8 +237,11 @@ static void divu(uint32_t rs, uint32_t rt) {
     return; // TODO: Throw an exception here
   }
   uint32_t dividend = (uint32_t)read_gpr(rs);
-  THE_CPU.hw_registers[LO] = (dividend / divisor);
-  THE_CPU.hw_registers[HI] = (dividend % divisor);
+  uint32_t quotient = dividend / divisor;
+  uint32_t remainder = dividend % divisor;
+  THE_CPU.hw_registers[LO] = quotient;
+  THE_CPU.hw_registers[HI] = remainder;
+  set_div_flags(dividend, divisor, quotient, false);
 }
 
 static void mfhi(uint32_t rd) {
@@ -273,13 +380,19 @@ static void handle_r_type_instruction(uint32_t instruction) {
 static void addi(uint32_t rs, uint32_t rt, uint16_t imm) {
   int32_t simm = sign_extend(imm, 16);
   int32_t lhs = read_gpr(rs);
-  write_gpr(rt, (uint32_t)(lhs + simm));
+  int64_t sum = (int64_t)lhs + (int64_t)simm;
+  uint32_t result = (uint32_t)sum;
+  write_gpr(rt, result);
+  set_add_flags((uint32_t)lhs, (uint32_t)simm, result);
 }
 
 static void addiu(uint32_t rs, uint32_t rt, uint16_t imm) {
   uint32_t simm = (uint32_t)sign_extend(imm, 16);
   uint32_t lhs = (uint32_t)read_gpr(rs);
-  write_gpr(rt, lhs + simm);
+  uint64_t sum = (uint64_t)lhs + (uint64_t)simm;
+  uint32_t result = (uint32_t)sum;
+  write_gpr(rt, result);
+  set_add_flags(lhs, simm, result);
 }
 
 static void andi(uint32_t rs, uint32_t rt, uint16_t imm) {
@@ -329,7 +442,7 @@ static void sw(uint32_t rt, uint32_t effective_address) {
 static void lb(uint32_t rt, uint32_t effective_address) {
   uint8_t raw = load_byte(effective_address);
   int32_t extended = sign_extend(raw, 8);
-  write_gpr(rt, (uint32_t)extended);
+  write_gpr(rt, extended);
 }
 
 static void lbu(uint32_t rt, uint32_t effective_address) {
@@ -340,7 +453,7 @@ static void lbu(uint32_t rt, uint32_t effective_address) {
 static void lh(uint32_t rt, uint32_t effective_address) {
   uint16_t raw = load_halfword(effective_address);
   int32_t extended = sign_extend(raw, 16);
-  write_gpr(rt, (uint32_t)extended);
+  write_gpr(rt, extended);
 }
 
 static void lhu(uint32_t rt, uint32_t effective_address) {
