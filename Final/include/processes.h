@@ -1,8 +1,6 @@
 #ifndef PROCESSES_H
 #define PROCESSES_H
 
-#define QUANTUM 3;
-
 void roundRobin(void);
 
 void priorityBased(void);
@@ -15,8 +13,8 @@ void firstComeFirstServe(void);
 
 void shortestProcessNext(void);
 
-void feedback(void);
+void feedBack(void);
 
-void context_switch(int current, int next);
+//void context_switch(Queue* Q, int current, int next);
 
 #endif
