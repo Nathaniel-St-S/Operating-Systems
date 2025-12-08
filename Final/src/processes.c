@@ -155,6 +155,16 @@ Queue* init_FeedBack_Queue(const int size) {
     return FeedBack_Queue;
 }
 
+void init_Queues() {
+    init_Ready_Queue(MAX_PROCESSES);
+    init_Running_Queue(MAX_PROCESSES);
+    init_Blocked_Queue(MAX_PROCESSES);
+    init_Suspend_Block_Queue(MAX_PROCESSES);
+    init_Suspend_Ready_Queue(MAX_PROCESSES);
+    init_New_Queue(MAX_PROCESSES);
+    init_Finished_Queue(MAX_PROCESSES);
+}
+
 void free_Queue(Queue* Q) {
     free(Q);
 }
@@ -647,13 +657,7 @@ void feedBack(void) {
 //to initializer the scheduler and queues using the given scheduler type
 void initScheduler(int SchedulerType) {
     
-    init_Ready_Queue(MAX_PROCESSES);
-    init_Running_Queue(MAX_PROCESSES);
-    init_Blocked_Queue(MAX_PROCESSES);
-    init_Suspend_Block_Queue(MAX_PROCESSES);
-    init_Suspend_Ready_Queue(MAX_PROCESSES);
-    init_New_Queue(MAX_PROCESSES);
-    init_Finished_Queue(MAX_PROCESSES);
+    init_Queues();
 
     switch (SchedulerType) {
         case RR: roundRobin(); break;
