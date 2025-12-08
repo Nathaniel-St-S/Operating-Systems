@@ -1,5 +1,6 @@
 #include "../include/processes.h"
 #include "../include/cpu.h"
+#include "../include/memory.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -340,11 +341,20 @@ Process Dequeue(Queue* Q, int Queue_Type) {
 void transitionState(Process P) {
     if (P.burstTime <= 0) {
         P.state = FINISHED;
-    } else if (P.burstTime > 0 && RUNNING) {
+    } else if ((P.state == NEW) || (P.burstTime > 0 && RUNNING)) {
         P.state = READY;
     } else {
         P.state = RUNNING;
     }
+}
+
+//-------------------------------------Process Creation-------------------------------------//
+
+Process* makeProcess(int pID, int pc, int priority, int burstTime) {
+    Process newProcess = {pID, pc, NEW, priority, burstTime, 0, THE_CPU};
+    uint32_t processBlock = mallocate(pID, MAX_PROCESS_SIZE);
+    Enqueue(newProcess, New_Queue);
+    return &newProcess;
 }
 
 //-------------------------------------Context Switching-------------------------------------//
