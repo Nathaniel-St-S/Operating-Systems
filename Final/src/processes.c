@@ -227,7 +227,7 @@ Process dequeueBurst(Queue* Q) {
 
     Q->PCB[0] = Q->PCB[--Q->next];
     int index = 0;
-    while(1) {
+    while(true) {
         int smallest = index;
         int left = 2 * index + 1;
         int right = 2 * index + 2;
@@ -277,7 +277,7 @@ Process dequeuePriority(Queue* Q) {
 
     Q->PCB[0] = Q->PCB[--Q->next];
     int index = 0;
-    while(1) {
+    while(true) {
         int smallest = index;
         int left = 2 * index + 1;
         int right = 2 * index + 2;
@@ -338,13 +338,20 @@ Process Dequeue(Queue* Q, int Queue_Type) {
 //-------------------------------------State Transitions-------------------------------------//
 
 //transitions a process 's state from one to another and moves to its corresponding queue
-void transitionState(Process P) {
+void transitionState(Process P, int QueueType) {
     if (P.burstTime <= 0) {
-        P.state = FINISHED;
+        P.state = FINISHED; 
+        Enqueue(Dequeue(Running_Queue, NORMAL), NORMAL);
     } else if ((P.state == NEW) || (P.burstTime > 0 && RUNNING)) {
         P.state = READY;
+        if ((P.state == NEW)) {
+            Enqueue(Dequeue(New_Queue, QueueType), QueueType);
+        } else {
+            Enqueue(Dequeue(Running_Queue, QueueType), QueueType);
+        }
     } else {
         P.state = RUNNING;
+        Enqueue(Dequeue(Ready_Queue, NORMAL), NORMAL);
     }
 }
 
@@ -353,26 +360,28 @@ void transitionState(Process P) {
 Process* makeProcess(int pID, int pc, int priority, int burstTime) {
     Process newProcess = {pID, pc, NEW, priority, burstTime, 0, THE_CPU};
     uint32_t processBlock = mallocate(pID, MAX_PROCESS_SIZE);
-    Enqueue(newProcess, New_Queue);
+    Enqueue(newProcess, NORMAL);
     return &newProcess;
 }
 
 //-------------------------------------Context Switching-------------------------------------//
 
 //Switches from one process to another
-void context_switch(Queue* Q, int current, int next) {
-    Process* curr = &Q->PCB[current];
-    Process* nxt = &Q->PCB[next];
+void context_switch(int QueueType, bool needTransition) {
+    Process curr = Running_Queue->PCB[0];
+    Process nxt = Ready_Queue->PCB[0];
   
     //save current's state
-    curr->cpu_state = THE_CPU;
-    curr->state = READY;
-
+    curr.cpu_state = THE_CPU;
     //start the next process
-    THE_CPU = nxt->cpu_state;
-    nxt->state = RUNNING;
+    THE_CPU = nxt.cpu_state;
 
-    printf("Switched from process (PID: %d) to process (PID: %d)", curr->pid, nxt->pid);
+    if (needTransition) {
+        transitionState(curr, QueueType);
+        transitionState(nxt, QueueType);
+    }
+    
+    printf("Switched from process (PID: %d) to process (PID: %d)", curr.pid, nxt.pid);
 }
 
 //-------------------------------------Scheduling Helpers-------------------------------------//
@@ -387,18 +396,8 @@ Process getHighestResponseRatio() {
         }
         i+=1;
     }
-
+    swap(Ready_Queue, 0, 1);
     return HRRProcess;
-}
-
-//removes the given process from the given queue
-void removeProcess(Process P, Queue* Q) {
-    int i = 0;
-    while (i < Q->next &&  &P != &Q->PCB[i]) {
-        i+=1;
-    }
-    swap(Q, 0, i);
-    Enqueue(Dequeue(Q, NORMAL), NORMAL);
 }
 
 //calculates given process's response ratio
@@ -415,30 +414,36 @@ void updateResponseRatio(Queue* Q, int idleTime) {
     }
 }
 
+//transfers all the processes in the new queue to the its respective ready queue
+void transferProcesses(int QueueType) {
+    while (New_Queue->next != 0) {
+        Enqueue(Dequeue(New_Queue, QueueType), QueueType);
+    }
+}
+
 //-------------------------------------Scheduling Algorithms-------------------------------------//
 
 //the round robin scheduling algorithm
 void roundRobin(void) {
     int idx = 0;
     while (Ready_Queue->next != 0) {
+        transferProcesses(NORMAL);
         Process currentProcess = Ready_Queue->PCB[idx];
-        transitionState(currentProcess);
-        //currentProcess.state = RUNNING;
+        transitionState(currentProcess, NORMAL);
         for (int i = 0; i < QUANTUM; i++) {
             fetch();
             execute();
-            currentProcess.burstTime=-1; //could make ternary
+            currentProcess.burstTime-=1; //could make ternary
         }
 
         if (currentProcess.burstTime > 0 && idx+1 >= Ready_Queue->next) {
-            context_switch(Ready_Queue, idx, 0);
+            context_switch(NORMAL, true);
             idx = 0;
         } else if (currentProcess.burstTime > 0) {
-            context_switch(Ready_Queue, idx, idx+1);
+            context_switch(NORMAL, true);
             idx+=1;
         } else {
-            transitionState(currentProcess);
-            Enqueue(Dequeue(Ready_Queue, NORMAL), NORMAL);
+            transitionState(currentProcess, NORMAL);
         }
          
     }
@@ -448,14 +453,15 @@ void roundRobin(void) {
 //The first come first serve scheduling algorithm
 void firstComeFirstServe(void) {
     while (Ready_Queue->next != 0) {
+        transferProcesses(NORMAL);
         Process currentProcess = Ready_Queue->PCB[0];
-        transitionState(currentProcess);
-        for (int i = 0; i < currentProcess.burstTime; i++) {
+        transitionState(currentProcess, NORMAL);
+        while (currentProcess.burstTime > 0) {
             fetch();
             execute();
+            currentProcess.burstTime-=1;
         }
-        transitionState(currentProcess);
-        Enqueue(Dequeue(Ready_Queue, NORMAL), NORMAL);
+        transitionState(currentProcess, NORMAL);
     }
 }
 
@@ -463,15 +469,15 @@ void firstComeFirstServe(void) {
 //the shortest process next scheduling algorithm
 void shortestProcessNext(void) {
     while (Ready_Queue->next != 0) {
+        transferProcesses(PRIORITYBURST);
         Process shortestProcess = Ready_Queue->PCB[0]; //searchForShortestProcess(Ready_Queue);
-        transitionState(shortestProcess);
-        for (int i = 0; i < shortestProcess.burstTime; i++) {
+        transitionState(shortestProcess, PRIORITYBURST);
+        while(shortestProcess.burstTime > 0) {
             fetch();
             execute();
+            shortestProcess.burstTime-=1;
         }
-        transitionState(shortestProcess); 
-        Enqueue(Dequeue(Ready_Queue, PRIORITYBURST), PRIORITYBURST);
-        //removeProcess(shortestProcess, Ready_Queue);
+        transitionState(shortestProcess, PRIORITYBURST); 
     }
 }
 
@@ -479,65 +485,74 @@ void shortestProcessNext(void) {
 //the priority based scheduling algorithm
 void priorityBased(void) {
     while (Ready_Queue->next != 0) {
+        transferProcesses(PRIORITYPRIORITY);
         Process highestPriorityP = Ready_Queue->PCB[0];
-        transitionState(highestPriorityP);
-        for (int i = 0; i < highestPriorityP.burstTime; i++) {
+        transitionState(highestPriorityP, PRIORITYPRIORITY);
+        while (highestPriorityP.burstTime > 0) {
             fetch();
             execute();
-            Process newHighestP = Ready_Queue->PCB[0]; //searchForHighestPriority(Ready_Queue);
+            highestPriorityP.burstTime-=1;
+            transferProcesses(PRIORITYPRIORITY);
+            Process newHighestP = Ready_Queue->PCB[0];
+
             if (&newHighestP != &highestPriorityP) {
                 if (&Ready_Queue->PCB[1] == &newHighestP) {
-                    context_switch(Ready_Queue, 0, 1);
+                    context_switch(PRIORITYPRIORITY, true);
                 } else {
-                    context_switch(Ready_Queue, 0, 2);
+                    context_switch(PRIORITYPRIORITY, true);
                 }
             }
         }
-        transitionState(highestPriorityP);
-        Enqueue(Dequeue(Ready_Queue, PRIORITYPRIORITY), PRIORITYPRIORITY);
+        transitionState(highestPriorityP, PRIORITYPRIORITY);
     }
 }
 //uses priorityBurstQueue 
 //the shortest time remaining scheduling algorithm
 void shortestRemainingTime(void) {
     while (Ready_Queue->next != 0) {
+        transferProcesses(PRIORITYBURST);
         Process shortestBTimeP = Ready_Queue->PCB[0];
-        transitionState(shortestBTimeP);
-        for (int i = 0; i < shortestBTimeP.burstTime; i++) {
+        transitionState(shortestBTimeP, PRIORITYBURST);
+        while (shortestBTimeP.burstTime > 0) {
             fetch();
             execute();
-            Process newShortestBTimeP = Ready_Queue->PCB[0]; //searchForShortestProcess(Ready_Queue);
+            shortestBTimeP.burstTime-=1;
+            transferProcesses(PRIORITYBURST);
+            Process newShortestBTimeP = Ready_Queue->PCB[0];
+
             if (&newShortestBTimeP != &shortestBTimeP) {
                 if (&Ready_Queue->PCB[1] == &newShortestBTimeP) {
-                    context_switch(Ready_Queue, 0, 1);
+                    context_switch(PRIORITYBURST, true);
                 } else {
-                    context_switch(Ready_Queue, 0, 2);
+                    context_switch(PRIORITYBURST, true);
                 }
             }
         }
-        transitionState(shortestBTimeP);
-        Enqueue(Dequeue(Ready_Queue, PRIORITYBURST), PRIORITYBURST);
+        transitionState(shortestBTimeP, PRIORITYBURST);
     }
 }
 
 //the highest response ratio next scheduling algorithm
 void highestResponseRatioNext(void) {
+    transferProcesses(NORMAL);
     if (Ready_Queue->next != 0 ) {
         int total_time = 0;
         Process currentProcess = Ready_Queue->PCB[0];
         total_time = currentProcess.burstTime;
-        
+        transitionState(currentProcess, NORMAL);
         while (Ready_Queue->next != 0); {
-            for (int i = 0; i < currentProcess.burstTime; i++) {
+            transferProcesses(NORMAL);
+            while (currentProcess.burstTime > 0) {
                 fetch();
                 execute();
+                currentProcess.burstTime-=1;
             }
-            transitionState(currentProcess);
-            removeProcess(currentProcess, Ready_Queue);
+
+            transitionState(currentProcess, NORMAL);
             updateResponseRatio(Ready_Queue, total_time); 
             currentProcess = getHighestResponseRatio();
             total_time = currentProcess.burstTime;
-            transitionState(currentProcess);
+            transitionState(currentProcess, NORMAL);
         }
     }
 }
@@ -550,11 +565,13 @@ void feedBack(void) {
     int quantum2 = 4;
 
     while(true) {
+        transferProcesses(NORMAL);
         //handle processes in highest priority queue with 2 quantum
         if (Ready_Queue->next != 0) {
             Process P = Ready_Queue->PCB[0];
-            transitionState(P);
-            for (int i = 0; i < quantum1; i++) {
+            transitionState(P, NORMAL);
+            transferProcesses(NORMAL);
+            for (int i = 0; i < quantum1 && P.burstTime > 0; i++) {
                 fetch();
                 execute();
                 P.burstTime-=1;
@@ -564,8 +581,9 @@ void feedBack(void) {
         //handle processes in middle priority queue with 4 quantum
         if (feedBack_Q2->next != 0) {
             Process P = feedBack_Q2->PCB[0];
-            transitionState(P);
-            for (int j = 0; j < quantum2; j++) {
+            transitionState(P, NORMAL);
+            transferProcesses(NORMAL);
+            for (int j = 0; j < quantum2 && P.burstTime > 0; j++) {
                 fetch();
                 execute();
                 P.burstTime-=1;
@@ -575,10 +593,12 @@ void feedBack(void) {
         //handle processes in lowest priority queue FCFS
         if (feedBack_Q3->next != 0) {
             Process P = feedBack_Q3->PCB[0];
-            transitionState(P);
-            for (int k = 0; k < P.burstTime; k++) {
+            transitionState(P, NORMAL);
+            transferProcesses(NORMAL);
+            while (P.burstTime > 0) {
                 fetch();
                 execute();
+                P.burstTime-=1;
             }
         }
         
@@ -586,10 +606,9 @@ void feedBack(void) {
         if (Ready_Queue->next != 0) {
             //move process from Ready queue to finished queue
             if (Ready_Queue->PCB[0].burstTime <= 0) {
-                transitionState(Ready_Queue->PCB[0]);
-                Enqueue(Dequeue(Ready_Queue, NORMAL), NORMAL);
+                transitionState(Ready_Queue->PCB[0], NORMAL);
             } else if (Ready_Queue->next >= 2) { // switch context then move to middle priority queue
-                context_switch(Ready_Queue, 0, 1);
+                context_switch(NORMAL, false);
                 enqueue(Dequeue(Ready_Queue, NORMAL), feedBack_Q2);
             } else { // move to middle priority queue
                 enqueue(Dequeue(Ready_Queue, NORMAL), feedBack_Q2);
@@ -600,10 +619,9 @@ void feedBack(void) {
         if (feedBack_Q2->next != 0) {
             //move process from middle priority queue to finished queue
             if (feedBack_Q2->PCB[0].burstTime <= 0) {
-                transitionState(feedBack_Q2->PCB[0]);
-                Enqueue(Dequeue(feedBack_Q2, NORMAL), NORMAL);
+                transitionState(feedBack_Q2->PCB[0], NORMAL);
             } else if (feedBack_Q2->next >= 2) { // switch context then move to lowest priority queue
-                context_switch(feedBack_Q2, 0, 1);
+                context_switch(NORMAL, false);
                 enqueue(Dequeue(feedBack_Q2, NORMAL), feedBack_Q3);
             } else { // move to lowest priority queue
                 enqueue(Dequeue(feedBack_Q2, NORMAL), feedBack_Q3);
@@ -614,8 +632,7 @@ void feedBack(void) {
         if (feedBack_Q3->next != 0) {
             //move process from middle priority queue to finished queue
             if (feedBack_Q3->PCB[0].burstTime <= 0) {
-                transitionState(feedBack_Q3->PCB[0]);
-                Enqueue(Dequeue(feedBack_Q3, NORMAL), NORMAL);
+                transitionState(feedBack_Q3->PCB[0], NORMAL);
             }
         }
         
