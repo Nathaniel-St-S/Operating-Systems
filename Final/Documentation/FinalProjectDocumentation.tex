@@ -47,6 +47,7 @@
 \newcommand{\ACC}{\texttt{ACC}}
 \newcommand{\C}{\texttt{C}}
 \newcommand{\N}{\texttt{n}}
+\newcommand{\os}{\testtt{OS}}
 
 
 \begin{document}
@@ -73,6 +74,17 @@
 \subsection{Problem Statement}
 \label{problem-statement}
 
+The goal of this project is to guide you through the process of building an advanced operating system simulator. It will challenge you to apply and integrate the key concepts you have learned in previous projects while introducing more advanced features such as multitasking, inter-process communication, memory hierarchy, and efficient process scheduling with real-time constraints.
+
+The purpose of this project is to help you understand how a modern operating system manages CPU resources and handles tasks concurrently. You will explore various scheduling algorithms to ensure safe and efficient access to shared resources, all while simulating real-world CPU and memory behaviors. By the end of this project, you will have a solid understanding of how operating systems work and gain hands-on experience in building a fully functional OS simulator capable of efficiently managing multiple processes in a concurrent environment.
+
+Eventually, this project aims to deepen your understanding of system-level programming and OS concepts, preparing you for real-world applications and advanced studies in computer science.
+
+\subsection{Outline}
+
+
+
+
 \begin{itemize}
 	\item Module 1: Process Simulation
 	\item Module 2: Advanced Memory Management
@@ -81,7 +93,6 @@
 	\item Module 5: Efficiency Analysis of Concurrency
 \end{itemize}
 
-\subsection{Outline}
 
 \section{Key Concepts and Features}
 
@@ -115,64 +126,17 @@ Wasn't Assigned
 
 
 \pagebreak
-\section{Module 2: Advanced Memory Management}
-\label{module2}
-
-\subsection{Problem Statement}
-\label{PS-m2}
-
-\subsection{Implementation}
-\label{IMP-m2}
-\subsubsection{Hierarchical Memory System}
-
-\subsubsection{Memory Table}
-
-\subsubsection{Dynamic Memory Allocation and Deallocation}
+\include{Memory-Spec}
 
 \pagebreak
 %%%\section{Module 3: Process Scheduling and Context Switching}
 \include{Process-Spec}
 
 \pagebreak
-\section{Module 4: Interrupt Handling and Dispatcher}
-\label{module4}
-
-\subsection{Problem Statement}
-\label{PS-m4}
-\subsection{Implementation}
-\label{IMP-m4}
-
-\subsubsection{Types of Interruption}
-
-\subsubsection{Interrupt Vector Table}
-
-%\subsubsection*{Interrupt Handler}
-%\subsubsection*{Dispatcher}
-\subsubsection{Context Switching}
+\include{module4}
 
 \pagebreak
-\section{Module 5: Efficiency Analysis of Concurrency}
-\label{module5}
-
-\subsection{Problem Statement}
-\label{PS-m5}
-
-\subsection{Implementation}
-\label{IMP-m5}
-
-\subsubsection{Performance Metrics Setup}
-
-
-\subsubsection{Implementation of Time Tracking}
-
-
-\subsubsection{Data Comparison}
-
-
-\subsubsection{Performance Comparison}
-
-
-\subsubsection{Visualization and Reporting}
+\include{module5}
 
 
 \pagebreak
