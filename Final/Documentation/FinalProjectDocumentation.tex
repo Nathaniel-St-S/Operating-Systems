@@ -1,0 +1,194 @@
+\documentclass[titlepage, 11pt,a4paper]{article}
+
+\usepackage[a4paper,margin=0.5in]{geometry}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{alltt}
+\usepackage{tikz}
+\usepackage{float}
+\floatstyle{ruled}
+\restylefloat{figure}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{balance}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{stfloats}
+\pgfplotsset{compat=newest}
+\usepackage{pgfplotstable}
+\usepackage{url}
+\def\UrlBreaks{\do\/\do-}
+\usepackage{bold-extra}
+\usepackage{enumitem}
+\setlist[description]{leftmargin=\parindent,labelindent=\parindent}
+\usepackage{doi}
+\usepackage{bm}
+%\usepackage[outputdir]{minted}
+%\usepackage{fontspec}
+%\setmonofont{JetBrainsMono Nerd Font}[
+%    Scale=MatchLowercase
+%]
+
+\newcommand{\ADD}{\texttt{ADD}}
+\newcommand{\SUB}{\texttt{SUB}}
+\newcommand{\LOAD}{\texttt{LOAD}}
+\newcommand{\STORE}{\texttt{STORE}}
+\newcommand{\HALT}{\texttt{HALT}}
+\newcommand{\PC}{\texttt{PC}}
+\newcommand{\IR}{\texttt{IR}}
+\newcommand{\ACC}{\texttt{ACC}}
+\newcommand{\C}{\texttt{C}}
+\newcommand{\N}{\texttt{n}}
+
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\Huge\bfseries Final Project Documentation: \\ Advanced Operating System Simulator \\}
+  \vspace*{2cm}
+  {\Large\texttt{Brysen Pfingsten, Nathaniel Savoury, \\ David Fields}}
+  \vfill
+  {\large \today\par}
+  \vspace{1cm}
+  {\large CSAS 3111 - Operating Systems \\ Fall 2025 \\ Seton Hall University}
+  \vspace*{2cm}
+\end{titlepage}
+
+\tableofcontents
+
+\pagebreak
+
+\section{Introduction}
+
+\subsection{Problem Statement}
+\label{problem-statement}
+
+\begin{itemize}
+	\item Module 1: Process Simulation
+	\item Module 2: Advanced Memory Management
+	\item Module 3: Process Scheduling and Context Switching
+	\item Module 4: Interrupt Handling and Dispatcher
+	\item Module 5: Efficiency Analysis of Concurrency
+\end{itemize}
+
+\subsection{Outline}
+
+\section{Key Concepts and Features}
+
+\subsection{Project 1}
+
+\subsection{Project 2}
+
+\subsection{Project 3}
+Wasn't Assigned
+
+\subsection{Project 4}
+Wasn't Assigned
+
+\pagebreak
+
+\section{Module 1: Process Simulation}
+\label{module1}
+
+\subsection{Problem Statement}
+\label{PS-m1}
+
+\subsection{Implementation}
+\label{IMP-m1}
+\subsubsection{Core CPU Components and Registers}
+\include{ISA-Spec}
+
+\subsubsection{Process Control Block}
+
+
+\subsubsection{Fetch-Decode-Execute Cycle}
+
+
+\pagebreak
+\section{Module 2: Advanced Memory Management}
+\label{module2}
+
+\subsection{Problem Statement}
+\label{PS-m2}
+
+\subsection{Implementation}
+\label{IMP-m2}
+\subsubsection{Hierarchical Memory System}
+
+\subsubsection{Memory Table}
+
+\subsubsection{Dynamic Memory Allocation and Deallocation}
+
+\pagebreak
+%%%\section{Module 3: Process Scheduling and Context Switching}
+\include{Process-Spec}
+
+\pagebreak
+\section{Module 4: Interrupt Handling and Dispatcher}
+\label{module4}
+
+\subsection{Problem Statement}
+\label{PS-m4}
+\subsection{Implementation}
+\label{IMP-m4}
+
+\subsubsection{Types of Interruption}
+
+\subsubsection{Interrupt Vector Table}
+
+%\subsubsection*{Interrupt Handler}
+%\subsubsection*{Dispatcher}
+\subsubsection{Context Switching}
+
+\pagebreak
+\section{Module 5: Efficiency Analysis of Concurrency}
+\label{module5}
+
+\subsection{Problem Statement}
+\label{PS-m5}
+
+\subsection{Implementation}
+\label{IMP-m5}
+
+\subsubsection{Performance Metrics Setup}
+
+
+\subsubsection{Implementation of Time Tracking}
+
+
+\subsubsection{Data Comparison}
+
+
+\subsubsection{Performance Comparison}
+
+
+\subsubsection{Visualization and Reporting}
+
+
+\pagebreak
+\section{The Simulation}
+\label{simulation}
+
+\pagebreak
+\section{Testing and Debugging}
+\label{testNdebug}
+
+\pagebreak
+\section{Conclusion}
+\label{concl}
+
+\pagebreak
+\section{Appendix A: Screenshots}
+\label{SS}
+
+\end{document}

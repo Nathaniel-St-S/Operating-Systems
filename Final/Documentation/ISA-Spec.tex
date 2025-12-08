@@ -1,26 +1,27 @@
-\documentclass[11pt]{article}
+%\documentclass[11pt]{article}
 
-\usepackage[a4paper,margin=0.5in]{geometry}
-\usepackage{amsmath,amssymb}
-\usepackage{booktabs}
-\usepackage{array}
-\usepackage{hyperref}
-\usepackage{longtable}
-\usepackage{enumitem}
+%\usepackage[a4paper,margin=0.5in]{geometry}
+%\usepackage{amsmath,amssymb}
+%\usepackage{booktabs}
+%\usepackage{array}
+%\usepackage{hyperref}
+%\usepackage{longtable}
+%\usepackage{enumitem}
 
-\title{MIPS-I Subset 32-bit ISA Specification}
-\author{Operating Systems Final}
-\date{\today}
+%\title{MIPS-I Subset 32-bit ISA Specification}
+%\author{Operating Systems Final}
+%\date{\today}
 
-\begin{document}
-\maketitle
+%\begin{document}
+%\maketitle
 
-\tableofcontents
+%\tableofcontents
 
-\pagebreak
+%\pagebreak
+%\subsubsection{Core CPU Components and Registers}
 
 \section{Overview}
-
+\label{ISA-Spec}
 This document specifies a small, real 32-bit ISA based closely on the original MIPS~I architecture. 
 %
 All instructions are 32 bits wide and follow one of three formats: R-type, I-type, or J-type.
@@ -465,5 +466,5 @@ When the kernel is finished handling the exception or interrupt, it executes
         \texttt{Status}.
 \end{itemize}
 
-\end{document}
+%\end{document}
 
