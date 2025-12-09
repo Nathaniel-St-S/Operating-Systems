@@ -1,6 +1,7 @@
 #include "../include/processes.h"
 #include "../include/cpu.h"
 #include "../include/memory.h"
+#include "../include/isa.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -63,6 +64,22 @@ static Queue* New_Queue = NULL;
 static Queue* Finished_Queue = NULL;
 
 //-------------------------------------Initializers for Queue-------------------------------------//
+
+static void shift_ready_left(void) {
+  if (Ready_Queue->next == 0) return;
+  for (int i = 0; i + 1 < Ready_Queue->next; i++) {
+    Ready_Queue->PCB[i] = Ready_Queue->PCB[i + 1];
+  }
+  Ready_Queue->next--;
+}
+
+static void push_ready_back(Process p) {
+  if (Ready_Queue->next >= Ready_Queue->capacity) {
+    fprintf(stderr, "Ready queue full, dropping PID %d\n", p.pid);
+    return;
+  }
+  Ready_Queue->PCB[Ready_Queue->next++] = p;
+}
 
 static void init_Ready_Queue(const int size) {
   Ready_Queue = calloc(1, sizeof(Queue) + (size_t)size * sizeof(Process));
@@ -156,7 +173,9 @@ void init_queues(void) {
 }
 
 static void free_Queue(Queue* Q) {
-  free(Q->PCB);
+  if (!Q) {
+    return;
+  }
   free(Q);
 }
 
@@ -394,7 +413,7 @@ uint32_t makeProcess(int pID,
   }
 
   // Validate that memory was actually allocated
-  if (text_start == UINT32_MAX || text_start == 0) {
+  if (text_start == UINT32_MAX) {
     fprintf(stderr, "makeProcess: Invalid text_start address for PID %d\n", pID);
     return UINT32_MAX;
   }
@@ -501,7 +520,9 @@ static void updateResponseRatio(Queue* Q, int idleTime) {
 //transfers all the processes in the new queue to the its respective ready queue
 static void transferProcesses(int queue_type) {
   while (New_Queue->next != 0) {
-    enqueue(dequeue(New_Queue, queue_type), queue_type);
+    Process p = dequeue(New_Queue, queue_type);
+    p.state = READY;
+    enqueueHelper(p, queue_type);
   }
 }
 
@@ -509,30 +530,38 @@ static void transferProcesses(int queue_type) {
 
 //the round robin scheduling algorithm
 static void roundRobin(void) {
-  int idx = 0;
-  while (Ready_Queue->next != 0) {
-    transferProcesses(NORMAL);
-    Process currentProcess = Ready_Queue->PCB[idx];
+  transferProcesses(NORMAL);
 
-    set_current_process(currentProcess.pid);
+  while (Ready_Queue->next > 0) {
+    Process *p = &Ready_Queue->PCB[0];
 
-    transitionState(currentProcess, NORMAL);
-    for (int i = 0; i < QUANTUM; i++) {
+    set_current_process(p->pid);
+    THE_CPU = p->cpu_state;
+
+    int slice = (p->burstTime < QUANTUM) ? p->burstTime : QUANTUM;
+    for (int i = 0; i < slice; i++) {
+      if (THE_CPU.hw_registers[PC] == CPU_HALT) break;
       fetch();
       execute();
-      currentProcess.burstTime-=1; //could make ternary
+      if (p->burstTime > 0) {
+        p->burstTime -= 1;
+      }
     }
 
-    if (currentProcess.burstTime > 0 && idx+1 >= Ready_Queue->next) {
-      context_switch(NORMAL, true);
-      idx = 0;
-    } else if (currentProcess.burstTime > 0) {
-      context_switch(NORMAL, true);
-      idx+=1;
+    // Save CPU state back to PCB
+    p->cpu_state = THE_CPU;
+
+    bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
+    if (finished) {
+      printf("Process %d finished - freeing memory\n", p->pid);
+      liberate(p->pid);
+      shift_ready_left();
     } else {
-      transitionState(currentProcess, NORMAL);
+      // rotate to back
+      Process tmp = *p;
+      shift_ready_left();
+      push_ready_back(tmp);
     }
-
   }
 
   set_current_process(SYSTEM_PROCESS_ID);

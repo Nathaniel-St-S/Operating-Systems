@@ -212,14 +212,16 @@ static bool check_access(uint32_t addr) {
     return true; // System/kernel mode - allow all access
   }
   
-  MemoryBlock *b = {0};
   bool valid_id = false;
-  // Check if the process id is a valid id
   for (size_t i = 0; i < MEMORY_TABLE.block_count; i++){
-    b = &MEMBLOCK(i);
-    if (b->pid == current_process_id){
-      valid_id = true;
-      break;
+    MemoryBlock *b = &MEMBLOCK(i);
+    if (b->pid != current_process_id) {
+      continue;
+    }
+
+    valid_id = true;
+    if (!b->is_free && addr >= b->start_addr && addr <= b->end_addr) {
+      return true;
     }
   }
 
@@ -227,8 +229,6 @@ static bool check_access(uint32_t addr) {
     fprintf(stderr, "Pocess read/write access: Invalid process id\n");
     return false;
   }
-
-  if (!b->is_free && addr >= b->start_addr && addr <= b->end_addr) return true;
 
   // Also check if address is in process's TEXT/DATA segments
   // Process 0: TEXT_BASE (0x00400000) to TEXT_BASE + 0x00100000

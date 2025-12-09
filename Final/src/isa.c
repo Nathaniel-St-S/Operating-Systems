@@ -332,7 +332,32 @@ static void jalr(uint32_t rs, uint32_t rd) {
 }
 
 static void syscall() {
-  THE_CPU.hw_registers[PC] = CPU_HALT;
+  uint32_t code = (uint32_t)read_gpr(REG_VO);
+
+  switch (code) {
+    case 1: { // print integer in $a0
+      int32_t value = read_gpr(REG_A0);
+      printf("%d", value);
+      fflush(stdout);
+      break;
+    }
+    case 4: { // print string at address in $a0
+      uint32_t addr = (uint32_t)read_gpr(REG_A0);
+      while (1) {
+        uint8_t ch = read_byte(addr++);
+        if (ch == 0) break;
+        putchar(ch);
+      }
+      fflush(stdout);
+      break;
+    }
+    case 10: // exit
+      THE_CPU.hw_registers[PC] = CPU_HALT;
+      break;
+    default:
+      fprintf(stderr, "Unhandled syscall code %u\n", code);
+      break;
+  }
 }
 
 static void breakk() {

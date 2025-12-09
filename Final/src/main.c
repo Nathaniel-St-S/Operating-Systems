@@ -2,6 +2,7 @@
 #include "../include/memory.h"
 #include "../include/assembler.h"
 #include "../include/processes.h"
+#include "../include/isa.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,6 +42,12 @@ static bool memory_initialized = false;
 static bool queues_initialized = false;
 
 static void panic_handler(int sig);
+
+// Disable leak detection in ASan builds because the sandbox blocks the ptrace
+// calls LeakSanitizer uses to suspend threads.
+const char *__asan_default_options(void) {
+  return "detect_leaks=0";
+}
 
 int main(int argc, char *argv[])
 {

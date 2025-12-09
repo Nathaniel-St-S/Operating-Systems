@@ -314,7 +314,7 @@ static uint32_t assemble_r_type(const char *op, int rd, int rs, int rt, int sham
   else if (strcmp(op, "div") == 0) funct = 0x1a;
   else if (strcmp(op, "divu") == 0) funct = 0x1b;
 
-  return (rs << 21) | (rt << 16) | (rd << 11) | (shamt << 6) | funct;
+  return ((uint32_t)rs << 21) | ((uint32_t)rt << 16) | ((uint32_t)rd << 11) | ((uint32_t)shamt << 6) | funct;
 }
 
 static uint32_t assemble_i_type(const char *op, int rt, int rs, int16_t imm) {
@@ -341,7 +341,7 @@ static uint32_t assemble_i_type(const char *op, int rt, int rs, int16_t imm) {
   else if (strcmp(op, "sh") == 0) opcode = 0x29;
   else if (strcmp(op, "sw") == 0) opcode = 0x2b;
 
-  return (opcode << 26) | (rs << 21) | (rt << 16) | (imm & 0xFFFF);
+  return (opcode << 26) | ((uint32_t)rs << 21) | ((uint32_t)rt << 16) | (imm & 0xFFFF);
 }
 
 static uint32_t assemble_j_type(const char *op, uint32_t addr) {
@@ -349,15 +349,25 @@ static uint32_t assemble_j_type(const char *op, uint32_t addr) {
   return (opcode << 26) | ((addr >> 2) & 0x3FFFFFF);
 }
 
+static int validate_register_num(int reg, const char *name, const char *op, uint32_t pc) {
+  if (reg < 0 || reg > 31) {
+    fprintf(stderr, "Error: Invalid register '%s' for %s at PC 0x%08x\n",
+            name ? name : "<null>", op, pc);
+    return 0;
+  }
+  return 1;
+}
+
 // Assemble MIPS-1 psuedo instructions
 static int expand_pseudo(AssemblyContext *ctx, const char *op, char *operands, 
     char output[][MAX_LINE], uint32_t pc) {
   char args[4][64];
   int argc = 0;
-  char *token = strtok(operands, " ,\t()");
+  char *saveptr = NULL;
+  char *token = strtok_r(operands, " ,\t()", &saveptr);
   while (token && argc < 4) {
     strcpy(args[argc++], trim(token));
-    token = strtok(NULL, " ,\t()");
+    token = strtok_r(NULL, " ,\t()", &saveptr);
   }
 
   if (strcmp(op, "li") == 0 && argc == 2) {
@@ -378,9 +388,14 @@ static int expand_pseudo(AssemblyContext *ctx, const char *op, char *operands,
       fprintf(stderr, "Warning: Undefined label '%s' for la, using 0\n", args[1]);
       addr = 0;
     }
-    sprintf(output[0], "lui %s, %d", args[0], (addr >> 16) & 0xFFFF);
-    sprintf(output[1], "ori %s, %s, %d", args[0], args[0], addr & 0xFFFF);
-    return 2;
+    if (addr >= -32768 && addr <= 32767) {
+      sprintf(output[0], "addiu %s, $zero, %d", args[0], addr);
+      return 1;
+    } else {
+      sprintf(output[0], "lui %s, %d", args[0], (addr >> 16) & 0xFFFF);
+      sprintf(output[1], "ori %s, %s, %d", args[0], args[0], addr & 0xFFFF);
+      return 2;
+    }
   }
 
   if (strcmp(op, "move") == 0 && argc == 2) {
@@ -401,14 +416,24 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
   strncpy(buffer, line, MAX_LINE - 1);
   buffer[MAX_LINE - 1] = '\0';
 
-  char *op = strtok(buffer, " \t,()");
+  char *saveptr = NULL;
+  char *op = strtok_r(buffer, " \t,()", &saveptr);
   if (!op) return 0;
 
   // Check pseudo-instructions
   char expanded[4][MAX_LINE];
   char rest[MAX_LINE] = "";
-  char *remainder = strtok(NULL, "");
-  if (remainder) strcpy(rest, remainder);
+  const char *operand_str = line;
+  while (*operand_str && !isspace((unsigned char)*operand_str)) {
+    operand_str++;
+  }
+  while (*operand_str && isspace((unsigned char)*operand_str)) {
+    operand_str++;
+  }
+  if (*operand_str) {
+    strncpy(rest, operand_str, MAX_LINE - 1);
+    rest[MAX_LINE - 1] = '\0';
+  }
 
   int exp_count = expand_pseudo(ctx, op, rest, expanded, pc);
   if (exp_count > 0) {
@@ -421,17 +446,31 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
       strcmp(op, "and") == 0 || strcmp(op, "or") == 0 ||
       strcmp(op, "xor") == 0 || strcmp(op, "nor") == 0 ||
       strcmp(op, "slt") == 0 || strcmp(op, "sltu") == 0) {
-    char *rd = strtok(NULL, " \t,()");
-    char *rs = strtok(NULL, " \t,()");
-    char *rt = strtok(NULL, " \t,()");
-    return assemble_r_type(op, get_register(rd), get_register(rs), get_register(rt), 0);
+    char *rd = strtok_r(NULL, " \t,()", &saveptr);
+    char *rs = strtok_r(NULL, " \t,()", &saveptr);
+    char *rt = strtok_r(NULL, " \t,()", &saveptr);
+    int rd_num = get_register(rd);
+    int rs_num = get_register(rs);
+    int rt_num = get_register(rt);
+    if (!validate_register_num(rd_num, rd, op, pc) ||
+        !validate_register_num(rs_num, rs, op, pc) ||
+        !validate_register_num(rt_num, rt, op, pc)) {
+      return 0;
+    }
+    return assemble_r_type(op, rd_num, rs_num, rt_num, 0);
   }
 
   if (strcmp(op, "sll") == 0 || strcmp(op, "srl") == 0 || strcmp(op, "sra") == 0) {
-    char *rd = strtok(NULL, " \t,()");
-    char *rt = strtok(NULL, " \t,()");
-    char *shamt = strtok(NULL, " \t,()");
-    return assemble_r_type(op, get_register(rd), 0, get_register(rt), parse_num(shamt));
+    char *rd = strtok_r(NULL, " \t,()", &saveptr);
+    char *rt = strtok_r(NULL, " \t,()", &saveptr);
+    char *shamt = strtok_r(NULL, " \t,()", &saveptr);
+    int rd_num = get_register(rd);
+    int rt_num = get_register(rt);
+    if (!validate_register_num(rd_num, rd, op, pc) ||
+        !validate_register_num(rt_num, rt, op, pc)) {
+      return 0;
+    }
+    return assemble_r_type(op, rd_num, 0, rt_num, parse_num(shamt));
   }
 
   // I-type
@@ -439,16 +478,26 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
       strcmp(op, "andi") == 0 || strcmp(op, "ori") == 0 ||
       strcmp(op, "xori") == 0 || strcmp(op, "slti") == 0 ||
       strcmp(op, "sltiu") == 0) {
-    char *rt = strtok(NULL, " \t,()");
-    char *rs = strtok(NULL, " \t,()");
-    char *imm = strtok(NULL, " \t,()");
-    return assemble_i_type(op, get_register(rt), get_register(rs), (int16_t)parse_num(imm));
+    char *rt = strtok_r(NULL, " \t,()", &saveptr);
+    char *rs = strtok_r(NULL, " \t,()", &saveptr);
+    char *imm = strtok_r(NULL, " \t,()", &saveptr);
+    int rt_num = get_register(rt);
+    int rs_num = get_register(rs);
+    if (!validate_register_num(rt_num, rt, op, pc) ||
+        !validate_register_num(rs_num, rs, op, pc)) {
+      return 0;
+    }
+    return assemble_i_type(op, rt_num, rs_num, (int16_t)parse_num(imm));
   }
 
   if (strcmp(op, "lui") == 0) {
-    char *rt = strtok(NULL, " \t,()");
-    char *imm = strtok(NULL, " \t,()");
-    return assemble_i_type(op, get_register(rt), 0, (int16_t)parse_num(imm));
+    char *rt = strtok_r(NULL, " \t,()", &saveptr);
+    char *imm = strtok_r(NULL, " \t,()", &saveptr);
+    int rt_num = get_register(rt);
+    if (!validate_register_num(rt_num, rt, op, pc)) {
+      return 0;
+    }
+    return assemble_i_type(op, rt_num, 0, (int16_t)parse_num(imm));
   }
 
   // Load/Store
@@ -456,20 +505,33 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
       strcmp(op, "lb") == 0 || strcmp(op, "sb") == 0 ||
       strcmp(op, "lh") == 0 || strcmp(op, "sh") == 0 ||
       strcmp(op, "lbu") == 0 || strcmp(op, "lhu") == 0) {
-    char *rt = strtok(NULL, " \t,()");
-    char *offset = strtok(NULL, " \t,()");
-    char *rs = strtok(NULL, " \t,()");
-    return assemble_i_type(op, get_register(rt), get_register(rs), (int16_t)parse_num(offset));
+    char *rt = strtok_r(NULL, " \t,()", &saveptr);
+    char *offset = strtok_r(NULL, " \t,()", &saveptr);
+    char *rs = strtok_r(NULL, " \t,()", &saveptr);
+    int rt_num = get_register(rt);
+    int rs_num = get_register(rs);
+    if (!validate_register_num(rt_num, rt, op, pc) ||
+        !validate_register_num(rs_num, rs, op, pc)) {
+      return 0;
+    }
+    return assemble_i_type(op, rt_num, rs_num, (int16_t)parse_num(offset));
   }
 
   // Branches
   if (strcmp(op, "beq") == 0 || strcmp(op, "bne") == 0) {
-    char *rs = strtok(NULL, " \t,()");
-    char *rt = strtok(NULL, " \t,()");
-    char *label = strtok(NULL, " \t,()");
+    char *rs = strtok_r(NULL, " \t,()", &saveptr);
+    char *rt = strtok_r(NULL, " \t,()", &saveptr);
+    char *label = strtok_r(NULL, " \t,()", &saveptr);
 
     if (!label) {
       fprintf(stderr, "Error: Missing label for %s at PC 0x%08x\n", op, pc);
+      return 0;
+    }
+
+    int rs_num = get_register(rs);
+    int rt_num = get_register(rt);
+    if (!validate_register_num(rs_num, rs, op, pc) ||
+        !validate_register_num(rt_num, rt, op, pc)) {
       return 0;
     }
 
@@ -479,12 +541,12 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
       return 0;
     }
     int16_t offset = (target - (pc + 4)) / 4;
-    return assemble_i_type(op, get_register(rt), get_register(rs), offset);
+    return assemble_i_type(op, rt_num, rs_num, offset);
   }
 
   // Jumps
   if (strcmp(op, "j") == 0 || strcmp(op, "jal") == 0) {
-    char *label = strtok(NULL, " \t,()");
+    char *label = strtok_r(NULL, " \t,()", &saveptr);
     if (!label) {
       fprintf(stderr, "Error: Missing label for %s at PC 0x%08x\n", op, pc);
       return 0;
@@ -499,8 +561,12 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
   }
 
   if (strcmp(op, "jr") == 0) {
-    char *rs = strtok(NULL, " \t,()");
-    return assemble_r_type(op, 0, get_register(rs), 0, 0);
+    char *rs = strtok_r(NULL, " \t,()", &saveptr);
+    int rs_num = get_register(rs);
+    if (!validate_register_num(rs_num, rs, op, pc)) {
+      return 0;
+    }
+    return assemble_r_type(op, 0, rs_num, 0, 0);
   }
 
   if (strcmp(op, "syscall") == 0 || strcmp(op, "break") == 0) {
@@ -555,6 +621,20 @@ static int write_to_memory(AssemblyContext *ctx) {
            ctx->allocated_data_addr, ctx->data_segment.size);
   }
 
+  // Rebase symbol addresses to the allocated physical addresses so that
+  // any references (e.g., via `la`) point at real memory we control.
+  for (int i = 0; i < ctx->symbol_count; i++) {
+    if (ctx->symbols[i].address >= ctx->text_base &&
+        ctx->symbols[i].address < ctx->text_base + ctx->text_count * 4) {
+      uint32_t off = ctx->symbols[i].address - ctx->text_base;
+      ctx->symbols[i].address = ctx->allocated_text_addr + off;
+    } else if (ctx->symbols[i].address >= ctx->data_base &&
+               ctx->symbols[i].address < ctx->data_base + ctx->data_segment.size) {
+      uint32_t off = ctx->symbols[i].address - ctx->data_base;
+      ctx->symbols[i].address = ctx->allocated_data_addr + off;
+    }
+  }
+
   // Write text segment
   for (int i = 0; i < ctx->text_count; i++) {
     uint32_t offset = i * 4;
@@ -607,7 +687,7 @@ static int parse_file(AssemblyContext *ctx, const char *filename) {
       }
       trimmed = trim(colon + 1);
       if (trimmed[0] == '\0' || trimmed[0] == '#') continue;
-      strncpy(buffer, trimmed, MAX_LINE - 1);
+      memmove(buffer, trimmed, strlen(trimmed));
       buffer[MAX_LINE - 1] = '\0';
     }
 
@@ -742,8 +822,11 @@ AssemblyResult assemble(const char *filename, int process_id) {
   }
 
   // Readjust the memory adress to a physical adress
-  uint32_t offset = result.program->entry_point - ctx.text_base;
-  result.program->entry_point = ctx.allocated_text_addr + offset;
+  if (result.program->entry_point >= ctx.text_base &&
+      result.program->entry_point < ctx.text_base + ctx.text_count * 4) {
+    uint32_t offset = result.program->entry_point - ctx.text_base;
+    result.program->entry_point = ctx.allocated_text_addr + offset;
+  }
 
   // Copy symbols for debugging
   result.symbol_count = ctx.symbol_count;
