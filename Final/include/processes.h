@@ -1,20 +1,24 @@
 #ifndef PROCESSES_H
 #define PROCESSES_H
 
-void roundRobin(void);
+#include <stdint.h>
 
-void priorityBased(void);
+typedef enum {
+  SCHED_FCFS,
+  SCHED_ROUND_ROBIN,
+  SCHED_PRIORITY,
+  SCHED_SRT,
+  SCHED_HRRN,
+  SCHED_SPN,
+  SCHED_MLFQ
+} SchedulingAlgorithm;
 
-void shortestRemainingTime(void);
+void init_queues(void);
 
-void highestResponseRatioNext(void);
+void free_queues(void);
 
-void firstComeFirstServe(void);
+// I gotta figure our what to do for this
+uint32_t makeProcess(int pID, int pc, int priority, int burstTime);
 
-void shortestProcessNext(void);
-
-void feedBack(void);
-
-//void context_switch(Queue* Q, int current, int next);
-
+void scheduler(SchedulingAlgorithm algorithm);
 #endif

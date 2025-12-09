@@ -20,7 +20,7 @@ static void reset_cpu_state(void) {
 static void reset_cpu_and_memory(void) {
   reset_cpu_state();
   free_memory();
-  init_memory();
+  init_memory(CACHE_WRITE_THROUGH);
   set_current_process(SYSTEM_PROCESS_ID);
 }
 

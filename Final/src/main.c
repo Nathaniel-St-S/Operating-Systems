@@ -1,6 +1,7 @@
 #include "../include/cpu.h"
 #include "../include/memory.h"
 #include "../include/assembler.h"
+#include "../include/processes.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,20 +10,6 @@
 
 #define MAX_PROGRAMS 10
 
-typedef enum {
-  CACHE_WRITE_THROUGH,
-  CACHE_WRITE_BACK
-} CachePolicy;
-
-typedef enum {
-  SCHED_FCFS,
-  SCHED_ROUND_ROBIN,
-  SCHED_PRIORITY,
-  SCHED_SRT,
-  SCHED_HRRN,
-  SCHED_SPN,
-  SCHED_MLFQ
-} SchedulingAlgorithm;
 
 typedef struct {
   CachePolicy cache_policy;
@@ -51,6 +38,7 @@ static volatile sig_atomic_t g_panic_handler_active = 0;
 // For error check
 static int result_count = 0;
 static bool memory_initialized = false;
+static bool queues_initialized = false;
 
 static void panic_handler(int sig);
 
@@ -72,7 +60,7 @@ int main(int argc, char *argv[])
 
   parse_args(argc, argv);
 
-  init_memory();
+  init_memory(opts.cache_policy);
   memory_initialized = true;
 
   results = calloc(opts.program_count, sizeof(AssemblyResult));
@@ -83,6 +71,9 @@ int main(int argc, char *argv[])
     goto cleanup;
   }
 
+  // I need the assembler to now turn the programs into processes
+  // Maybe i need to re-write the assembler so that i can calculte
+  // The burst times for all of these
   int success_count = assemble_programs(opts.program_files, 
                                         opts.program_count, 
                                         results);
@@ -94,11 +85,19 @@ int main(int argc, char *argv[])
   }
 
   // Write main code here
+  // Initialize the CPU
+  // Run the scheduler
+
+  init_queues();
+  queues_initialized = true;
+
+  scheduler(opts.scheduler);
 
 
-  // Part of the cleanup process
+  // Print the stats after execution
   print_cache_stats();
 
+  // Part of the cleanup process
 cleanup:
   g_panic_handler_active = 1;
 
@@ -120,6 +119,11 @@ cleanup:
   if (memory_initialized) {
     free_memory();
     memory_initialized = false;
+  }
+
+  if (queues_initialized){
+    free_queues();
+    queues_initialized = false;
   }
 
   g_panic_handler_active = 0;
