@@ -176,7 +176,7 @@ static void free_Queue(Queue* Q) {
   if (!Q) {
     return;
   }
-  free(Q);
+  free(Q->PCB);
 }
 
 void free_queues(void){
