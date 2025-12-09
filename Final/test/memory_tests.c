@@ -42,7 +42,7 @@ TEST_CASE(Memory, WriteBytePreservesOtherBytes) {
   reset_memory();
   write_word(400, 0xAABBCCDD);
   write_byte(401, 0xFF);
-  ASSERT_EQ(read_word(400), 0xAAFFCCDD);
+  ASSERT_EQ(read_word(400), 0xAABBFFDD);
 }
 
 TEST_CASE(Memory, WriteHalfwordPreservesOtherBytes) {
@@ -191,6 +191,9 @@ TEST_CASE(Memory, AllocateAfterMultipleFrees) {
   liberate(1);
   liberate(2);
   liberate(3);
+  (void)addr1;
+  (void)addr2;
+  (void)addr3;
   
   uint32_t addr4 = mallocate(4, 512);
   ASSERT_TRUE(addr4 != UINT32_MAX);

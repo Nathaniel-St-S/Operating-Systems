@@ -46,7 +46,6 @@ Queue* init_Ready_Queue(const int size) {
     Queue* Ready_Queue = calloc(size, sizeof(Process));
     Ready_Queue->next = 0;
     Ready_Queue->capacity = size;
-    Ready_Queue->PCB[size];
     if (!Ready_Queue) {
         perror("calloc R_Queue");
         exit(EXIT_FAILURE);
@@ -118,37 +117,38 @@ void enqueue_Burst(Process process, Queue* Q) {
 }
 
 //extracts a process and maintains the priority queue WRT burst time
-Process dequeueBurst(Queue* Q) {
-    if (Q->next == 0) {
-        fprintf(stderr, "Priority queue is empty\n");
-        return;
+static Process dequeueBurst(Queue* Q) {
+  if (Q->next == 0) {
+    fprintf(stderr, "Priority queue is empty\n");
+    Process empty = {0};
+    return empty;
+  }
+
+  Process process = Q->PCB[0];
+
+  Q->PCB[0] = Q->PCB[--Q->next];
+  int index = 0;
+  while(true) {
+    int smallest = index;
+    int left = 2 * index + 1;
+    int right = 2 * index + 2;
+
+    if (left < Q->next && Q->PCB[left].burstTime < Q->PCB[smallest].burstTime) {
+      smallest = left;
     }
 
-    Process process = Q->PCB[0];
-
-    Q->PCB[0] = Q->PCB[--Q->next];
-    int index = 0;
-    while(1) {
-        int smallest = index;
-        int left = 2 * index + 1;
-        int right = 2 * index + 2;
-
-        if (left < Q->next && Q->PCB[left].burstTime < Q->PCB[smallest].burstTime) {
-            smallest = left;
-        }
-
-        if (right < Q->next && Q->PCB[right].burstTime < Q->PCB[smallest].burstTime) {
-            smallest = right;
-        }
-
-        if (smallest != index) {
-            swap(Q, index, smallest);
-            index = smallest;
-        } else {
-            break;
-        }
+    if (right < Q->next && Q->PCB[right].burstTime < Q->PCB[smallest].burstTime) {
+      smallest = right;
     }
-    return process;
+
+    if (smallest != index) {
+      swap(Q, index, smallest);
+      index = smallest;
+    } else {
+      break;
+    }
+  }
+  return process;
 }
 
 
@@ -168,37 +168,38 @@ void enqueuePriority(Process process, Queue* Q) {
 }
 
 // extracts a process and maintains the priority queue WRT priority
-Process dequeuePriority(Queue* Q) {
-    if (!Q->capacity) {
-        fprintf(stderr, "Priority queue is empty\n");
-        return;
+static Process dequeuePriority(Queue* Q) {
+  if (Q->next == 0) {
+    fprintf(stderr, "Priority queue is empty\n");
+    Process empty = {0};
+    return empty;
+  }
+
+  Process process = Q->PCB[0];
+
+  Q->PCB[0] = Q->PCB[--Q->next];
+  int index = 0;
+  while(true) {
+    int smallest = index;
+    int left = 2 * index + 1;
+    int right = 2 * index + 2;
+
+    if (left < Q->next && Q->PCB[left].priority < Q->PCB[smallest].priority) {
+      smallest = left;
     }
 
-    Process process = Q->PCB[0];
-
-    Q->PCB[0] = Q->PCB[--Q->next];
-    int index = 0;
-    while(1) {
-        int smallest = index;
-        int left = 2 * index + 1;
-        int right = 2 * index + 2;
-
-        if (left < Q->next && Q->PCB[left].priority < Q->PCB[smallest].priority) {
-            smallest = left;
-        }
-
-        if (right < Q->next && Q->PCB[right].priority < Q->PCB[smallest].priority) {
-            smallest = right;
-        }
-
-        if (smallest != index) {
-            swap(Q, index, smallest);
-            index = smallest;
-        } else {
-            break;
-        }
+    if (right < Q->next && Q->PCB[right].priority < Q->PCB[smallest].priority) {
+      smallest = right;
     }
-    return process;
+
+    if (smallest != index) {
+      swap(Q, index, smallest);
+      index = smallest;
+    } else {
+      break;
+    }
+  }
+  return process;
 }
 
 TEST(Test_Enqueue) {
@@ -238,6 +239,7 @@ TEST(Test_Dequeue) {
     ASSERT_EQ_INT(Ready_Queue->PCB[1].burstTime, 8);
     
     free_Ready_Queue(Ready_Queue);
+    return 1;
 }
 
 TEST(Test_Swap) {
@@ -261,6 +263,7 @@ TEST(Test_Swap) {
     ASSERT_EQ_INT(Ready_Queue->PCB[1].burstTime, 9);
 
     free_Ready_Queue(Ready_Queue);
+    return 1;
 }
 
 TEST(Test_PriortyPriorityQ) {
@@ -296,6 +299,7 @@ TEST(Test_PriortyPriorityQ) {
     ASSERT_EQ_INT(Ready_Queue->PCB[0].priority, 0);
 
     free_Ready_Queue(Ready_Queue);
+    return 1;
 }
 
 TEST(Test_PriorityBurstQ) {
@@ -333,11 +337,12 @@ TEST(Test_PriorityBurstQ) {
 
 
     printf("P5 %p \nP6 %p\n", &P5, &P6);
-    printf("same process %p %d\n", &P5, &P5 == &P5);
+    printf("same process %p %d\n", &P5, &P5 == &P6);
     free_Ready_Queue(Ready_Queue);
+    return 1;
 }
 
-int main() {
+int main_test() {
     RUN_TEST(Test_Enqueue);
     RUN_TEST(Test_Dequeue);
     RUN_TEST(Test_Swap);

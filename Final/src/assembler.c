@@ -361,6 +361,7 @@ static int validate_register_num(int reg, const char *name, const char *op, uint
 // Assemble MIPS-1 psuedo instructions
 static int expand_pseudo(AssemblyContext *ctx, const char *op, char *operands, 
     char output[][MAX_LINE], uint32_t pc) {
+  (void)pc;
   char args[4][64];
   int argc = 0;
   char *saveptr = NULL;
@@ -647,7 +648,6 @@ static int write_to_memory(AssemblyContext *ctx) {
   }
 
   // Write data segment
-  uint32_t data_addr = ctx->data_base;
   for (uint32_t i = 0; i < ctx->data_segment.size; i++) {
     write_byte(ctx->allocated_data_addr + i, ctx->data_segment.data[i]);
   }

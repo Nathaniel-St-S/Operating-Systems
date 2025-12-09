@@ -576,6 +576,7 @@ static int handle_jump_instruction(uint32_t instruction) {
 
 static void eret(uint32_t target) {
   // TODO
+  (void)target;
 }
 
 static int handle_eret_instruction(uint32_t instruction) {

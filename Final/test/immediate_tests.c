@@ -24,6 +24,26 @@ static void reset_cpu_and_memory(void) {
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
+static inline uint32_t mask_reg_index(uint32_t reg) {
+  return (uint32_t)reg & 0x1F;
+}
+
+static inline int32_t read_gpr(uint32_t reg) {
+  uint32_t idx = mask_reg_index(reg);
+  if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
+    return 0;
+  }
+  return THE_CPU.gp_registers[idx];
+}
+
+static inline void write_gpr(uint32_t reg, uint32_t value) {
+  uint32_t idx = mask_reg_index(reg);
+  if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
+    return;
+  }
+  THE_CPU.gp_registers[idx] = value;
+}
+
 TEST_CASE(ITypeImmediate, AddiAddsSignedImmediate) {
   reset_cpu_and_memory();
   write_gpr(REG_T0, 5);

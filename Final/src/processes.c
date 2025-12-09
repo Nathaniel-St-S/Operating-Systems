@@ -28,27 +28,25 @@ typedef enum {
 
 //To represent a process
 typedef struct {
-  int pid; //process id
-  uint32_t pc; //program counter 
-  ProcessState state; //state of the process
-  int priority; //priority level
-  int burstTime; //time left to complete
-  float responseRatio; //calculated as (waiting time + service time) //service time
-  Cpu cpu_state; 
-  // Litterally just more wrappers for the fucking assembly structure kill me
-  // fuck you brysen why did you do this
-  uint32_t text_start; // Where code is in memory
-  uint32_t text_size; // where said code is
-  uint32_t data_start; // Where data is in memory
-  uint32_t data_size; // Size of said data
-  uint32_t stack_ptr; // Stack pointer value
+  int pid;
+  uint32_t pc;
+  ProcessState state;
+  int priority;
+  int burstTime;
+  float responseRatio;
+  Cpu cpu_state;
+  uint32_t text_start;
+  uint32_t text_size;
+  uint32_t data_start;
+  uint32_t data_size;
+  uint32_t stack_ptr;
 } Process;
 
 //To represent a queue
 typedef struct {
-  int next; //the index to next open space
-  int capacity; //The size of the queue
-  Process PCB[]; //The block to hold processes
+  int next;
+  int capacity;
+  Process PCB[];
 } Queue;
 
 //-------------------------------------Constants-------------------------------------//
@@ -176,7 +174,7 @@ static void free_Queue(Queue* Q) {
   if (!Q) {
     return;
   }
-  free(Q->PCB);
+  free(Q);
 }
 
 void free_queues(void){
@@ -191,7 +189,6 @@ void free_queues(void){
 
 //-------------------------------------Helpers for Queue-------------------------------------//
 
-//for non priority queues
 static void enqueueGeneric(Process elem, Queue* Q) {
   if (Q == Finished_Queue && Q->next >= Q->capacity) {
     Q->next = 0;
@@ -206,7 +203,6 @@ static void enqueueGeneric(Process elem, Queue* Q) {
   Q->next+=1;
 }
 
-//for non priority queues
 static Process dequeueGeneric(Queue* Q) {
   if (Q->next == 0) {
     fprintf(stderr, "Queue is empty\n");
@@ -214,25 +210,21 @@ static Process dequeueGeneric(Queue* Q) {
     return empty;
   }
 
-  int i = 0;
   Process process = Q->PCB[0];
   Q->next-=1;
-  while (i < Q->next) {
+  for (int i = 0; i < Q->next; i++) {
     Q->PCB[i] = Q->PCB[i+1];
-    i+=1;
   }
 
   return process;
 }
 
-// Define swap function to swap two PCB
 static void swap(Queue* Q, int swappee, int swapper) {
   Process temp = Q->PCB[swappee];
   Q->PCB[swappee] = Q->PCB[swapper];
   Q->PCB[swapper] = temp;
 }
 
-// Adds a procces to the priority queue WRT to a process's burst time
 static void enqueueBurst(Process process, Queue* Q) {
   if (Q->next >= Q->capacity) {
     fprintf(stderr, "Priority queue is full\n");
@@ -247,7 +239,6 @@ static void enqueueBurst(Process process, Queue* Q) {
   }
 }
 
-// Extracts a process and maintains the priority queue WRT burst time
 static Process dequeueBurst(Queue* Q) {
   if (Q->next == 0) {
     fprintf(stderr, "Priority queue is empty\n");
@@ -282,8 +273,6 @@ static Process dequeueBurst(Queue* Q) {
   return process;
 }
 
-
-// Adds a procces to the priority queue WRT to a process's priority
 static void enqueuePriority(Process process, Queue* Q) {
   if (Q->next >= Q->capacity) {
     fprintf(stderr, "Priority queue is full\n");
@@ -298,7 +287,6 @@ static void enqueuePriority(Process process, Queue* Q) {
   }
 }
 
-// Extracts a process and maintains the priority queue WRT priority
 static Process dequeuePriority(Queue* Q) {
   if (Q->next == 0) {
     fprintf(stderr, "Priority queue is empty\n");
@@ -333,7 +321,6 @@ static Process dequeuePriority(Queue* Q) {
   return process;
 }
 
-//enqueues the process depending on the queue type
 static void enqueueHelper(Process P, int queue_type) {
   switch(queue_type) {
     case NORMAL: enqueueGeneric(P, Ready_Queue); break;
@@ -343,7 +330,6 @@ static void enqueueHelper(Process P, int queue_type) {
   }
 }
 
-// Enqueues the process depending the process's state
 static void enqueue(Process P, int queue_type) {
   switch (P.state) {
     case READY: enqueueHelper(P, queue_type); break; 
@@ -357,7 +343,6 @@ static void enqueue(Process P, int queue_type) {
   }
 }
 
-// Returns the process at the front of the queue depending on the queue type
 static Process dequeue(Queue* Q, int queue_type) {
   Process P;
   switch(queue_type) {
@@ -369,26 +354,37 @@ static Process dequeue(Queue* Q, int queue_type) {
   return P;
 }
 
-//-------------------------------------State Transitions-------------------------------------//
+//-------------------------------------Scheduling Helpers-------------------------------------//
 
-//transitions a process 's state from one to another and moves to its corresponding queue
-static void transitionState(Process P, int queue_type) {
-  if (P.burstTime <= 0) {
-    P.state = FINISHED; 
-    printf("Process %d finished - freeing memory\n", P.pid);
-    liberate(P.pid);
-    enqueue(dequeue(Running_Queue, NORMAL), NORMAL);
-  } else if ((P.state == NEW) || (P.burstTime > 0 && RUNNING)) {
-    P.state = READY;
-    if (P.state == NEW) {
-      enqueue(dequeue(New_Queue, queue_type), queue_type);
-    } else {
-      enqueue(dequeue(Running_Queue, queue_type), queue_type);
-    }
-  } else {
-    P.state = RUNNING;
-    enqueue(dequeue(Ready_Queue, NORMAL), NORMAL);
+static void transferProcesses(int queue_type) {
+  while (New_Queue->next != 0) {
+    Process p = dequeue(New_Queue, NORMAL);
+    p.state = READY;
+    enqueueHelper(p, queue_type);
   }
+}
+
+static float calcResponseRatio(Process P, int idleTime) {
+  if (P.burstTime == 0) return 0.0f;
+  return (float)(idleTime + P.burstTime) / (float)P.burstTime;
+}
+
+static void updateResponseRatio(Queue* Q, int idleTime) {
+  for (int i = 0; i < Q->next; i++) {
+    Q->PCB[i].responseRatio = calcResponseRatio(Q->PCB[i], idleTime);
+  }
+}
+
+static int getHighestResponseRatioIndex(void) {
+  if (Ready_Queue->next == 0) return -1;
+  
+  int best = 0;
+  for (int i = 1; i < Ready_Queue->next; i++) {
+    if (Ready_Queue->PCB[i].responseRatio > Ready_Queue->PCB[best].responseRatio) {
+      best = i;
+    }
+  }
+  return best;
 }
 
 //-------------------------------------Process Creation-------------------------------------//
@@ -406,22 +402,18 @@ uint32_t makeProcess(int pID,
                      int priority, 
                      int burstTime) {
   
-  // Check if we have room for another process
   if (process_storage_index >= MAX_PROCESSES) {
     fprintf(stderr, "makeProcess: Too many processes (max %d)\n", MAX_PROCESSES);
     return UINT32_MAX;
   }
 
-  // Validate that memory was actually allocated
   if (text_start == UINT32_MAX) {
     fprintf(stderr, "makeProcess: Invalid text_start address for PID %d\n", pID);
     return UINT32_MAX;
   }
 
-  // Get pointer to process storage
   Process* newProcess = &global_process_storage[process_storage_index++];
   
-  // Initialize process control block
   newProcess->pid = pID;
   newProcess->pc = entry_point;
   newProcess->state = NEW;
@@ -429,23 +421,19 @@ uint32_t makeProcess(int pID,
   newProcess->burstTime = burstTime;
   newProcess->responseRatio = 0;
   
-  // Store memory layout
   newProcess->text_start = text_start;
   newProcess->text_size = text_size;
   newProcess->data_start = data_start;
   newProcess->data_size = data_size;
   newProcess->stack_ptr = stack_ptr;
   
-  // Initialize CPU state
   memset(&newProcess->cpu_state, 0, sizeof(Cpu));
   
-  // Set up initial register values
-  newProcess->cpu_state.hw_registers[PC] = entry_point;  // Start at entry point
-  newProcess->cpu_state.gp_registers[REG_SP] = stack_ptr;  // Set stack pointer
-  newProcess->cpu_state.gp_registers[REG_GP] = data_start; // Point to data segment
-  newProcess->cpu_state.gp_registers[REG_ZERO] = 0;        // Zero register
+  newProcess->cpu_state.hw_registers[PC] = entry_point;
+  newProcess->cpu_state.gp_registers[REG_SP] = stack_ptr;
+  newProcess->cpu_state.gp_registers[REG_GP] = data_start;
+  newProcess->cpu_state.gp_registers[REG_ZERO] = 0;
   
-  // Add to NEW queue (will be moved to READY by scheduler)
   enqueue(*newProcess, NORMAL);
   
   printf("  ✓ Process created:\n");
@@ -463,72 +451,8 @@ uint32_t makeProcess(int pID,
   return entry_point;
 }
 
-//-------------------------------------Context Switching-------------------------------------//
-
-//Switches from one process to another
-static void context_switch(int queue_type, bool needTransition) {
-  Process curr = Running_Queue->PCB[0];
-  Process nxt = Ready_Queue->PCB[0];
-
-  //save current's state
-  curr.cpu_state = THE_CPU;
-
-  set_current_process(nxt.pid);
-
-  //start the next process
-  THE_CPU = nxt.cpu_state;
-
-  if (needTransition) {
-    transitionState(curr, queue_type);
-    transitionState(nxt, queue_type);
-  }
-
-  printf("Context switch: PID %d -> PID %d (PC: 0x%08x)\n", curr.pid, nxt.pid, THE_CPU.hw_registers[PC]);
-}
-
-//-------------------------------------Scheduling Helpers-------------------------------------//
-
-//returns the process with the highest response ratio
-static Process getHighestResponseRatio(void) {
-  int i = 1; 
-  Process HRRProcess = Ready_Queue->PCB[0];
-  while (i < Ready_Queue->next) {
-    if (Ready_Queue->PCB[i].responseRatio < HRRProcess.responseRatio) {
-      HRRProcess = Ready_Queue->PCB[i];
-    }
-    i+=1;
-  }
-  swap(Ready_Queue, 0, 1);
-  return HRRProcess;
-}
-
-//calculates given process's response ratio
-static float calcResponseRatio(Process P, int idleTime) {
-  if (P.burstTime == 0) return 0.0f;
-  return (float)(idleTime + P.burstTime) / (float)P.burstTime;
-}
-
-//updates the response ratio for every process in the given queue
-static void updateResponseRatio(Queue* Q, int idleTime) {
-  int i = 0;
-  while (i < Q->next) {
-    Q->PCB[i].responseRatio = calcResponseRatio(Q->PCB[i], idleTime);
-    i++;
-  }
-}
-
-//transfers all the processes in the new queue to the its respective ready queue
-static void transferProcesses(int queue_type) {
-  while (New_Queue->next != 0) {
-    Process p = dequeue(New_Queue, queue_type);
-    p.state = READY;
-    enqueueHelper(p, queue_type);
-  }
-}
-
 //-------------------------------------Scheduling Algorithms-------------------------------------//
 
-//the round robin scheduling algorithm
 static void roundRobin(void) {
   transferProcesses(NORMAL);
 
@@ -544,11 +468,10 @@ static void roundRobin(void) {
       fetch();
       execute();
       if (p->burstTime > 0) {
-        p->burstTime -= 1;
+        p->burstTime--;
       }
     }
 
-    // Save CPU state back to PCB
     p->cpu_state = THE_CPU;
 
     bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
@@ -557,7 +480,6 @@ static void roundRobin(void) {
       liberate(p->pid);
       shift_ready_left();
     } else {
-      // rotate to back
       Process tmp = *p;
       shift_ready_left();
       push_ready_back(tmp);
@@ -567,210 +489,248 @@ static void roundRobin(void) {
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
-
-//The first come first serve scheduling algorithm
 static void firstComeFirstServe(void) {
-  while (Ready_Queue->next != 0) {
-    transferProcesses(NORMAL);
-    Process currentProcess = Ready_Queue->PCB[0];
-    set_current_process(currentProcess.pid);
-    transitionState(currentProcess, NORMAL);
-    while (currentProcess.burstTime > 0) {
+  transferProcesses(NORMAL);
+  
+  while (Ready_Queue->next > 0) {
+    Process *p = &Ready_Queue->PCB[0];
+    set_current_process(p->pid);
+    THE_CPU = p->cpu_state;
+    
+    while (p->burstTime > 0 && THE_CPU.hw_registers[PC] != CPU_HALT) {
       fetch();
       execute();
-      currentProcess.burstTime-=1;
+      p->burstTime--;
     }
-    transitionState(currentProcess, NORMAL);
+    
+    p->cpu_state = THE_CPU;
+    printf("Process %d finished - freeing memory\n", p->pid);
+    liberate(p->pid);
+    shift_ready_left();
   }
-
+  
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
-//uses priorityBurstQueue 
-//the shortest process next scheduling algorithm
 static void shortestProcessNext(void) {
-  while (Ready_Queue->next != 0) {
-    transferProcesses(PRIORITYBURST);
-    Process shortestProcess = Ready_Queue->PCB[0]; //searchForShortestProcess(Ready_Queue);
-    set_current_process(shortestProcess.pid);
-    transitionState(shortestProcess, PRIORITYBURST);
-    while(shortestProcess.burstTime > 0) {
+  transferProcesses(PRIORITYBURST);
+  
+  while (Ready_Queue->next > 0) {
+    Process *p = &Ready_Queue->PCB[0];
+    set_current_process(p->pid);
+    THE_CPU = p->cpu_state;
+    
+    while(p->burstTime > 0 && THE_CPU.hw_registers[PC] != CPU_HALT) {
       fetch();
       execute();
-      shortestProcess.burstTime-=1;
+      p->burstTime--;
     }
-    transitionState(shortestProcess, PRIORITYBURST); 
+    
+    p->cpu_state = THE_CPU;
+    printf("Process %d finished - freeing memory\n", p->pid);
+    liberate(p->pid);
+    dequeueGeneric(Ready_Queue); // Remove from heap
+    transferProcesses(PRIORITYBURST);
   }
-
+  
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
-//uses priorityPriorityQueue 
-//the priority based scheduling algorithm
 static void priorityBased(void) {
-  while (Ready_Queue->next != 0) {
-    transferProcesses(PRIORITYPRIORITY);
-    Process highestPriorityP = Ready_Queue->PCB[0];
-    set_current_process(highestPriorityP.pid);
-    transitionState(highestPriorityP, PRIORITYPRIORITY);
-    while (highestPriorityP.burstTime > 0) {
+  transferProcesses(PRIORITYPRIORITY);
+  
+  while (Ready_Queue->next > 0) {
+    Process *p = &Ready_Queue->PCB[0];
+    set_current_process(p->pid);
+    THE_CPU = p->cpu_state;
+    
+    while (p->burstTime > 0 && THE_CPU.hw_registers[PC] != CPU_HALT) {
       fetch();
       execute();
-      highestPriorityP.burstTime-=1;
+      p->burstTime--;
+      
       transferProcesses(PRIORITYPRIORITY);
-      Process newHighestP = Ready_Queue->PCB[0];
-
-      if (&newHighestP != &highestPriorityP) {
-        if (&Ready_Queue->PCB[1] == &newHighestP) {
-          context_switch(PRIORITYPRIORITY, true);
-        } else {
-          context_switch(PRIORITYPRIORITY, true);
-        }
+      
+      // Check if higher priority process arrived
+      if (Ready_Queue->next > 1 && Ready_Queue->PCB[1].priority < p->priority) {
+        p->cpu_state = THE_CPU;
+        Process tmp = *p;
+        dequeueGeneric(Ready_Queue); // Remove current from heap
+        enqueuePriority(tmp, Ready_Queue); // Re-insert
+        break;
       }
     }
-    transitionState(highestPriorityP, PRIORITYPRIORITY);
+    
+    bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
+    if (finished) {
+      p->cpu_state = THE_CPU;
+      printf("Process %d finished - freeing memory\n", p->pid);
+      liberate(p->pid);
+      dequeueGeneric(Ready_Queue);
+    }
   }
+  
   set_current_process(SYSTEM_PROCESS_ID);
 }
-//uses priorityBurstQueue 
-//the shortest time remaining scheduling algorithm
+
 static void shortestRemainingTime(void) {
-  while (Ready_Queue->next != 0) {
-    transferProcesses(PRIORITYBURST);
-    Process shortestBTimeP = Ready_Queue->PCB[0];
-    set_current_process(shortestBTimeP.pid);
-    transitionState(shortestBTimeP, PRIORITYBURST);
-    while (shortestBTimeP.burstTime > 0) {
+  transferProcesses(PRIORITYBURST);
+  
+  while (Ready_Queue->next > 0) {
+    Process *p = &Ready_Queue->PCB[0];
+    set_current_process(p->pid);
+    THE_CPU = p->cpu_state;
+    
+    while (p->burstTime > 0 && THE_CPU.hw_registers[PC] != CPU_HALT) {
       fetch();
       execute();
-      shortestBTimeP.burstTime-=1;
+      p->burstTime--;
+      
       transferProcesses(PRIORITYBURST);
-      Process newShortestBTimeP = Ready_Queue->PCB[0];
-
-      if (&newShortestBTimeP != &shortestBTimeP) {
-        if (&Ready_Queue->PCB[1] == &newShortestBTimeP) {
-          context_switch(PRIORITYBURST, true);
-        } else {
-          context_switch(PRIORITYBURST, true);
-        }
+      
+      // Check if shorter process arrived
+      if (Ready_Queue->next > 1 && Ready_Queue->PCB[1].burstTime < p->burstTime) {
+        p->cpu_state = THE_CPU;
+        Process tmp = *p;
+        dequeueGeneric(Ready_Queue); // Remove current from heap
+        enqueueBurst(tmp, Ready_Queue); // Re-insert with new burst time
+        break;
       }
     }
-    transitionState(shortestBTimeP, PRIORITYBURST);
+    
+    bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
+    if (finished) {
+      p->cpu_state = THE_CPU;
+      printf("Process %d finished - freeing memory\n", p->pid);
+      liberate(p->pid);
+      dequeueGeneric(Ready_Queue);
+    }
   }
+  
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
-//the highest response ratio next scheduling algorithm
 static void highestResponseRatioNext(void) {
   transferProcesses(NORMAL);
-  if (Ready_Queue->next != 0) {
-    int total_time = 0;
-    Process currentProcess = Ready_Queue->PCB[0];
-    set_current_process(currentProcess.pid);
-    total_time = currentProcess.burstTime;
-    transitionState(currentProcess, NORMAL);
-    while (Ready_Queue->next != 0) {
-      transferProcesses(NORMAL);
-      while (currentProcess.burstTime > 0) {
-        fetch();
-        execute();
-        currentProcess.burstTime-=1;
-      }
-
-      transitionState(currentProcess, NORMAL);
-      updateResponseRatio(Ready_Queue, total_time); 
-      currentProcess = getHighestResponseRatio();
-      total_time = currentProcess.burstTime;
-      transitionState(currentProcess, NORMAL);
+  
+  int total_time = 0;
+  
+  while (Ready_Queue->next > 0) {
+    updateResponseRatio(Ready_Queue, total_time);
+    
+    int best_idx = getHighestResponseRatioIndex();
+    if (best_idx < 0) break;
+    
+    // Swap best to front
+    if (best_idx != 0) {
+      swap(Ready_Queue, 0, best_idx);
     }
+    
+    Process *p = &Ready_Queue->PCB[0];
+    set_current_process(p->pid);
+    THE_CPU = p->cpu_state;
+    
+    int process_time = p->burstTime;
+    
+    while (p->burstTime > 0 && THE_CPU.hw_registers[PC] != CPU_HALT) {
+      fetch();
+      execute();
+      p->burstTime--;
+    }
+    
+    p->cpu_state = THE_CPU;
+    total_time += process_time;
+    
+    printf("Process %d finished - freeing memory\n", p->pid);
+    liberate(p->pid);
+    shift_ready_left();
+    
+    transferProcesses(NORMAL);
   }
+  
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
-//the feedback scheduling algorithm
 static void feedBack(void) {
   Queue* feedBack_Q2 = init_FeedBack_Queue(MAX_PROCESSES);
   Queue* feedBack_Q3 = init_FeedBack_Queue(MAX_PROCESSES);
   int quantum1 = 2;
   int quantum2 = 4;
 
-  while(true) {
+  transferProcesses(NORMAL);
+
+  while(Ready_Queue->next > 0 || feedBack_Q2->next > 0 || feedBack_Q3->next > 0) {
     transferProcesses(NORMAL);
-    //handle processes in highest priority queue with 2 quantum
-    if (Ready_Queue->next != 0) {
-      Process P = Ready_Queue->PCB[0];
-      set_current_process(P.pid);
-      transitionState(P, NORMAL);
-      transferProcesses(NORMAL);
-      for (int i = 0; i < quantum1 && P.burstTime > 0; i++) {
+    
+    // Handle Q1 (highest priority) with quantum 2
+    if (Ready_Queue->next > 0) {
+      Process *p = &Ready_Queue->PCB[0];
+      set_current_process(p->pid);
+      THE_CPU = p->cpu_state;
+      
+      for (int i = 0; i < quantum1 && p->burstTime > 0 && THE_CPU.hw_registers[PC] != CPU_HALT; i++) {
         fetch();
         execute();
-        P.burstTime-=1;
+        p->burstTime--;
       }
+      
+      p->cpu_state = THE_CPU;
+      
+      bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
+      if (finished) {
+        printf("Process %d finished - freeing memory\n", p->pid);
+        liberate(p->pid);
+        shift_ready_left();
+      } else {
+        Process tmp = *p;
+        shift_ready_left();
+        enqueueGeneric(tmp, feedBack_Q2);
+      }
+      continue;
     }
-
-    //handle processes in middle priority queue with 4 quantum
-    if (feedBack_Q2->next != 0) {
-      Process P = feedBack_Q2->PCB[0];
-      set_current_process(P.pid);
-      transitionState(P, NORMAL);
-      transferProcesses(NORMAL);
-      for (int j = 0; j < quantum2 && P.burstTime > 0; j++) {
+    
+    // Handle Q2 (middle priority) with quantum 4
+    if (feedBack_Q2->next > 0) {
+      Process *p = &feedBack_Q2->PCB[0];
+      set_current_process(p->pid);
+      THE_CPU = p->cpu_state;
+      
+      for (int i = 0; i < quantum2 && p->burstTime > 0 && THE_CPU.hw_registers[PC] != CPU_HALT; i++) {
         fetch();
         execute();
-        P.burstTime-=1;
+        p->burstTime--;
       }
+      
+      p->cpu_state = THE_CPU;
+      
+      bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
+      if (finished) {
+        printf("Process %d finished - freeing memory\n", p->pid);
+        liberate(p->pid);
+        dequeueGeneric(feedBack_Q2);
+      } else {
+        Process tmp = dequeueGeneric(feedBack_Q2);
+        enqueueGeneric(tmp, feedBack_Q3);
+      }
+      continue;
     }
-
-    //handle processes in lowest priority queue FCFS
-    if (feedBack_Q3->next != 0) {
-      Process P = feedBack_Q3->PCB[0];
-      set_current_process(P.pid);
-      transitionState(P, NORMAL);
-      transferProcesses(NORMAL);
-      while (P.burstTime > 0) {
+    
+    // Handle Q3 (lowest priority) FCFS
+    if (feedBack_Q3->next > 0) {
+      Process *p = &feedBack_Q3->PCB[0];
+      set_current_process(p->pid);
+      THE_CPU = p->cpu_state;
+      
+      while (p->burstTime > 0 && THE_CPU.hw_registers[PC] != CPU_HALT) {
         fetch();
         execute();
-        P.burstTime-=1;
+        p->burstTime--;
       }
-    }
-
-    //highest priority queue not empty
-    if (Ready_Queue->next != 0) {
-      //move process from Ready queue to finished queue
-      if (Ready_Queue->PCB[0].burstTime <= 0) {
-        transitionState(Ready_Queue->PCB[0], NORMAL);
-      } else if (Ready_Queue->next >= 2) { // switch context then move to middle priority queue
-        context_switch(NORMAL, false);
-        enqueueGeneric(dequeue(Ready_Queue, NORMAL), feedBack_Q2);
-      } else { // move to middle priority queue
-        enqueueGeneric(dequeue(Ready_Queue, NORMAL), feedBack_Q2);
-      }
-    }
-
-    //middle priority queue not empty
-    if (feedBack_Q2->next != 0) {
-      //move process from middle priority queue to finished queue
-      if (feedBack_Q2->PCB[0].burstTime <= 0) {
-        transitionState(feedBack_Q2->PCB[0], NORMAL);
-      } else if (feedBack_Q2->next >= 2) { // switch context then move to lowest priority queue
-        context_switch(NORMAL, false);
-        enqueueGeneric(dequeue(feedBack_Q2, NORMAL), feedBack_Q3);
-      } else { // move to lowest priority queue
-        enqueueGeneric(dequeue(feedBack_Q2, NORMAL), feedBack_Q3);
-      }
-    }
-
-    //lowest priority queue not empty
-    if (feedBack_Q3->next != 0) {
-      //move process from middle priority queue to finished queue
-      if (feedBack_Q3->PCB[0].burstTime <= 0) {
-        transitionState(feedBack_Q3->PCB[0], NORMAL);
-      }
-    }
-
-    if (Ready_Queue->next == 0 && feedBack_Q2->next == 0 && feedBack_Q3->next == 0) {
-      break;
+      
+      p->cpu_state = THE_CPU;
+      printf("Process %d finished - freeing memory\n", p->pid);
+      liberate(p->pid);
+      dequeueGeneric(feedBack_Q3);
     }
   }
 
@@ -781,9 +741,7 @@ static void feedBack(void) {
 
 //-------------------------------------Scheduler-------------------------------------//
 
-// To start the scheduler with the given type
 void scheduler(SchedulingAlgorithm algorithm) {
-
   switch (algorithm) {
     case SCHED_ROUND_ROBIN: roundRobin(); break;
     case SCHED_PRIORITY: priorityBased(); break;

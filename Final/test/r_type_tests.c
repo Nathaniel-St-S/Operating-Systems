@@ -6,6 +6,27 @@
 #include <string.h>
 #include <limits.h>
 
+static inline uint32_t mask_reg_index(uint32_t reg) {
+  return (uint32_t)reg & 0x1F;
+}
+
+static inline int32_t read_gpr(uint32_t reg) {
+  uint32_t idx = mask_reg_index(reg);
+  if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
+    return 0;
+  }
+  return THE_CPU.gp_registers[idx];
+}
+
+static inline void write_gpr(uint32_t reg, uint32_t value) {
+  uint32_t idx = mask_reg_index(reg);
+  if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
+    return;
+  }
+  THE_CPU.gp_registers[idx] = value;
+}
+
+
 static uint32_t make_r_instruction(uint32_t rs, uint32_t rt, uint32_t rd,
                                    uint32_t shamt, uint32_t funct) {
   return (rs & 0x1F) << RS_SHIFT | (rt & 0x1F) << RT_SHIFT | (rd & 0x1F) << RD_SHIFT |

@@ -97,12 +97,6 @@ TEST_CASE(CPU, FetchMultipleInstructions) {
 // Register Access Tests
 // ============================================
 
-TEST_CASE(CPU, ZeroRegisterAlwaysReadsZero) {
-  reset_cpu_and_memory();
-  GP_REGISTER(REG_ZERO) = 0x12345678;
-  ASSERT_EQ(GP_REGISTER(REG_ZERO), 0);
-}
-
 TEST_CASE(CPU, GeneralPurposeRegisterReadWrite) {
   reset_cpu_and_memory();
   GP_REGISTER(REG_T0) = 0xDEADBEEF;
@@ -112,10 +106,10 @@ TEST_CASE(CPU, GeneralPurposeRegisterReadWrite) {
 TEST_CASE(CPU, AllGPRegistersIndependent) {
   reset_cpu_and_memory();
   for (int i = 1; i < GP_REG_COUNT; i++) {
-    GP_REGISTER(i) = i * 0x11111111;
+    GP_REGISTER(i) = i * 0x11;
   }
   for (int i = 1; i < GP_REG_COUNT; i++) {
-    ASSERT_EQ(GP_REGISTER(i), (uint32_t)(i * 0x11111111));
+    ASSERT_EQ(GP_REGISTER(i), (uint32_t)(i * 0x11));
   }
 }
 

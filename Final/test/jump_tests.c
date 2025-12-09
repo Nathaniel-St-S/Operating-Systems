@@ -7,7 +7,28 @@
 
 static uint32_t make_j_instruction(uint32_t opcode, uint32_t target) {
   return (opcode & 0x3F) << OPCODE_SHIFT | (target & 0x03FFFFFF);
+} 
+
+static inline uint32_t mask_reg_index(uint32_t reg) {
+  return (uint32_t)reg & 0x1F;
 }
+
+static inline int32_t read_gpr(uint32_t reg) {
+  uint32_t idx = mask_reg_index(reg);
+  if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
+    return 0;
+  }
+  return THE_CPU.gp_registers[idx];
+}
+
+static inline void write_gpr(uint32_t reg, uint32_t value) {
+  uint32_t idx = mask_reg_index(reg);
+  if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
+    return;
+  }
+  THE_CPU.gp_registers[idx] = value;
+}
+
 
 static void reset_cpu_state(void) {
   memset(&THE_CPU, 0, sizeof(THE_CPU));
