@@ -17,8 +17,38 @@ void init_queues(void);
 
 void free_queues(void);
 
-// I gotta figure our what to do for this
-uint32_t makeProcess(int pID, int pc, int priority, int burstTime);
+// This serves as a rapper for the ctx in the assembler pretty
+// much. there isn't really another way to make a process out-
+// side of this, since all the data is in the assembly. the 
+// entry point will initialize the cpu, and the function 
+// keeps track of a processes size so that we don't have to
+// allocate 1MB for eah one. 
+//
+// delete this once you understand. ask me questions
+//
+/**
+ * Create a process and add it to the new queue
+ * 
+ * @param pID Process ID
+ * @param entry_point Entry point address (where execution starts)
+ * @param text_start Start address of text segment in memory
+ * @param text_size Size of text segment
+ * @param data_start Start address of data segment in memory  
+ * @param data_size Size of data segment
+ * @param stack_ptr Initial stack pointer value
+ * @param priority Process priority (for priority scheduling)
+ * @param burstTime Estimated CPU burst time (for SPN/SRT scheduling)
+ * @return Address of allocated memory, or UINT32_MAX on failure
+ */
+uint32_t makeProcess(int pID, 
+                     uint32_t entry_point,
+                     uint32_t text_start,
+                     uint32_t text_size,
+                     uint32_t data_start,
+                     uint32_t data_size,
+                     uint32_t stack_ptr,
+                     int priority, 
+                     int burstTime);
 
 void scheduler(SchedulingAlgorithm algorithm);
 #endif

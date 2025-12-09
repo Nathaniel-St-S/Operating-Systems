@@ -10,32 +10,32 @@
 
 #define MAX_PROGRAMS 10
 
-
 typedef struct {
   CachePolicy cache_policy;
   SchedulingAlgorithm scheduler;
   const char **program_files;
   int program_count;
+  int *priorities;        // Priority for each program
+  int *burst_estimates;   // Burst time estimates for each program
 } Options;
 
 static Options opts = {
   .cache_policy = CACHE_WRITE_THROUGH,
   .scheduler = SCHED_ROUND_ROBIN,
   .program_files = NULL,
-  .program_count = 0
+  .program_count = 0,
+  .priorities = NULL,
+  .burst_estimates = NULL
 };
 
 static AssemblyResult *results;
 
 static void parse_args(int argc, char *argv[]);
-
 static void print_usage(const char *prog_name);
 
-// For error handling since we lowkey requesting a lot of memory now
 static jmp_buf g_panic_buffer;
 static volatile sig_atomic_t g_panic_handler_active = 0;
 
-// For error check
 static int result_count = 0;
 static bool memory_initialized = false;
 static bool queues_initialized = false;
@@ -46,10 +46,9 @@ int main(int argc, char *argv[])
 {
   int exit_code = EXIT_SUCCESS;
 
-  // Panic handlers for signalls
-  signal(SIGSEGV, panic_handler); // Seg Fault
-  signal(SIGABRT, panic_handler); // Abort (we don't use it yet but i will be in the future)
-  signal(SIGFPE, panic_handler);  // Floating Point Error (div by 0)
+  signal(SIGSEGV, panic_handler);
+  signal(SIGABRT, panic_handler);
+  signal(SIGFPE, panic_handler);
 
   int panic_signal = setjmp(g_panic_buffer);
   if (panic_signal != 0) {
@@ -60,44 +59,81 @@ int main(int argc, char *argv[])
 
   parse_args(argc, argv);
 
+  // Initialize memory system
+  printf("Initializing memory system...\n");
   init_memory(opts.cache_policy);
   memory_initialized = true;
 
-  results = calloc(opts.program_count, sizeof(AssemblyResult));
-  result_count = opts.program_count;
-  if(!results){
-    fprintf(stderr, "Memory allocation failed for assembly results during initialization\n");
-    exit_code = EXIT_FAILURE;
-    goto cleanup;
-  }
-
-  // I need the assembler to now turn the programs into processes
-  // Maybe i need to re-write the assembler so that i can calculte
-  // The burst times for all of these
-  int success_count = assemble_programs(opts.program_files, 
-                                        opts.program_count, 
-                                        results);
-
-  if (success_count == 0) {
-    fprintf(stderr, "\nError: No programs assembled successfully\n");
-    exit_code = EXIT_FAILURE;
-    goto cleanup;
-  }
-
-  // Write main code here
-  // Initialize the CPU
-  // Run the scheduler
-
+  // Initialize process queues
+  printf("Initializing process queues...\n");
   init_queues();
   queues_initialized = true;
 
+  // Allocate results array
+  results = calloc(opts.program_count, sizeof(AssemblyResult));
+  result_count = opts.program_count;
+  if(!results){
+    fprintf(stderr, "Memory allocation failed for assembly results\n");
+    exit_code = EXIT_FAILURE;
+    goto cleanup;
+  }
+
+  // Assemble all programs and create processes
+  printf("\n=== Assembling Programs ===\n");
+  for (int i = 0; i < opts.program_count; i++) {
+    printf("\n[%d/%d] Processing: %s\n", i+1, opts.program_count, opts.program_files[i]);
+    
+    // Assemble the program (this allocates memory and writes code/data)
+    results[i] = assemble(opts.program_files[i], i);
+    
+    if (!results[i].success) {
+      fprintf(stderr, "  ✗ Assembly failed: %s\n", results[i].error_message);
+      continue;
+    }
+    
+    printf("  ✓ Assembly successful\n");
+    
+    // Create process from assembled program
+    uint32_t process_addr = makeProcess(
+      i,                                      // Process ID
+      results[i].program->entry_point,        // Entry point (PC)
+      results[i].program->text_start,         // Text segment start
+      results[i].program->text_size,          // Text segment size
+      results[i].program->data_start,         // Data segment start
+      results[i].program->data_size,          // Data segment size
+      results[i].program->stack_ptr,          // Stack pointer
+      opts.priorities[i],                     // Priority
+      opts.burst_estimates[i]                 // Burst time estimate
+    );
+    
+    if (process_addr == UINT32_MAX) {
+      fprintf(stderr, "  ✗ Failed to create process\n");
+      exit_code = EXIT_FAILURE;
+    } else {
+      printf("  ✓ Process created (PID: %d, Entry: 0x%08x)\n", 
+             i, results[i].program->entry_point);
+    }
+  }
+
+  // Run the scheduler
+  printf("\n=== Starting Scheduler ===\n");
+  printf("Algorithm: ");
+  switch (opts.scheduler) {
+    case SCHED_FCFS: printf("First-Come First-Served\n"); break;
+    case SCHED_ROUND_ROBIN: printf("Round Robin\n"); break;
+    case SCHED_PRIORITY: printf("Priority\n"); break;
+    case SCHED_SRT: printf("Shortest Remaining Time\n"); break;
+    case SCHED_HRRN: printf("Highest Response Ratio Next\n"); break;
+    case SCHED_SPN: printf("Shortest Process Next\n"); break;
+    case SCHED_MLFQ: printf("Multi-Level Feedback Queue\n"); break;
+  }
+  printf("\n");
+
   scheduler(opts.scheduler);
 
-
-  // Print the stats after execution
+  printf("\n=== Execution Complete ===\n");
   print_cache_stats();
 
-  // Part of the cleanup process
 cleanup:
   g_panic_handler_active = 1;
 
@@ -114,6 +150,16 @@ cleanup:
   if (opts.program_files) {
     free((void*)opts.program_files);
     opts.program_files = NULL;
+  }
+
+  if (opts.priorities) {
+    free(opts.priorities);
+    opts.priorities = NULL;
+  }
+
+  if (opts.burst_estimates) {
+    free(opts.burst_estimates);
+    opts.burst_estimates = NULL;
   }
 
   if (memory_initialized) {
@@ -137,9 +183,18 @@ static void parse_args(int argc, char* argv[]){
   }
 
   opts.program_files = malloc(sizeof(char*) * argc);
-  if (!opts.program_files) {
-    fprintf(stderr, "Memory allocation failed for program files during cla parsing\n");
+  opts.priorities = malloc(sizeof(int) * argc);
+  opts.burst_estimates = malloc(sizeof(int) * argc);
+  
+  if (!opts.program_files || !opts.priorities || !opts.burst_estimates) {
+    fprintf(stderr, "Memory allocation failed during argument parsing\n");
     exit(EXIT_FAILURE);
+  }
+
+  // Default values for each program
+  for (int i = 0; i < argc; i++) {
+    opts.priorities[i] = 5;        // Default medium priority
+    opts.burst_estimates[i] = 100; // Default burst estimate
   }
 
   for (int i = 1; i < argc; i++) {
@@ -180,7 +235,15 @@ static void parse_args(int argc, char* argv[]){
       exit(EXIT_FAILURE);
     }
     else {
-      opts.program_files[opts.program_count++] = argv[i];
+      opts.program_files[opts.program_count] = argv[i];
+      
+      // Assign priority based on order (first = highest priority)
+      opts.priorities[opts.program_count] = opts.program_count + 1;
+      
+      // Estimate burst time (can be refined later)
+      opts.burst_estimates[opts.program_count] = 50 + (opts.program_count * 25);
+      
+      opts.program_count++;
     }
   }
 
@@ -198,7 +261,6 @@ static void parse_args(int argc, char* argv[]){
 }
 
 static void print_usage(const char *prog_name) {
-  // program name will be argv[0]
   printf("Usage: %s [OPTIONS] <program1.asm> <program2.asm> ...\n\n", prog_name);
   printf("OPTIONS:\n");
   printf("  --write-through       Use write-through cache policy (default)\n");
@@ -210,7 +272,7 @@ static void print_usage(const char *prog_name) {
   printf("  --srt                 Shortest Remaining Time scheduling\n");
   printf("  --hrrn                Highest Response Ratio Next scheduling\n");
   printf("  --spn                 Shortest Process Next scheduling\n");
-  printf("  --feedback            Multi-Level Feedback Queue scheduling\n");
+  printf("  --mlfq                Multi-Level Feedback Queue scheduling\n");
   printf("\n");
   printf("EXAMPLES:\n");
   printf("  %s programs/hello_world.asm\n", prog_name);

@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 //-------------------------------------Structs & Enums-------------------------------------//
 typedef enum {
@@ -27,12 +28,19 @@ typedef enum {
 //To represent a process
 typedef struct {
   int pid; //process id
-  int pc; //program counter 
+  uint32_t pc; //program counter 
   ProcessState state; //state of the process
   int priority; //priority level
   int burstTime; //time left to complete
   float responseRatio; //calculated as (waiting time + service time) //service time
   Cpu cpu_state; 
+  // Litterally just more wrappers for the fucking assembly structure kill me
+  // fuck you brysen why did you do this
+  uint32_t text_start; // Where code is in memory
+  uint32_t text_size; // where said code is
+  uint32_t data_start; // Where data is in memory
+  uint32_t data_size; // Size of said data
+  uint32_t stack_ptr; // Stack pointer value
 } Process;
 
 //To represent a queue
@@ -348,6 +356,8 @@ static Process dequeue(Queue* Q, int queue_type) {
 static void transitionState(Process P, int queue_type) {
   if (P.burstTime <= 0) {
     P.state = FINISHED; 
+    printf("Process %d finished - freeing memory\n", P.pid);
+    liberate(P.pid);
     enqueue(dequeue(Running_Queue, NORMAL), NORMAL);
   } else if ((P.state == NEW) || (P.burstTime > 0 && RUNNING)) {
     P.state = READY;
@@ -364,29 +374,74 @@ static void transitionState(Process P, int queue_type) {
 
 //-------------------------------------Process Creation-------------------------------------//
 
-static Process global_process_storage[10];
+static Process global_process_storage[MAX_PROCESSES];
 static int process_storage_index = 0;
 
-uint32_t makeProcess(int pID, int pc, int priority, int burstTime) {
-  if (process_storage_index >= 10) {
-    fprintf(stderr, "Too many processes created\n");
+uint32_t makeProcess(int pID, 
+                     uint32_t entry_point,
+                     uint32_t text_start,
+                     uint32_t text_size,
+                     uint32_t data_start,
+                     uint32_t data_size,
+                     uint32_t stack_ptr,
+                     int priority, 
+                     int burstTime) {
+  
+  // Check if we have room for another process
+  if (process_storage_index >= MAX_PROCESSES) {
+    fprintf(stderr, "makeProcess: Too many processes (max %d)\n", MAX_PROCESSES);
     return UINT32_MAX;
   }
 
+  // Validate that memory was actually allocated
+  if (text_start == UINT32_MAX || text_start == 0) {
+    fprintf(stderr, "makeProcess: Invalid text_start address for PID %d\n", pID);
+    return UINT32_MAX;
+  }
+
+  // Get pointer to process storage
   Process* newProcess = &global_process_storage[process_storage_index++];
+  
+  // Initialize process control block
   newProcess->pid = pID;
-  newProcess->pc = pc;
+  newProcess->pc = entry_point;
   newProcess->state = NEW;
   newProcess->priority = priority;
   newProcess->burstTime = burstTime;
   newProcess->responseRatio = 0;
-  newProcess->cpu_state = THE_CPU;
-
-  uint32_t address = mallocate(pID, MAX_PROCESS_SIZE);
-  if(address == UINT32_MAX)
-    fprintf(stderr, "Could not create new process of pID %d\n", pID);
+  
+  // Store memory layout
+  newProcess->text_start = text_start;
+  newProcess->text_size = text_size;
+  newProcess->data_start = data_start;
+  newProcess->data_size = data_size;
+  newProcess->stack_ptr = stack_ptr;
+  
+  // Initialize CPU state
+  memset(&newProcess->cpu_state, 0, sizeof(Cpu));
+  
+  // Set up initial register values
+  newProcess->cpu_state.hw_registers[PC] = entry_point;  // Start at entry point
+  newProcess->cpu_state.gp_registers[REG_SP] = stack_ptr;  // Set stack pointer
+  newProcess->cpu_state.gp_registers[REG_GP] = data_start; // Point to data segment
+  newProcess->cpu_state.gp_registers[REG_ZERO] = 0;        // Zero register
+  
+  // Add to NEW queue (will be moved to READY by scheduler)
   enqueue(*newProcess, NORMAL);
-  return address;
+  
+  printf("  ✓ Process created:\n");
+  printf("      PID: %d\n", pID);
+  printf("      PC:  0x%08x\n", entry_point);
+  printf("      SP:  0x%08x\n", stack_ptr);
+  printf("      Text: 0x%08x - 0x%08x (%u bytes)\n", 
+         text_start, text_start + text_size, text_size);
+  if (data_size > 0) {
+    printf("      Data: 0x%08x - 0x%08x (%u bytes)\n", 
+           data_start, data_start + data_size, data_size);
+  }
+  printf("      Priority: %d, Burst: %d\n", priority, burstTime);
+  
+  return entry_point;
 }
 
 //-------------------------------------Context Switching-------------------------------------//
@@ -398,6 +453,9 @@ static void context_switch(int queue_type, bool needTransition) {
 
   //save current's state
   curr.cpu_state = THE_CPU;
+
+  set_current_process(nxt.pid);
+
   //start the next process
   THE_CPU = nxt.cpu_state;
 
@@ -406,7 +464,7 @@ static void context_switch(int queue_type, bool needTransition) {
     transitionState(nxt, queue_type);
   }
 
-  printf("Switched from process (PID: %d) to process (PID: %d)", curr.pid, nxt.pid);
+  printf("Context switch: PID %d -> PID %d (PC: 0x%08x)\n", curr.pid, nxt.pid, THE_CPU.hw_registers[PC]);
 }
 
 //-------------------------------------Scheduling Helpers-------------------------------------//
@@ -455,6 +513,9 @@ static void roundRobin(void) {
   while (Ready_Queue->next != 0) {
     transferProcesses(NORMAL);
     Process currentProcess = Ready_Queue->PCB[idx];
+
+    set_current_process(currentProcess.pid);
+
     transitionState(currentProcess, NORMAL);
     for (int i = 0; i < QUANTUM; i++) {
       fetch();
@@ -473,6 +534,8 @@ static void roundRobin(void) {
     }
 
   }
+
+  set_current_process(SYSTEM_PROCESS_ID);
 }
 
 
@@ -481,6 +544,7 @@ static void firstComeFirstServe(void) {
   while (Ready_Queue->next != 0) {
     transferProcesses(NORMAL);
     Process currentProcess = Ready_Queue->PCB[0];
+    set_current_process(currentProcess.pid);
     transitionState(currentProcess, NORMAL);
     while (currentProcess.burstTime > 0) {
       fetch();
@@ -489,6 +553,8 @@ static void firstComeFirstServe(void) {
     }
     transitionState(currentProcess, NORMAL);
   }
+
+  set_current_process(SYSTEM_PROCESS_ID);
 }
 
 //uses priorityBurstQueue 
@@ -497,6 +563,7 @@ static void shortestProcessNext(void) {
   while (Ready_Queue->next != 0) {
     transferProcesses(PRIORITYBURST);
     Process shortestProcess = Ready_Queue->PCB[0]; //searchForShortestProcess(Ready_Queue);
+    set_current_process(shortestProcess.pid);
     transitionState(shortestProcess, PRIORITYBURST);
     while(shortestProcess.burstTime > 0) {
       fetch();
@@ -505,6 +572,8 @@ static void shortestProcessNext(void) {
     }
     transitionState(shortestProcess, PRIORITYBURST); 
   }
+
+  set_current_process(SYSTEM_PROCESS_ID);
 }
 
 //uses priorityPriorityQueue 
@@ -513,6 +582,7 @@ static void priorityBased(void) {
   while (Ready_Queue->next != 0) {
     transferProcesses(PRIORITYPRIORITY);
     Process highestPriorityP = Ready_Queue->PCB[0];
+    set_current_process(highestPriorityP.pid);
     transitionState(highestPriorityP, PRIORITYPRIORITY);
     while (highestPriorityP.burstTime > 0) {
       fetch();
@@ -531,6 +601,7 @@ static void priorityBased(void) {
     }
     transitionState(highestPriorityP, PRIORITYPRIORITY);
   }
+  set_current_process(SYSTEM_PROCESS_ID);
 }
 //uses priorityBurstQueue 
 //the shortest time remaining scheduling algorithm
@@ -538,6 +609,7 @@ static void shortestRemainingTime(void) {
   while (Ready_Queue->next != 0) {
     transferProcesses(PRIORITYBURST);
     Process shortestBTimeP = Ready_Queue->PCB[0];
+    set_current_process(shortestBTimeP.pid);
     transitionState(shortestBTimeP, PRIORITYBURST);
     while (shortestBTimeP.burstTime > 0) {
       fetch();
@@ -556,6 +628,7 @@ static void shortestRemainingTime(void) {
     }
     transitionState(shortestBTimeP, PRIORITYBURST);
   }
+  set_current_process(SYSTEM_PROCESS_ID);
 }
 
 //the highest response ratio next scheduling algorithm
@@ -564,6 +637,7 @@ static void highestResponseRatioNext(void) {
   if (Ready_Queue->next != 0) {
     int total_time = 0;
     Process currentProcess = Ready_Queue->PCB[0];
+    set_current_process(currentProcess.pid);
     total_time = currentProcess.burstTime;
     transitionState(currentProcess, NORMAL);
     while (Ready_Queue->next != 0) {
@@ -581,6 +655,7 @@ static void highestResponseRatioNext(void) {
       transitionState(currentProcess, NORMAL);
     }
   }
+  set_current_process(SYSTEM_PROCESS_ID);
 }
 
 //the feedback scheduling algorithm
@@ -595,6 +670,7 @@ static void feedBack(void) {
     //handle processes in highest priority queue with 2 quantum
     if (Ready_Queue->next != 0) {
       Process P = Ready_Queue->PCB[0];
+      set_current_process(P.pid);
       transitionState(P, NORMAL);
       transferProcesses(NORMAL);
       for (int i = 0; i < quantum1 && P.burstTime > 0; i++) {
@@ -607,6 +683,7 @@ static void feedBack(void) {
     //handle processes in middle priority queue with 4 quantum
     if (feedBack_Q2->next != 0) {
       Process P = feedBack_Q2->PCB[0];
+      set_current_process(P.pid);
       transitionState(P, NORMAL);
       transferProcesses(NORMAL);
       for (int j = 0; j < quantum2 && P.burstTime > 0; j++) {
@@ -619,6 +696,7 @@ static void feedBack(void) {
     //handle processes in lowest priority queue FCFS
     if (feedBack_Q3->next != 0) {
       Process P = feedBack_Q3->PCB[0];
+      set_current_process(P.pid);
       transitionState(P, NORMAL);
       transferProcesses(NORMAL);
       while (P.burstTime > 0) {
@@ -669,6 +747,7 @@ static void feedBack(void) {
 
   free_Queue(feedBack_Q2);
   free_Queue(feedBack_Q3);
+  set_current_process(SYSTEM_PROCESS_ID);
 }
 
 //-------------------------------------Scheduler-------------------------------------//

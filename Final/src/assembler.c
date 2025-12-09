@@ -65,6 +65,13 @@ typedef struct {
 
   uint32_t text_base;
   uint32_t data_base;
+
+  // Keeps track of the physical memory 
+  // addresses given by the system
+  // when malocate is called
+  uint32_t allocated_text_addr;
+  uint32_t allocated_data_addr;
+
   int process_id;
 } AssemblyContext;
 
@@ -507,25 +514,62 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
   return 0;
 }
 
+// Mallocate now uses mallocate instead of just rawdogging it
+// like they did in the 70's. so now the isntructions can be 
+// properly loaded in to memory, and freed with just the pid
 static int write_to_memory(AssemblyContext *ctx) {
   // Set current process for memory access control
   set_current_process(ctx->process_id);
 
+  // Mallocates memory for text segment, cause i lowkey just
+  // realized we don't have to allocate one big blob at once
+  uint32_t text_size = ctx->text_count * 4;
+  if (text_size > 0) { // No allocation if corrupted program
+    ctx->allocated_text_addr = mallocate(ctx->process_id, text_size);
+    if (ctx->allocated_text_addr == UINT32_MAX) {
+      fprintf(stderr, "Failed to allocate %u bytes for text segment (PID %d)\n", 
+              text_size, ctx->process_id);
+      set_current_process(SYSTEM_PROCESS_ID);
+      return 0;
+    }
+    printf("Allocated text: 0x%08x (%u bytes)\n", 
+           ctx->allocated_text_addr, text_size);
+  }
+
+  // And now just allocate the text segment cause it's so much
+  // simpler than tryin to manually split up the memory :]
+  // don't ask what i was doing before this
+  if (ctx->data_segment.size > 0) {
+    ctx->allocated_data_addr = mallocate(ctx->process_id, ctx->data_segment.size);
+    if (ctx->allocated_data_addr == UINT32_MAX) {
+      fprintf(stderr, "Failed to allocate %u bytes for data segment (PID %d)\n", 
+              ctx->data_segment.size, ctx->process_id);
+      // Clean up text allocation if data fails
+      if (ctx->allocated_text_addr != UINT32_MAX) {
+        liberate(ctx->process_id);
+      }
+      set_current_process(SYSTEM_PROCESS_ID);
+      return 0;
+    }
+    printf("  ✓ Allocated data: 0x%08x (%u bytes)\n", 
+           ctx->allocated_data_addr, ctx->data_segment.size);
+  }
+
   // Write text segment
   for (int i = 0; i < ctx->text_count; i++) {
-    uint32_t addr = ctx->text_segment[i].address;
-    uint32_t code = assemble_line(ctx, ctx->text_segment[i].line, addr);
+    uint32_t offset = i * 4;
+    uint32_t addr = ctx->allocated_text_addr + offset;
+    uint32_t code = assemble_line(ctx, ctx->text_segment[i].line, ctx->text_base + offset);
     
     write_word(addr, code);
     
     free(ctx->text_segment[i].line);
   }
 
-
   // Write data segment
   uint32_t data_addr = ctx->data_base;
   for (uint32_t i = 0; i < ctx->data_segment.size; i++) {
-    write_byte(data_addr + i, ctx->data_segment.data[i]);
+    write_byte(ctx->allocated_data_addr + i, ctx->data_segment.data[i]);
   }
   
   // Reset to system mode after assembly
@@ -673,7 +717,7 @@ AssemblyResult assemble(const char *filename, int process_id) {
 
   // Write to memory
   if (!write_to_memory(&ctx)) {
-    snprintf(result.error_message, 511, "Failed to write to memory: out of bounds");
+    snprintf(result.error_message, 511, "Failed to allocate/write memory");
     result.success = 0;
     free(result.program);
     result.program = NULL;
@@ -681,61 +725,57 @@ AssemblyResult assemble(const char *filename, int process_id) {
   }
 
   // Fill in process image
-  result.program->text_start = ctx.text_base;
+  result.program->text_start = ctx.allocated_text_addr;  // ACTUAL allocated address
   result.program->text_size = ctx.text_count * 4;
-  result.program->data_start = ctx.data_base;
+  result.program->data_start = ctx.allocated_data_addr;  // ACTUAL allocated address
   result.program->data_size = ctx.data_segment.size;
-  result.program->stack_ptr= STACK_TOP - (process_id * MAX_PROCESS_SIZE);
-  result.program->globl_ptr= GLOBAL_PTR + (process_id * MAX_PROCESS_SIZE);
+  result.program->stack_ptr = STACK_TOP - (process_id * MAX_PROCESS_SIZE);
+  result.program->globl_ptr = GLOBAL_PTR + (process_id * MAX_PROCESS_SIZE);
 
   // Find entry point
-  result.program->entry_point = get_symbol_address(&ctx, "main");
-  if (result.program->entry_point == -1) {
-    result.program->entry_point = ctx.text_base;  // Default to first instruction
+  int entry_sym = get_symbol_address(&ctx, "main");
+  if (entry_sym == -1) {
+    // Default to first instruction at TEXT_BASE
+    result.program->entry_point = ctx.text_base;
+  } else {
+    result.program->entry_point = entry_sym;
   }
+
+  // Readjust the memory adress to a physical adress
+  uint32_t offset = result.program->entry_point - ctx.text_base;
+  result.program->entry_point = ctx.allocated_text_addr + offset;
 
   // Copy symbols for debugging
   result.symbol_count = ctx.symbol_count;
   result.symbols = malloc(sizeof(SymbolInfo) * ctx.symbol_count);
-  for (int i = 0; i < ctx.symbol_count; i++) {
-    strncpy(result.symbols[i].name, ctx.symbols[i].name, 63);
-    result.symbols[i].name[63] = '\0';
-    result.symbols[i].address = ctx.symbols[i].address;
-    result.symbols[i].is_global = ctx.symbols[i].is_global;
-    result.symbols[i].is_procedure = ctx.symbols[i].is_procedure;
+  if (result.symbols) {
+    for (int i = 0; i < ctx.symbol_count; i++) {
+      strncpy(result.symbols[i].name, ctx.symbols[i].name, 63);
+      result.symbols[i].name[63] = '\0';
+      
+      // Adjust symbol addresses to physical addresses
+      if (ctx.symbols[i].address >= ctx.text_base && 
+          ctx.symbols[i].address < ctx.text_base + ctx.text_count * 4) {
+        // Text symbol
+        uint32_t text_offset = ctx.symbols[i].address - ctx.text_base;
+        result.symbols[i].address = ctx.allocated_text_addr + text_offset;
+      } else if (ctx.symbols[i].address >= ctx.data_base &&
+                 ctx.symbols[i].address < ctx.data_base + ctx.data_segment.size) {
+        // Data symbol
+        uint32_t data_offset = ctx.symbols[i].address - ctx.data_base;
+        result.symbols[i].address = ctx.allocated_data_addr + data_offset;
+      } else {
+        result.symbols[i].address = ctx.symbols[i].address;
+      }
+      
+      result.symbols[i].is_global = ctx.symbols[i].is_global;
+      result.symbols[i].is_procedure = ctx.symbols[i].is_procedure;
+    }
   }
 
   result.success = 1;
   return result;
 }
-
-int assemble_programs(const char **filenames, int file_count, AssemblyResult *results) {
-  int success_count = 0;
-
-  for (int i = 0; i < file_count; i++) {
-    printf("Assembling process %d: %s\n", i, filenames[i]);
-    results[i] = assemble(filenames[i], i);
-
-    if (results[i].success) {
-      success_count++;
-      printf("  ✓ Successfully assembled\n");
-      printf("    Text: 0x%08x - 0x%08x (%d bytes)\n",
-          results[i].program->text_start,
-          results[i].program->text_start + results[i].program->text_size,
-          results[i].program->text_size);
-      printf("    Data: 0x%08x - 0x%08x (%d bytes)\n",
-          results[i].program->data_start,
-          results[i].program->data_start + results[i].program->data_size,
-          results[i].program->data_size);
-      printf("    Entry: 0x%08x\n", results[i].program->entry_point);
-    } else {
-      printf("  ✗ Failed: %s\n", results[i].error_message);
-    }
-  }
-
-  return success_count;
-}
-
 
 void free_program(AssemblyResult *result) {
   if (result->symbols) {
