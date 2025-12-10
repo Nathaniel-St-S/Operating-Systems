@@ -430,7 +430,7 @@ uint32_t makeProcess(int pID,
   memset(&newProcess->cpu_state, 0, sizeof(Cpu));
   
   newProcess->cpu_state.hw_registers[PC] = entry_point;
-  newProcess->cpu_state.gp_registers[REG_SP] = stack_ptr;
+  newProcess->cpu_state.gp_registers[REG_SP] = text_start + text_size + data_size - 4;
   newProcess->cpu_state.gp_registers[REG_GP] = data_start;
   newProcess->cpu_state.gp_registers[REG_ZERO] = 0;
   

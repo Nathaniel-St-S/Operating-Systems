@@ -248,6 +248,13 @@ static bool check_access(uint32_t addr) {
     return true;
   }
 
+  // Data pushed to the stack is accessible to all procsses
+  uint32_t process_stack_base = STACK_TOP - ((current_process_id + 1) * MAX_PROCESS_SIZE);
+  uint32_t process_stack_top = STACK_TOP - (current_process_id * MAX_PROCESS_SIZE);
+  if (addr >= process_stack_base && addr < process_stack_top) {
+    return true;
+  }
+
   return false;
 }
 
