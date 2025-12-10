@@ -7,8 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define L1CACHE_SIZE 32 * 1024
-#define L2CACHE_SIZE 128 * 1024
+#define L1CACHE_SIZE 64
+#define L2CACHE_SIZE 128
 #define CACHE_LINE_SIZE 64
 #define RAM_SIZE 128 * 1024 * 1024
 #define SSD_SIZE 256 * 1024 * 1024

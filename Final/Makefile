@@ -1,10 +1,10 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Wshadow -Wformat=2  \
-				 -Wpointer-arith -Wcast-qual -Wwrite-strings -fsanitize=address,undefined \
-				 -g3 -DDEBUG -O0 -Iinclude -pthread
+# CFLAGS = -Wall -Wextra -Wshadow -Wformat=2  \
+# 				 -Wpointer-arith -Wcast-qual -Wwrite-strings -fsanitize=address,undefined \
+# 				 -g3 -DDEBUG -O0 -Iinclude -pthread
 # these are annoying me -Wconversion -Wsign-conversion
 # When we finish we can use these flags instead
-# CFLAGS = -Wall -Wextra -O2 -flto -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2
+CFLAGS = -Wall -Wextra -O2 -flto -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2
 LDFLAGS = -pthread
 
 DEBUG ?= 0
