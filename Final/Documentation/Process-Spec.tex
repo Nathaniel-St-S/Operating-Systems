@@ -65,7 +65,7 @@ The process structure contains a process id (pid), the state of the process (sta
 \subsubsection{Scheduling Algorithms}
 \label{Scheduling}
 
-\begin{figure}[h]
+\begin{figure}[h!]
 	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
 //To represent a queue
 typedef struct {
@@ -78,7 +78,7 @@ typedef struct {
 	\label{queue-impl}
 \end{figure}
 
-To implement the seven scheduling algorithms for our \os{}, we first needed a queue to hold all of the processes. This led to creating the Queue structure displayed in \Cref{queue-impl}. The queue structure contains the index to the next open space in the queue (next), the size of queue (capacity), and an array holding all of the processes (PCB). We made a queue for each state that the process can have as well as priority ready queue with respect to burst time and priority. In the interest of brevity, the scheduling algorithm will be explained at a high level of abstraction.
+To implement the seven scheduling algorithms for our \os{}, we first needed a queue to hold all of the processes. This led to creating the Queue structure displayed in \Cref{queue-impl}. The queue structure contains the index to the next open space in the queue (next), the size of queue (capacity), and an array holding all of the processes (PCB). We made a queue for each state that the process can have as well as priority ready queue with respect to burst time and priority. In the interest of brevity, the scheduling algorithm will be explained at a high level of abstraction. 
 
 \subsubsection*{Round-Robin}
 \label{RR}
@@ -97,7 +97,7 @@ static void roundRobin(void) {
 		for (int i = 0; i < QUANTUM; i++) {
 			fetch();
 			execute();
-			currentProcess.burstTime-=1; //could make ternary
+			currentProcess.burstTime-=1; 
 		}
 		
 		if (currentProcess.burstTime > 0 && idx+1 >= Ready_Queue->next) {
@@ -341,6 +341,14 @@ The implementation of the First Come First Serve scheduling algorithm is found i
  	\label{SPN-impl}
  \end{figure}
 
+The implementation of the Shortest Process Next scheduling algorithm is found in \Cref{SPN-impl}. We implemented a ready queue where the processes are sorted with respect to burst time. While the ready queue is not empty, we loop over the following sequence: 
+
+\begin{enumerate}
+	\item Check for new processes
+	\item Get the process with the smallest burst time and transition it's state
+	\item Execute the current process to completion and transition it's state
+\end{enumerate}
+
 \subsubsection*{Feedback Scheduling}
 \label{FBS}
 
@@ -356,77 +364,18 @@ The implementation of the First Come First Serve scheduling algorithm is found i
 			while(true) {
 				transferProcesses(NORMAL);
 				//handle processes in highest priority queue with 2 quantum
-				if (Ready_Queue->next != 0) {
-					Process P = Ready_Queue->PCB[0];
-					set_current_process(P.pid);
-					transitionState(P, NORMAL);
-					transferProcesses(NORMAL);
-					for (int i = 0; i < quantum1 && P.burstTime > 0; i++) {
-						fetch();
-						execute();
-						P.burstTime-=1;
-					}
-				}
-				
+				handleQueue(Ready_Queue, quantum1, false);
 				//handle processes in middle priority queue with 4 quantum
-				if (feedBack_Q2->next != 0) {
-					Process P = feedBack_Q2->PCB[0];
-					set_current_process(P.pid);
-					transitionState(P, NORMAL);
-					transferProcesses(NORMAL);
-					for (int j = 0; j < quantum2 && P.burstTime > 0; j++) {
-						fetch();
-						execute();
-						P.burstTime-=1;
-					}
-				}
-				
+				handleQueue(feedBack_Q2, quantum2, false); 
 				//handle processes in lowest priority queue FCFS
-				if (feedBack_Q3->next != 0) {
-					Process P = feedBack_Q3->PCB[0];
-					set_current_process(P.pid);
-					transitionState(P, NORMAL);
-					transferProcesses(NORMAL);
-					while (P.burstTime > 0) {
-						fetch();
-						execute();
-						P.burstTime-=1;
-					}
-				}
+				handleQueue(feedBack_Q3, 0, true);
 				
-				//highest priority queue not empty
-				if (Ready_Queue->next != 0) {
-					//move process from Ready queue to finished queue
-					if (Ready_Queue->PCB[0].burstTime <= 0) {
-						transitionState(Ready_Queue->PCB[0], NORMAL);
-					} else if (Ready_Queue->next >= 2) { // switch context then move to middle priority queue
-						context_switch(NORMAL, false);
-						enqueueGeneric(dequeue(Ready_Queue, NORMAL), feedBack_Q2);
-					} else { // move to middle priority queue
-						enqueueGeneric(dequeue(Ready_Queue, NORMAL), feedBack_Q2);
-					}
-				}
-				
-				//middle priority queue not empty
-				if (feedBack_Q2->next != 0) {
-					//move process from middle priority queue to finished queue
-					if (feedBack_Q2->PCB[0].burstTime <= 0) {
-						transitionState(feedBack_Q2->PCB[0], NORMAL);
-					} else if (feedBack_Q2->next >= 2) { // switch context then move to lowest priority queue
-						context_switch(NORMAL, false);
-						enqueueGeneric(dequeue(feedBack_Q2, NORMAL), feedBack_Q3);
-					} else { // move to lowest priority queue
-						enqueueGeneric(dequeue(feedBack_Q2, NORMAL), feedBack_Q3);
-					}
-				}
-				
-				//lowest priority queue not empty
-				if (feedBack_Q3->next != 0) {
-					//move process from middle priority queue to finished queue
-					if (feedBack_Q3->PCB[0].burstTime <= 0) {
-						transitionState(feedBack_Q3->PCB[0], NORMAL);
-					}
-				}
+				//Moves unfinished processes from ready_queue to middle priority queue
+				moveProcesses(Ready_Queue);
+				//Moves unfinished processes from middle priority queue to lowest queue
+				moveProcesses(feedBack_Q2);
+				//move process from lowest priority queue to finished queue
+				moveProcesses(feedBack_Q3);
 				
 				if (Ready_Queue->next == 0 && feedBack_Q2->next == 0 && feedBack_Q3->next == 0) {
 					break;
@@ -442,23 +391,48 @@ The implementation of the First Come First Serve scheduling algorithm is found i
 	\label{FBS-impl}
 \end{figure}
 
-%The implementation of the Priority-Based scheduling algorithm is found in \Cref{PBS-impl}. We implemented a ready queue where the processes are sorted with respect to priority. While the ready queue is not empty, we loop over the following sequence: 
+The implementation of the Feed Back scheduling algorithm is found in \Cref{FBS-impl}. We implemented a 3 ready queues where the processes are moved to the lower queues if they are not completed. While all three queues are not empty, we loop over the following sequence: 
 
-%\begin{enumerate}
-%	\item Check for new processes
-%	\item Get the current process and transition it's state
-%	\item Execute the current process, check for new processes, and get the process with the new highest priority:
-%	\begin{enumerate}
-%		\item If new process is different from the current process, switch the context
-%	\end{enumerate}
-%	\item When the current process is finished, transition it's state
-%\end{enumerate}
+\begin{enumerate}
+	\item Check for new processes
+	\item Execute the process in the highest priority queue, then middle priority queue and finally the lowest priority queue
+	\item Move the unfinished processes from the highest priority to the middle priority queue
+	\item Move the unfinished processes from the middle priority queue to the lowest priority queue
+	\item Move finished processes from lowest priority queue to the finished queue
+	\item When the current process is finished, transition it's state
+\end{enumerate}
 
 \subsubsection{Context Switching}
 \label{cont-sw}
 
-snfj
+\begin{figure}[h]
+	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+		//Switches from one process to another
+		static void context_switch(int queue_type, bool needTransition) {
+			Process curr = Running_Queue->PCB[0];
+			Process nxt = Ready_Queue->PCB[0];
+			
+			//save current's state
+			curr.cpu_state = THE_CPU;
+			
+			set_current_process(nxt.pid);
+			
+			//start the next process
+			THE_CPU = nxt.cpu_state;
+			
+			if (needTransition) {
+				transitionState(curr, queue_type);
+				transitionState(nxt, queue_type);
+			}
+		}
+	\end{lstlisting}
+	\caption{Context Switching Implementation}
+	\label{consw-impl}
+\end{figure}
+
+The implementation for context switching is shown in \Cref{consw-impl}. This function takes in as input an integer designating the type of queue (e.i. a normal queue, a priority queue WRT priority or a priority queue WRT burst time) and a boolean denoting whether the two processes should have their states transitioned. The body of function extracts the first process from the running queue and the first process from the ready queue, called \texttt{curr} and \texttt{nxt} respectively. The current state of the cpu is saved into \texttt{curr} and the state of the cpu found within \texttt{nxt} is extracted and used to update the state of the cpu. Lastly, the processes transition their states if the \texttt{needTransition} argument is true. 
+
 \subsubsection{Integration with Fetch-Decode-Execute Cycle}
 \label{fetNdec}
 
-jnsf
+With the addition of schedulers to our \os{}, this requires additional logic for the fetch-decode-execute cycle. As a consequence of the way we implemented the algorithms, we handle most, if not all of the integration within the schedule itself. Each scheduler checks if there a new processes and when applicable, reorders the priority queue such the process with the smallest burst time or priority. In addition, all of the preemptive schedulers handle context switching. 
