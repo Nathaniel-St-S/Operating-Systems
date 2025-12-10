@@ -1,0 +1,282 @@
+\documentclass[aspectratio=169]{beamer}
+\setbeamertemplate{footline}{}
+\setbeamertemplate{navigation symbols}{}
+
+% ---------------------------------------------------------
+% Nord Color Palette
+% ---------------------------------------------------------
+\definecolor{Nord0}{HTML}{2E3440} % #2E3440
+\definecolor{Nord1}{HTML}{3B4252} % #3B4252
+\definecolor{Nord2}{HTML}{434C5E} % #434C5E
+\definecolor{Nord3}{HTML}{4C566A} % #4C566A
+\definecolor{Nord4}{HTML}{D8DEE9} % #D8DEE9
+\definecolor{Nord5}{HTML}{E5E9F0} % #E5E9F0
+\definecolor{Nord6}{HTML}{ECEFF4} % #ECEFF4
+\definecolor{Nord7}{HTML}{8FBCBB} % #8FBCBB
+\definecolor{Nord8}{HTML}{88C0D0} % #88C0D0
+\definecolor{Nord9}{HTML}{81A1C1} % #81A1C1
+\definecolor{Nord10}{HTML}{5E81AC} % #5E81AC
+\definecolor{Nord11}{HTML}{BF616A} % #BF616A
+\definecolor{Nord12}{HTML}{D08770} % #D08770
+\definecolor{Nord13}{HTML}{EBCB8B} % #EBCB8B
+\definecolor{Nord14}{HTML}{A3BE8C} % #A3BE8C
+\definecolor{Nord15}{HTML}{B48EAD} % #B48EAD
+
+% ---------------------------------------------------------
+% Theme Setup
+% ---------------------------------------------------------
+\usetheme{default}
+
+% Background + text
+\setbeamercolor{background canvas}{bg=Nord0}
+\setbeamercolor{normal text}{fg=Nord6}
+
+% Frame titles
+\setbeamercolor{frametitle}{bg=Nord0, fg=Nord8}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+
+% Section titles
+\setbeamercolor{section title}{fg=Nord8}
+
+% Itemize
+\setbeamercolor{itemize item}{fg=Nord9}
+\setbeamercolor{itemize subitem}{fg=Nord10}
+
+% Blocks
+\setbeamercolor{block title}{bg=Nord2, fg=Nord6}
+\setbeamercolor{block body}{bg=Nord1, fg=Nord6}
+
+% Links
+\hypersetup{
+    colorlinks=true,
+    urlcolor=Nord8,
+    linkcolor=Nord14
+}
+
+% Packages
+\usepackage{listings}
+\usepackage{xcolor}
+\input{C-lstlisting}
+
+
+% ---------------------------------------------------------
+% Title Info
+% ---------------------------------------------------------
+\title{Operating Systems Final Project}
+\subtitle{Advanced OS Simulator}
+\author{David Fields \and Brysen Pfingsten \and Nathanial Savoury}
+\institute{Seton Hall Univeristy}
+\date{Fall 2025}
+
+% ---------------------------------------------------------
+% Document
+% ---------------------------------------------------------
+\begin{document}
+
+% ---------- TITLE SLIDE ----------
+{
+\setbeamercolor{title}{fg=Nord8}
+\begin{frame}
+    \titlepage
+\end{frame}
+}
+
+% ---------- TABLE OF CONTENTS ----------
+\begin{frame}{Outline}
+    \tableofcontents
+\end{frame}
+
+% ========= 1. INTRO =========
+\section{Introduction}
+
+\begin{frame}{Project Overview}
+    \begin{itemize}
+        \item Goal: Build an advanced OS simulator that integrates CPU, memory, scheduling, and interrupts.
+        \item Based on Projects 1–3, extended into a full simulator.
+        \item Language / environment used (e.g., C, Linux, etc.).
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Key OS Concepts Used}
+    \begin{itemize}
+        \item Multitasking and process management.
+        \item CPU scheduling with multiple algorithms.
+        \item Memory hierarchy: L1, L2, RAM, dynamic allocation.
+        \item Interrupt handling and basic concurrency.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Team and Roles}
+    \begin{itemize}
+        \item Member A – main responsibilities.
+        \item Member B – main responsibilities.
+        \item Member C – main responsibilities.
+    \end{itemize}
+\end{frame}
+
+% ========= 2. ARCHITECTURE =========
+\section{Simulator Architecture}
+
+\begin{frame}{High-Level Architecture}
+    \begin{itemize}
+        \item Overall structure: CPU core, memory subsystem, scheduler, interrupt controller.
+        \item How modules connect (e.g., diagram of data flow).
+        \item Main data structures shared across modules.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Core Data Structures}
+    \begin{itemize}
+        \item \textbf{PCB}: pid, pc, acc, state, priority, timeRemaining, responseRatio.
+        \item \textbf{Memory Table}: processID, memoryStart, memoryEnd, isFree.
+        \item \textbf{Interrupt Vector Table}: maps interrupt types to handlers.
+    \end{itemize}
+\end{frame}
+
+% ========= 3. MODULE 1 =========
+\section{Module 1: Process Simulation}
+
+\begin{frame}{CPU Model \& Registers}
+    \begin{itemize}
+        \item Implemented registers: PC, ACC, IR, Status Register.
+        \item Fetch–Decode–Execute cycle in the simulator.
+        \item How you represent instructions (e.g., struct, enum, opcodes).
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Process Control Block \& States}
+    \begin{itemize}
+        \item PCB fields and why they are needed.
+        \item Process states: READY, RUNNING, BLOCKED (and FINISHED if used).
+        \item Example: life cycle of a process in your simulator.
+    \end{itemize}
+\end{frame}
+
+% ========= 4. MODULE 2 =========
+\section{Module 2: Memory Management}
+
+\begin{frame}{Memory Hierarchy Design}
+    \begin{itemize}
+        \item L1 cache: size, role, typical hit rate (if measured).
+        \item L2 cache: relation to L1 and RAM.
+        \item RAM layout for processes and code/data.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Memory Table \& Allocation}
+    \begin{itemize}
+        \item Structure of the memory table.
+        \item Implemented strategies: First-Fit, Best-Fit.
+        \item Example allocation / deallocation scenario.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Cache Policies}
+    \begin{itemize}
+        \item Read path: L1 → L2 → RAM.
+        \item Write-through vs write-back (which you implemented / compared).
+        \item Any interesting cache hit/miss behavior you observed.
+    \end{itemize}
+\end{frame}
+
+% ========= 5. MODULE 3 =========
+\section{Module 3: Scheduling \& Context Switching}
+
+\begin{frame}{Implemented Scheduling Algorithms}
+    \begin{itemize}
+        \item FCFS, Round Robin, Priority-based.
+        \item Shortest Remaining Time (SRT), SPN, HRRN.
+        \item Feedback (multi-level queue) scheduling.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Context Switching \& Integration}
+    \begin{itemize}
+        \item \texttt{contextSwitch(from, to)}: what gets saved and restored.
+        \item Integration with fetch–decode–execute cycle (time slice checks, preemption).
+        \item Handling CPU-bound vs I/O-bound processes.
+    \end{itemize}
+\end{frame}
+
+% ========= 6. MODULE 4 =========
+\section{Module 4: Interrupt Handling}
+
+\begin{frame}{Interrupt Types \& IVT}
+    \begin{itemize}
+        \item Timer, I/O, System Call, Trap interrupts.
+        \item Structure of the Interrupt Vector Table.
+        \item How an interrupt is detected in the simulator.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{ISRs \& Dispatcher}
+    \begin{itemize}
+        \item Steps inside an ISR: save state, handle event, signal scheduler.
+        \item Dispatcher role after an interrupt: choosing next process.
+        \item Example: timer interrupt causing a context switch.
+    \end{itemize}
+\end{frame}
+
+% ========= 7. MODULE 5 =========
+\section{Module 5: Performance Analysis}
+
+\begin{frame}{Metrics and Workloads}
+    \begin{itemize}
+        \item Metrics: execution time, average waiting time, turnaround time.
+        \item CPU utilization and (optionally) memory/cache utilization.
+        \item Workloads: CPU-bound, I/O-bound, mixed; sample process set.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Scheduling Results (Table)}
+    \begin{itemize}
+        \item Present table: Algorithm vs Avg Waiting Time vs Avg Turnaround vs CPU usage.
+        \item Highlight a couple of key numbers (best/worst algorithms).
+        \item Mention how measurements were obtained (e.g., \texttt{clock()}).
+    \end{itemize}
+    % Insert screenshot or table here
+\end{frame}
+
+\begin{frame}{Graphs \& Observations}
+    \begin{itemize}
+        \item Bar/line charts comparing algorithms (waiting time, turnaround).
+        \item Which algorithm works best for CPU-bound vs I/O-bound vs mixed.
+        \item Trade-offs: fairness vs response time vs complexity.
+    \end{itemize}
+\end{frame}
+
+% ========= 8. DEMO PLAN =========
+\section{Live Demo}
+
+\begin{frame}{Demo Scenario}
+    \begin{itemize}
+        \item Input: small set of processes (arrival, burst, priority).
+        \item Show: scheduler switching, context switch messages, interrupt events.
+        \item What you want the professor to notice in the demo (e.g., differences between algorithms).
+    \end{itemize}
+\end{frame}
+
+% ========= 9. CONCLUSION =========
+\section{Conclusion}
+
+\begin{frame}{Challenges \& Debugging}
+    \begin{itemize}
+        \item Major bugs/issues you faced (race conditions, incorrect metrics, etc.).
+        \item How you tested and validated correctness.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Key Learnings \& Future Work}
+    \begin{itemize}
+        \item What you learned about OS internals and system-level programming.
+        \item Limitations of the current simulator.
+        \item Possible extensions (e.g., more realistic I/O, threads, new policies).
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Q \& A}
+    \centering
+    \Large Questions?
+\end{frame}
+
+\end{document}
