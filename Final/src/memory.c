@@ -642,9 +642,11 @@ uint32_t mallocate(int pid, size_t size) {
     MemoryBlock *b = &MEMBLOCK(i);
     if (!b->is_free)
       continue;
-    uint32_t bsize = (b->end_addr - b->start_addr) + 1u;
-    if (bsize >= size && bsize < best_size) {
-      best_size = bsize;
+    // Align allocations to 4 bytes so code and data are word-aligned
+    uint32_t aligned_start = (b->start_addr + 3u) & ~3u;
+    uint32_t usable_size = (b->end_addr - aligned_start) + 1u;
+    if (usable_size >= size && usable_size < best_size) {
+      best_size = usable_size;
       best_idx = i;
     }
   }
@@ -662,13 +664,49 @@ uint32_t mallocate(int pid, size_t size) {
   MemoryBlock *slot = &MEMBLOCK(best_idx);
   uint32_t old_start = slot->start_addr;
   uint32_t old_end = slot->end_addr;
-  uint32_t new_end = old_start + (uint32_t)size - 1u;
+
+  // Align the start of the allocation to a 4-byte boundary to keep
+  // instructions word-aligned (otherwise jumps land in the middle of an
+  // instruction once the low 2 bits are dropped).
+  uint32_t aligned_start = (old_start + 3u) & ~3u;
+  uint32_t new_end = aligned_start + (uint32_t)size - 1u;
+
+  // Not enough room in this block after alignment
+  if (new_end > old_end) {
+    fprintf(stderr, "mallocate: alignment adjusted block too small\n");
+    return UINT32_MAX;
+  }
 
   // Give the block to the process
   slot->pid = pid;
   slot->is_free = false;
-  slot->start_addr = old_start;
+  slot->start_addr = aligned_start;
   slot->end_addr = new_end;
+
+  // If we skipped some bytes to align, keep them as a tiny free block
+  if (aligned_start > old_start) {
+    if (MEMORY_TABLE.block_count + 1 > MEMORY_TABLE.capacity) {
+      fprintf(stderr, "mallocate: memtable capacity reached\n");
+      /* rollback */
+      slot->pid = -1;
+      slot->is_free = true;
+      slot->start_addr = old_start;
+      slot->end_addr = old_end;
+      return UINT32_MAX;
+    }
+    // Shift blocks right to make room
+    for (size_t i = MEMORY_TABLE.block_count; i > best_idx; i--) {
+      MEMBLOCK(i) = MEMBLOCK(i - 1);
+    }
+    // Prefix free block for the padding bytes
+    MEMBLOCK(best_idx).pid = -1;
+    MEMBLOCK(best_idx).is_free = true;
+    MEMBLOCK(best_idx).start_addr = old_start;
+    MEMBLOCK(best_idx).end_addr = aligned_start - 1u;
+    MEMORY_TABLE.block_count++;
+    best_idx++;         // Our allocated block moved one slot to the right
+    slot = &MEMBLOCK(best_idx);
+  }
 
   // Create a new block behind the allocated block if there is space
   if (new_end < old_end) {
