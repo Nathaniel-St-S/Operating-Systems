@@ -31,7 +31,6 @@ typedef enum {
 //To represent a process
 typedef struct {
     int pid; //process id
-    int pc; //program counter 
     ProcessState state; //state of the process
     int priority; //priority level
     int burstTime; //time left to complete
@@ -48,7 +47,19 @@ typedef struct {
 	\label{process-impl}
 \end{figure}
 
-\Cref{process-impl} displays the representation of processes in our \os{}
+\Cref{process-impl} displays the representation of processes in our \os{}. We follow a 7-state model where a process can be in one of seven states:
+
+\begin{enumerate}
+	\item READY
+	\item RUNNING
+	\item SUSPEND\textunderscore{}READY
+	\item BLOCKED
+	\item SUSPEND\textunderscore{}BLOCKED
+	\item NEW
+	\item FINISHED
+\end{enumerate}
+
+The process structure contains a process id (pid), the state of the process (state), the priority of the process (priority), the burst time of the process (burstTime), the response ratio for the response (responseRatio), the state of the cpu for context switching (cpu\textunderscore{}state), the location to the start of code in memory for the process (text\textunderscore{}start), the location of the code in memory for the process (text\textunderscore{}size), the location to the state of data in memory for the process (data\textunderscore{}start), the location of the data in memory for the process (data\textunderscore{}size), and finally the stack pointer for the process (stack\textunderscore{}ptr).
 
 
 \subsubsection{Scheduling Algorithms}
@@ -64,14 +75,15 @@ typedef struct {
 } Queue;
 	\end{lstlisting}
 	\caption{Representation of Queue}
+	\label{queue-impl}
 \end{figure}
+
+To implement the seven scheduling algorithms for our \os{}, we first needed a queue to hold all of the processes. This led to creating the Queue structure displayed in \Cref{queue-impl}. The queue structure contains the index to the next open space in the queue (next), the size of queue (capacity), and an array holding all of the processes (PCB). We made a queue for each state that the process can have as well as priority ready queue with respect to burst time and priority. In the interest of brevity, the scheduling algorithm will be explained at a high level of abstraction.
 
 \subsubsection*{Round-Robin}
 \label{RR}
 
-For the Round-Robin scheduling algorithm, we chose to have a time quantum of 3. 
-
-\begin{figure}
+\begin{figure}[h]
 	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
 //the round robin scheduling algorithm
 static void roundRobin(void) {
@@ -79,10 +91,9 @@ static void roundRobin(void) {
 	while (Ready_Queue->next != 0) {
 		transferProcesses(NORMAL);
 		Process currentProcess = Ready_Queue->PCB[idx];
-		
 		set_current_process(currentProcess.pid);
-		
 		transitionState(currentProcess, NORMAL);
+		
 		for (int i = 0; i < QUANTUM; i++) {
 			fetch();
 			execute();
@@ -98,41 +109,354 @@ static void roundRobin(void) {
 		} else {
 			transitionState(currentProcess, NORMAL);
 		}
-		
 	}
 	\end{lstlisting}
-	
+	\caption{The Round-Robin Scheduling algorithm}
+	\label{RR-impl}
 \end{figure}
 
+The Round-Robin scheduling algorithm is displayed \Cref{RR-impl} and we chose to have a time quantum of 3. While the ready queue is not empty, we loop over the following sequence:
+
+\begin{enumerate}
+	\item Check for new processes
+	\item Get the current process and transition it's state
+	\item Execute the time slice for the current process
+	\item Check if process is finished:
+	\begin{enumerate}
+		\item If the process is finished, transition it's state
+		\item Otherwise switch the context
+	\end{enumerate}
+\end{enumerate}
 
 \subsubsection*{Priority-Based Scheduling}
 \label{PBS}
 
-lsf
+\begin{figure}[h]
+	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+		//uses priorityPriorityQueue 
+		//the priority based scheduling algorithm
+		static void priorityBased(void) {
+			while (Ready_Queue->next != 0) {
+				transferProcesses(PRIORITYPRIORITY);
+				Process highestPriorityP = Ready_Queue->PCB[0];
+				set_current_process(highestPriorityP.pid);
+				transitionState(highestPriorityP, PRIORITYPRIORITY);
+				
+				while (highestPriorityP.burstTime > 0) {
+					fetch();
+					execute();
+					highestPriorityP.burstTime-=1;
+					transferProcesses(PRIORITYPRIORITY);
+					Process newHighestP = Ready_Queue->PCB[0];
+					
+					if (&newHighestP != &highestPriorityP) {
+						if (&Ready_Queue->PCB[1] == &newHighestP) {
+							context_switch(PRIORITYPRIORITY, true);
+						} else {
+							context_switch(PRIORITYPRIORITY, true);
+						}
+					}
+				}
+				transitionState(highestPriorityP, PRIORITYPRIORITY);
+			}
+			set_current_process(SYSTEM_PROCESS_ID);
+		}
+		\end{lstlisting}
+		\caption{The Priority Based Scheduling algorithm}
+		\label{PBS-impl}
+	\end{figure}
+
+The implementation of the Priority-Based scheduling algorithm is found in \Cref{PBS-impl}. We implemented a ready queue where the processes are sorted with respect to priority. While the ready queue is not empty, we loop over the following sequence: 
+
+\begin{enumerate}
+	\item Check for new processes
+	\item Get the current process and transition it's state
+	\item Execute the current process, check for new processes and get the process with the new highest priority:
+	\begin{enumerate}
+		\item If new process is different from the current process, switch the context
+		\item Otherwise continue executing the current process
+	\end{enumerate}
+	\item When the current process is finished, transition it's state
+\end{enumerate}
 
 \subsubsection*{Shortest Time Remaining}
 \label{SRT}
 
-lsf
+\begin{figure}[h]
+	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+		//uses priorityBurstQueue 
+		//the shortest time remaining scheduling algorithm
+		static void shortestRemainingTime(void) {
+			while (Ready_Queue->next != 0) {
+				transferProcesses(PRIORITYBURST);
+				Process shortestBTimeP = Ready_Queue->PCB[0];
+				set_current_process(shortestBTimeP.pid);
+				transitionState(shortestBTimeP, PRIORITYBURST);
+				
+				while (shortestBTimeP.burstTime > 0) {
+					fetch();
+					execute();
+					shortestBTimeP.burstTime-=1;
+					transferProcesses(PRIORITYBURST);
+					Process newShortestBTimeP = Ready_Queue->PCB[0];
+					
+					if (&newShortestBTimeP != &shortestBTimeP) {
+						if (&Ready_Queue->PCB[1] == &newShortestBTimeP) {
+							context_switch(PRIORITYBURST, true);
+						} else {
+							context_switch(PRIORITYBURST, true);
+						}
+					}
+				}
+				transitionState(shortestBTimeP, PRIORITYBURST);
+			}
+			set_current_process(SYSTEM_PROCESS_ID);
+		}
+	\end{lstlisting}
+	\caption{The Shortest Time Remaining Scheduling algorithm}
+	\label{SRT-impl}
+\end{figure}
+
+The implementation of the Shortest Time Remaining scheduling algorithm is found in \Cref{SRT-impl}. We implemented a ready queue where the processes are sorted with respect to burst time. While the ready queue is not empty, we loop over the following sequence: 
+
+\begin{enumerate}
+	\item Check for new processes
+	\item Get the current process and transition it's state
+	\item Execute the current process, check for new processes and get the process with the new smallest burst:
+	\begin{enumerate}
+		\item If new process is different from the current process, switch the context
+		\item Otherwise continue executing the current process
+	\end{enumerate}
+	\item When the current process is finished, transition it's state
+\end{enumerate}
 
 \subsubsection*{Highest Response Ratio Next}
 \label{HRRN}
-lsv
+
+\begin{figure}[h]
+	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+		//the highest response ratio next scheduling algorithm
+		static void highestResponseRatioNext(void) {
+			transferProcesses(NORMAL);
+			if (Ready_Queue->next != 0) {
+				int total_time = 0;
+				Process currentProcess = Ready_Queue->PCB[0];
+				set_current_process(currentProcess.pid);
+				total_time = currentProcess.burstTime;
+				transitionState(currentProcess, NORMAL);
+				
+				while (Ready_Queue->next != 0) {
+					transferProcesses(NORMAL);
+					while (currentProcess.burstTime > 0) {
+						fetch();
+						execute();
+						currentProcess.burstTime-=1;
+					}
+					
+					transitionState(currentProcess, NORMAL);
+					updateResponseRatio(Ready_Queue, total_time); 
+					currentProcess = getHighestResponseRatio();
+					total_time = currentProcess.burstTime;
+					transitionState(currentProcess, NORMAL);
+				}
+			}
+			set_current_process(SYSTEM_PROCESS_ID);
+		}
+	\end{lstlisting}
+	\caption{The Highest Response Ratio Next Scheduling algorithm}
+	\label{HRRN-impl}
+\end{figure}
+
+The implementation of the Highest Response Ratio Next scheduling algorithm is found in \Cref{HRRN-impl}.  While the ready queue is not empty, we loop over the following sequence: 
+
+\begin{enumerate}
+	\item Check for new processes
+	\item Get the current process, transition it's state and accumulate it's burst time
+	\item Execute the current process to completion and transition it's state
+	\item Update the response ratio for the remaining processes and get the process with the new highest response ratio
+\end{enumerate}
 
 \subsubsection*{First Come First Serve}
 \label{FCFS}
 
+\begin{figure}[h]
+	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+		//The first come first serve scheduling algorithm
+		static void firstComeFirstServe(void) {
+			while (Ready_Queue->next != 0) {
+				transferProcesses(NORMAL);
+				Process currentProcess = Ready_Queue->PCB[0];
+				set_current_process(currentProcess.pid);
+				transitionState(currentProcess, NORMAL);
+				
+				while (currentProcess.burstTime > 0) {
+					fetch();
+					execute();
+					currentProcess.burstTime-=1;
+				}
+				transitionState(currentProcess, NORMAL);
+			}
+			
+			set_current_process(SYSTEM_PROCESS_ID);
+		}
+	\end{lstlisting}
+	\caption{The First Come First Serve Scheduling algorithm}
+	\label{FCFS-impl}
+\end{figure}
 
-kfs
+The implementation of the Priority-Based scheduling algorithm is found in \Cref{PBS-impl}. We implemented a ready queue where the processes are sorted with respect to priority. While the ready queue is not empty, we loop over the following sequence: 
+
+\begin{enumerate}
+	\item Check for new processes
+	\item Get the current process and transition it's state
+	\item Execute the current process, check for new processes, and get the process with the new highest priority:
+	\begin{enumerate}
+		\item If new process is different from the current process, switch the context
+	\end{enumerate}
+	\item When the current process is finished, transition it's state
+\end{enumerate}
+
 \subsubsection*{Shortest Process Next}
 \label{SPN}
 
- skf
+ \begin{figure}[h]
+ 	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+ 		//uses priorityBurstQueue 
+ 		//the shortest process next scheduling algorithm
+ 		static void shortestProcessNext(void) {
+ 			while (Ready_Queue->next != 0) {
+ 				transferProcesses(PRIORITYBURST);
+ 				Process shortestProcess = Ready_Queue->PCB[0];
+ 				set_current_process(shortestProcess.pid);
+ 				transitionState(shortestProcess, PRIORITYBURST);
+ 				
+ 				while(shortestProcess.burstTime > 0) {
+ 					fetch();
+ 					execute();
+ 					shortestProcess.burstTime-=1;
+ 				}
+ 				transitionState(shortestProcess, PRIORITYBURST); 
+ 			}
+ 			
+ 			set_current_process(SYSTEM_PROCESS_ID);
+ 		}
+ 	\end{lstlisting}
+ 	\caption{The Shortest Process Next Scheduling algorithm}
+ 	\label{SPN-impl}
+ \end{figure}
 
 \subsubsection*{Feedback Scheduling}
-\label{FS}
+\label{FBS}
 
-jsnf
+\begin{figure}[h]
+	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+		//the feedback scheduling algorithm
+		static void feedBack(void) {
+			Queue* feedBack_Q2 = init_FeedBack_Queue(MAX_PROCESSES);
+			Queue* feedBack_Q3 = init_FeedBack_Queue(MAX_PROCESSES);
+			int quantum1 = 2;
+			int quantum2 = 4;
+			
+			while(true) {
+				transferProcesses(NORMAL);
+				//handle processes in highest priority queue with 2 quantum
+				if (Ready_Queue->next != 0) {
+					Process P = Ready_Queue->PCB[0];
+					set_current_process(P.pid);
+					transitionState(P, NORMAL);
+					transferProcesses(NORMAL);
+					for (int i = 0; i < quantum1 && P.burstTime > 0; i++) {
+						fetch();
+						execute();
+						P.burstTime-=1;
+					}
+				}
+				
+				//handle processes in middle priority queue with 4 quantum
+				if (feedBack_Q2->next != 0) {
+					Process P = feedBack_Q2->PCB[0];
+					set_current_process(P.pid);
+					transitionState(P, NORMAL);
+					transferProcesses(NORMAL);
+					for (int j = 0; j < quantum2 && P.burstTime > 0; j++) {
+						fetch();
+						execute();
+						P.burstTime-=1;
+					}
+				}
+				
+				//handle processes in lowest priority queue FCFS
+				if (feedBack_Q3->next != 0) {
+					Process P = feedBack_Q3->PCB[0];
+					set_current_process(P.pid);
+					transitionState(P, NORMAL);
+					transferProcesses(NORMAL);
+					while (P.burstTime > 0) {
+						fetch();
+						execute();
+						P.burstTime-=1;
+					}
+				}
+				
+				//highest priority queue not empty
+				if (Ready_Queue->next != 0) {
+					//move process from Ready queue to finished queue
+					if (Ready_Queue->PCB[0].burstTime <= 0) {
+						transitionState(Ready_Queue->PCB[0], NORMAL);
+					} else if (Ready_Queue->next >= 2) { // switch context then move to middle priority queue
+						context_switch(NORMAL, false);
+						enqueueGeneric(dequeue(Ready_Queue, NORMAL), feedBack_Q2);
+					} else { // move to middle priority queue
+						enqueueGeneric(dequeue(Ready_Queue, NORMAL), feedBack_Q2);
+					}
+				}
+				
+				//middle priority queue not empty
+				if (feedBack_Q2->next != 0) {
+					//move process from middle priority queue to finished queue
+					if (feedBack_Q2->PCB[0].burstTime <= 0) {
+						transitionState(feedBack_Q2->PCB[0], NORMAL);
+					} else if (feedBack_Q2->next >= 2) { // switch context then move to lowest priority queue
+						context_switch(NORMAL, false);
+						enqueueGeneric(dequeue(feedBack_Q2, NORMAL), feedBack_Q3);
+					} else { // move to lowest priority queue
+						enqueueGeneric(dequeue(feedBack_Q2, NORMAL), feedBack_Q3);
+					}
+				}
+				
+				//lowest priority queue not empty
+				if (feedBack_Q3->next != 0) {
+					//move process from middle priority queue to finished queue
+					if (feedBack_Q3->PCB[0].burstTime <= 0) {
+						transitionState(feedBack_Q3->PCB[0], NORMAL);
+					}
+				}
+				
+				if (Ready_Queue->next == 0 && feedBack_Q2->next == 0 && feedBack_Q3->next == 0) {
+					break;
+				}
+			}
+			
+			free_Queue(feedBack_Q2);
+			free_Queue(feedBack_Q3);
+			set_current_process(SYSTEM_PROCESS_ID);
+		}
+	\end{lstlisting}
+	\caption{The Feed Back Scheduling algorithm}
+	\label{FBS-impl}
+\end{figure}
+
+The implementation of the Priority-Based scheduling algorithm is found in \Cref{PBS-impl}. We implemented a ready queue where the processes are sorted with respect to priority. While the ready queue is not empty, we loop over the following sequence: 
+
+\begin{enumerate}
+	\item Check for new processes
+	\item Get the current process and transition it's state
+	\item Execute the current process, check for new processes, and get the process with the new highest priority:
+	\begin{enumerate}
+		\item If new process is different from the current process, switch the context
+	\end{enumerate}
+	\item When the current process is finished, transition it's state
+\end{enumerate}
 
 \subsubsection{Context Switching}
 \label{cont-sw}
