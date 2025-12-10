@@ -56,6 +56,11 @@
 % Packages
 \usepackage{listings}
 \usepackage{xcolor}
+\definecolor{pakistangreen}{RGB}{0,102,0}
+\definecolor{oceanboatblue}{RGB}{0,119,190}
+\definecolor{vscString}{RGB}{152,195,121}
+\definecolor{vscType}{RGB}{86,182,194}
+\definecolor{vscPreproc}{RGB}{198,120,221}
 \input{C-lstlisting}
 
 
@@ -91,26 +96,9 @@
 
 \begin{frame}{Project Overview}
     \begin{itemize}
-        \item Goal: Build an advanced OS simulator that integrates CPU, memory, scheduling, and interrupts.
-        \item Based on Projects 1–3, extended into a full simulator.
-        \item Language / environment used (e.g., C, Linux, etc.).
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Key OS Concepts Used}
-    \begin{itemize}
-        \item Multitasking and process management.
-        \item CPU scheduling with multiple algorithms.
-        \item Memory hierarchy: L1, L2, RAM, dynamic allocation.
-        \item Interrupt handling and basic concurrency.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Team and Roles}
-    \begin{itemize}
-        \item Member A – main responsibilities.
-        \item Member B – main responsibilities.
-        \item Member C – main responsibilities.
+        \item Advanced OS simulator in C that assembles multiple MIPS-like programs, loads them into isolated text/data/stack regions, and schedules them under different policies.
+        \item End-to-end pipeline: parse CLI options (\texttt{main.c}), assemble programs, allocate memory with selectable cache policy, create PCBs, then run the chosen scheduler.
+        \item Metrics captured per algorithm: waiting/turnaround/response time, context switches, CPU utilization, cache stats, and CSV exports for charting.
     \end{itemize}
 \end{frame}
 
@@ -119,17 +107,39 @@
 
 \begin{frame}{High-Level Architecture}
     \begin{itemize}
-        \item Overall structure: CPU core, memory subsystem, scheduler, interrupt controller.
-        \item How modules connect (e.g., diagram of data flow).
-        \item Main data structures shared across modules.
+        \item \textbf{Execution pipeline}: \texttt{main.c} parses flags (scheduler + cache policy), assembles programs, calls \texttt{init\_memory}/\texttt{init\_queues}, builds PCBs with \texttt{makeProcess()}, then invokes \texttt{scheduler()}.
+        \item \textbf{CPU + ISA}: fetch/execute loop in \texttt{cpu.c}/\texttt{isa.c} drives instructions from RAM; register files are plain arrays for GP/HW regs and FLAGS.
+        \item \textbf{Memory system}: 128\,MB RAM backed by 64\,B L1 and 128\,B L2 caches (64\,B lines), plus SSD/HDD buffers; runtime switchable between write-through and write-back.
+        \item \textbf{Scheduling layer}: ready/running/blocked queues feed FCFS, RR, Priority, SRT, SPN, HRRN, and MLFQ; scheduler swaps \texttt{THE\_CPU} state between PCBs and logs performance metrics.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Data Structures}
+\begin{frame}[fragile]{Core Data Structures}
     \begin{itemize}
-        \item \textbf{PCB}: pid, pc, acc, state, priority, timeRemaining, responseRatio.
-        \item \textbf{Memory Table}: processID, memoryStart, memoryEnd, isFree.
-        \item \textbf{Interrupt Vector Table}: maps interrupt types to handlers.
+        \item \textbf{PCB (\texttt{Process} in \texttt{processes.c})}: tracks PID, PC, priority/burst estimates, response ratio, full CPU register snapshot, text/data/stack bounds, and timing stats for reporting.
+    \end{itemize}
+\vspace{0.4em}
+\begin{lstlisting}[language=MyC]
+typedef struct {
+  int pid;
+  uint32_t pc;
+  ProcessState state;
+  int priority, burstTime, originalBurstTime;
+  float responseRatio;
+  Cpu cpu_state;                 // saved registers
+  uint32_t text_start, text_size;
+  uint32_t data_start, data_size;
+  uint32_t stack_ptr;
+  int arrival_time, start_time;
+  int completion_time, waiting_time, response_time;
+  bool has_started;
+} Process;
+\end{lstlisting}
+\vspace{0.4em}
+    \begin{itemize}
+        \item \textbf{Queues}: each ready/blocked/suspend queue is a fixed-capacity \texttt{Queue} with an in-place PCB array; priority and burst-based heaps are used for SPN/SRT/Priority.
+        \item \textbf{Memory metadata}: \texttt{CacheLine} (tag/valid/dirty + 64\,B payload) powers L1/L2, while \texttt{MemoryBlock}/\texttt{MemoryTable} track best-fit allocations per PID with 1\,MB virtual spacing.
+        \item \textbf{Performance tracker}: \texttt{PerformanceMetrics} aggregates per-algorithm latency stats, cache hits/misses, context-switch timings, and exports comparison CSVs.
     \end{itemize}
 \end{frame}
 
