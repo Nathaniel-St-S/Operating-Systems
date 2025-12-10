@@ -47,9 +47,9 @@
 \contentsline {subsection}{\numberline {10.2}Implementation}{12}{subsection.10.2}%
 \contentsline {subsubsection}{\numberline {10.2.1}Process Control Block Enhancements}{12}{subsubsection.10.2.1}%
 \contentsline {subsubsection}{\numberline {10.2.2}Scheduling Algorithms}{13}{subsubsection.10.2.2}%
-\contentsline {subsubsection}{\numberline {10.2.3}Context Switching}{16}{subsubsection.10.2.3}%
-\contentsline {subsubsection}{\numberline {10.2.4}Integration with Fetch-Decode-Execute Cycle}{16}{subsubsection.10.2.4}%
-\contentsline {section}{\numberline {11}The Simulation}{20}{section.11}%
-\contentsline {section}{\numberline {12}Testing and Debugging}{21}{section.12}%
-\contentsline {section}{\numberline {13}Conclusion}{22}{section.13}%
-\contentsline {section}{\numberline {14}Appendix A: Screenshots}{23}{section.14}%
+\contentsline {subsubsection}{\numberline {10.2.3}Context Switching}{15}{subsubsection.10.2.3}%
+\contentsline {subsubsection}{\numberline {10.2.4}Integration with Fetch-Decode-Execute Cycle}{15}{subsubsection.10.2.4}%
+\contentsline {section}{\numberline {11}The Simulation}{19}{section.11}%
+\contentsline {section}{\numberline {12}Testing and Debugging}{20}{section.12}%
+\contentsline {section}{\numberline {13}Conclusion}{21}{section.13}%
+\contentsline {section}{\numberline {14}Appendix A: Screenshots}{22}{section.14}%

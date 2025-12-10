@@ -304,16 +304,12 @@ The implementation of the Highest Response Ratio Next scheduling algorithm is fo
 	\label{FCFS-impl}
 \end{figure}
 
-The implementation of the Priority-Based scheduling algorithm is found in \Cref{PBS-impl}. We implemented a ready queue where the processes are sorted with respect to priority. While the ready queue is not empty, we loop over the following sequence: 
+The implementation of the First Come First Serve scheduling algorithm is found in \Cref{FCFS-impl}. While the ready queue is not empty, we loop over the following sequence: 
 
 \begin{enumerate}
 	\item Check for new processes
 	\item Get the current process and transition it's state
-	\item Execute the current process, check for new processes, and get the process with the new highest priority:
-	\begin{enumerate}
-		\item If new process is different from the current process, switch the context
-	\end{enumerate}
-	\item When the current process is finished, transition it's state
+	\item Execute the current process to completion then transition it's state 
 \end{enumerate}
 
 \subsubsection*{Shortest Process Next}
@@ -446,17 +442,17 @@ The implementation of the Priority-Based scheduling algorithm is found in \Cref{
 	\label{FBS-impl}
 \end{figure}
 
-The implementation of the Priority-Based scheduling algorithm is found in \Cref{PBS-impl}. We implemented a ready queue where the processes are sorted with respect to priority. While the ready queue is not empty, we loop over the following sequence: 
+%The implementation of the Priority-Based scheduling algorithm is found in \Cref{PBS-impl}. We implemented a ready queue where the processes are sorted with respect to priority. While the ready queue is not empty, we loop over the following sequence: 
 
-\begin{enumerate}
-	\item Check for new processes
-	\item Get the current process and transition it's state
-	\item Execute the current process, check for new processes, and get the process with the new highest priority:
-	\begin{enumerate}
-		\item If new process is different from the current process, switch the context
-	\end{enumerate}
-	\item When the current process is finished, transition it's state
-\end{enumerate}
+%\begin{enumerate}
+%	\item Check for new processes
+%	\item Get the current process and transition it's state
+%	\item Execute the current process, check for new processes, and get the process with the new highest priority:
+%	\begin{enumerate}
+%		\item If new process is different from the current process, switch the context
+%	\end{enumerate}
+%	\item When the current process is finished, transition it's state
+%\end{enumerate}
 
 \subsubsection{Context Switching}
 \label{cont-sw}
