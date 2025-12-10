@@ -31,11 +31,27 @@
 \setlist[description]{leftmargin=\parindent,labelindent=\parindent}
 \usepackage{doi}
 \usepackage{bm}
+\usepackage[dvipsnames]{xcolor}
+
 %\usepackage[outputdir]{minted}
 %\usepackage{fontspec}
 %\setmonofont{JetBrainsMono Nerd Font}[
 %    Scale=MatchLowercase
 %]
+
+\definecolor{pakistangreen}{rgb}{0.0, 0.4, 0.0}
+\definecolor{palecerulean}{rgb}{0.61, 0.77, 0.89}
+\definecolor{moonstoneblue}{rgb}{0.45, 0.66, 0.76}
+\definecolor{oceanboatblue}{rgb}{0.0, 0.47, 0.75}
+\definecolor{neonfuchsia}{rgb}{1.0, 0.25, 0.39}
+
+\definecolor{vscKeyword}{RGB}{86,156,214}
+\definecolor{vscType}{RGB}{78,201,176}
+\definecolor{vscPreproc}{RGB}{197,134,192}
+\definecolor{vscString}{RGB}{206,145,120}
+\definecolor{vscComment}{RGB}{106,153,85}
+\definecolor{vscFunction}{RGB}{220,220,180}
+\definecolor{vscNumber}{RGB}{181,206,168}
 
 \newcommand{\ADD}{\texttt{ADD}}
 \newcommand{\SUB}{\texttt{SUB}}
@@ -50,7 +66,10 @@
 \newcommand{\os}{\testtt{OS}}
 
 
+
 \begin{document}
+	
+\include{C-lstlisting}
 
 \begin{titlepage}
   \centering
@@ -146,6 +165,8 @@ Wasn't Assigned
 \pagebreak
 \section{Testing and Debugging}
 \label{testNdebug}
+
+
 
 \pagebreak
 \section{Conclusion}

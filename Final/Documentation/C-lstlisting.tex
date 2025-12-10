@@ -1,0 +1,75 @@
+%defualt style for C listings
+\lstset{
+	% --- Linenos ---
+	numbersep=3pt,                  % how far the line-numbers are from the code
+	numberstyle=\tiny\color{gray},
+	numbers=left,                   % where to put the line-numbers
+	stepnumber=1,                   % the step between two line-numbers. If it is 1 each line will be numbered
+	% -- Basics --
+	basicstyle=\ttfamily\small,
+	sensitive=true,  % Case-sensitive keywords
+	tabsize=2,
+	breaklines=true,  % Break lines if too long
+	columns=fullflexible,
+	keepspaces,
+	showstringspaces=false,  % Spaces not shown as _
+	upquote=true,
+	%keywordstyle={\color{purple}}
+}
+
+\lstset{numbers=left,xleftmargin=2em,framexleftmargin=1.5em}
+
+% Usage: \begin{lstlisting}[language=C] ...
+	\lstdefinelanguage{MyC} {
+		% -- Comments --
+		morecomment=[l]{//},
+		morecomment=[s]{/*}{*/},
+		%morecomment=[l]{;},         % Inline comments start with ;
+		%morecomment=[s]{\#|}{|\#},  % Block comments are done with #|  |#
+		commentstyle={\color{pakistangreen}\slshape\sffamily},
+		% -- Strings --
+		morestring=[b]",
+		stringstyle=\color{vscString},
+		% --- Literal replacements ---
+		literate=
+		{*}{{\color{cyan}{*}}}1
+		{&&}{\color{black}{$\&\&$}}1
+		%{&&}{{\color{cyan}{&&}}}1,
+		{||}{{\color{cyan}{||}}}1,
+		%	{lambda}{{$\lambda$}}1
+		%{->}{{$\rightarrow$}}1
+		%{*}{{*}}1
+		%{lambda}{{\textcolor{blue}{\(\lambda\)}}}1
+		%{EMP}{{\ep{}}}1,
+		%{'}{{\quot{}}}1,
+		classoffset=1,
+		morekeywords={
+			void, main, typedef, struct, enum, static, int, float
+		},
+		keywordstyle=\color{oceanboatblue},
+		classoffset=2,
+		morekeywords={
+			 if, for, while, else 
+		},
+		keywordstyle=\color{neonfuchsia},
+		classoffset=3,
+		morekeywords={
+			import, export
+			},
+		keywordstyle=\color{yellow},
+		classoffset=4,
+		morekeywords={
+			Cpu, ProcessState, uint32_t, size_t, Process, Queue
+			},
+		keywordstyle=\color{vscType},
+		classoffset=5,
+		morekeywords={
+			define
+		},
+		keywordstyle=\color{vscPreproc},
+		%classoffset=0,
+		alsoletter={',`,-,/,>,<,\#,\%,?,=,&},
+		%moredelim=**[is][\color{lightgray}]{<<@<<}{>>@>>},
+		%moredelim=**[is][\itshape\color{OliveGreen}]{<<;<<}{>>;>>},
+	}
+	% End of C listing style 

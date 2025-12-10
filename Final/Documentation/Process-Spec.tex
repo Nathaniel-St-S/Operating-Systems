@@ -17,7 +17,7 @@ This section outlines the our solution to the problem statement. \Cref{PCB} pres
 \label{PCB}
 
 \begin{figure}[h]
-	\begin{lstlisting}
+	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
 typedef enum {
     READY,
     RUNNING,
@@ -36,7 +36,12 @@ typedef struct {
     int priority; //priority level
     int burstTime; //time left to complete
     float responseRatio; //calculated as (waiting time + service time)
-    Cpu cpu_state; 
+    Cpu cpu_state; // the state of the cpu
+    uint32_t text_start; // Where code is in memory
+    uint32_t text_size; // where said code is
+    uint32_t data_start; // Where data is in memory
+    uint32_t data_size; // Size of said data
+    uint32_t stack_ptr; // Stack pointer value
 } Process;
 	\end{lstlisting}
 	\caption{Representation of Processes}
@@ -47,8 +52,8 @@ typedef struct {
 \subsubsection{Scheduling Algorithms}
 \label{Scheduling}
 
-\begin{figure}
-	\begin{lstlisting}
+\begin{figure}[h]
+	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
 //To represent a queue
 typedef struct {
     int next; //the index to next open space
@@ -56,13 +61,47 @@ typedef struct {
     Process PCB[]; //The block to hold processes
 } Queue;
 	\end{lstlisting}
-	\caption{Representation of Processes}
+	\caption{Representation of Queue}
 \end{figure}
 
 \subsubsection*{Round-Robin}
 \label{RR}
 
-ls
+For the Round-Robin scheduling algorithm, we chose to have a time quantum of 3. 
+
+\begin{figure}
+	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+//the round robin scheduling algorithm
+static void roundRobin(void) {
+	int idx = 0;
+	while (Ready_Queue->next != 0) {
+		transferProcesses(NORMAL);
+		Process currentProcess = Ready_Queue->PCB[idx];
+		
+		set_current_process(currentProcess.pid);
+		
+		transitionState(currentProcess, NORMAL);
+		for (int i = 0; i < QUANTUM; i++) {
+			fetch();
+			execute();
+			currentProcess.burstTime-=1; //could make ternary
+		}
+		
+		if (currentProcess.burstTime > 0 && idx+1 >= Ready_Queue->next) {
+			context_switch(NORMAL, true);
+			idx = 0;
+		} else if (currentProcess.burstTime > 0) {
+			context_switch(NORMAL, true);
+			idx+=1;
+		} else {
+			transitionState(currentProcess, NORMAL);
+		}
+		
+	}
+	\end{lstlisting}
+	
+\end{figure}
+
 
 \subsubsection*{Priority-Based Scheduling}
 \label{PBS}
