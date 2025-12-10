@@ -474,6 +474,37 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
     return assemble_r_type(op, rd_num, 0, rt_num, parse_num(shamt));
   }
 
+  if (strcmp(op, "mult") == 0 || strcmp(op, "multu") == 0 ||
+      strcmp(op, "div") == 0  || strcmp(op, "divu") == 0) {
+    char *rs = strtok_r(NULL, " \t,()", &saveptr);
+    char *rt = strtok_r(NULL, " \t,()", &saveptr);
+    int rs_num = get_register(rs);
+    int rt_num = get_register(rt);
+    if (!validate_register_num(rs_num, rs, op, pc) ||
+        !validate_register_num(rt_num, rt, op, pc)) {
+      return 0;
+    }
+    return assemble_r_type(op, 0, rs_num, rt_num, 0);
+  }
+
+  if (strcmp(op, "mfhi") == 0 || strcmp(op, "mflo") == 0) {
+    char *rd = strtok_r(NULL, " \t,()", &saveptr);
+    int rd_num = get_register(rd);
+    if (!validate_register_num(rd_num, rd, op, pc)) {
+      return 0;
+    }
+    return assemble_r_type(op, rd_num, 0, 0, 0);
+  }
+
+  if (strcmp(op, "mthi") == 0 || strcmp(op, "mtlo") == 0) {
+    char *rs = strtok_r(NULL, " \t,()", &saveptr);
+    int rs_num = get_register(rs);
+    if (!validate_register_num(rs_num, rs, op, pc)) {
+      return 0;
+    }
+    return assemble_r_type(op, 0, rs_num, 0, 0);
+  }
+
   // I-type
   if (strcmp(op, "addi") == 0 || strcmp(op, "addiu") == 0 ||
       strcmp(op, "andi") == 0 || strcmp(op, "ori") == 0 ||
@@ -640,7 +671,8 @@ static int write_to_memory(AssemblyContext *ctx) {
   for (int i = 0; i < ctx->text_count; i++) {
     uint32_t offset = i * 4;
     uint32_t addr = ctx->allocated_text_addr + offset;
-    uint32_t code = assemble_line(ctx, ctx->text_segment[i].line, ctx->text_base + offset);
+    uint32_t code = assemble_line(ctx, ctx->text_segment[i].line,
+                                  ctx->allocated_text_addr + offset);
     
     write_word(addr, code);
     
@@ -689,6 +721,17 @@ static int parse_file(AssemblyContext *ctx, const char *filename) {
       if (trimmed[0] == '\0' || trimmed[0] == '#') continue;
       memmove(buffer, trimmed, strlen(trimmed));
       buffer[MAX_LINE - 1] = '\0';
+    }
+
+    // Strip inline comments
+    char *comment = strchr(buffer, '#');
+    if (comment) {
+      *comment = '\0';
+      trimmed = trim(buffer);
+      if (trimmed[0] == '\0') continue;
+      if (trimmed != buffer) {
+        memmove(buffer, trimmed, strlen(trimmed) + 1);
+      }
     }
 
     // Directives

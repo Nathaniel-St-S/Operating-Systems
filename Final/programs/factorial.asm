@@ -12,10 +12,21 @@ main:
     li $a0, 5
     jal factorial
     nop                    # Branch delay slot preserved!
-    
-    # Print result
-    move $a0, $v0
+
+    # Print "Factorial result: "
+    move $t0, $v0          # Save factorial result
+    la $a0, result_msg
+    li $v0, 4
+    syscall
+
+    # Print numeric result
+    move $a0, $t0
     li $v0, 1
+    syscall
+
+    # Print newline
+    la $a0, newline
+    li $v0, 4
     syscall
     
     # Exit

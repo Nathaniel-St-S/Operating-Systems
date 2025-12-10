@@ -430,7 +430,7 @@ uint32_t makeProcess(int pID,
   memset(&newProcess->cpu_state, 0, sizeof(Cpu));
   
   newProcess->cpu_state.hw_registers[PC] = entry_point;
-  newProcess->cpu_state.gp_registers[REG_SP] = text_start + text_size + data_size - 4;
+  newProcess->cpu_state.gp_registers[REG_SP] = stack_ptr;
   newProcess->cpu_state.gp_registers[REG_GP] = data_start;
   newProcess->cpu_state.gp_registers[REG_ZERO] = 0;
   
@@ -462,7 +462,7 @@ static void roundRobin(void) {
     set_current_process(p->pid);
     THE_CPU = p->cpu_state;
 
-    int slice = (p->burstTime < QUANTUM) ? p->burstTime : QUANTUM;
+    int slice = (p->burstTime > 0 && p->burstTime < QUANTUM) ? p->burstTime : QUANTUM;
     for (int i = 0; i < slice; i++) {
       if (THE_CPU.hw_registers[PC] == CPU_HALT) break;
       fetch();
@@ -474,7 +474,7 @@ static void roundRobin(void) {
 
     p->cpu_state = THE_CPU;
 
-    bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
+    bool finished = (THE_CPU.hw_registers[PC] == CPU_HALT);
     if (finished) {
       printf("Process %d finished - freeing memory\n", p->pid);
       liberate(p->pid);

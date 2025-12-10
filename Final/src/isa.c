@@ -499,16 +499,14 @@ static void sh(uint32_t rt, uint32_t effective_address) {
 static void beq(uint32_t rs, uint32_t rt, int32_t offset) {
   if (read_gpr(rs) == read_gpr(rt)) {
     int32_t branch_offset = offset << 2;
-    uint32_t next_pc = THE_CPU.hw_registers[PC] + 4 + (uint32_t)branch_offset;
-    THE_CPU.hw_registers[PC] = next_pc;
+    THE_CPU.hw_registers[PC] += (uint32_t)branch_offset;
   }
 }
 
 static void bne(uint32_t rs, uint32_t rt, int32_t offset) {
   if (read_gpr(rs) != read_gpr(rt)) {
     int32_t branch_offset = offset << 2;
-    uint32_t next_pc = THE_CPU.hw_registers[PC] + 4 + (uint32_t)branch_offset;
-    THE_CPU.hw_registers[PC] = next_pc;
+    THE_CPU.hw_registers[PC] += (uint32_t)branch_offset;
   }
 }
 

@@ -16,8 +16,8 @@ else
     BUILD_MODE = Release
 endif
 
-# Source files
-SRC_FILES = $(wildcard src/*.c)
+# Source files (skip unfinished performance stub)
+SRC_FILES = $(filter-out src/performance.c, $(wildcard src/*.c))
 MAIN_SRC = src/main.c
 ifneq ($(wildcard $(MAIN_SRC)),)
 MAIN_OBJ = $(MAIN_SRC:.c=.o)
