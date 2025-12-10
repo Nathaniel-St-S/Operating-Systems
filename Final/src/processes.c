@@ -404,14 +404,22 @@ static int getHighestResponseRatioIndex(void) {
 
 static void record_process_completion(Process *p) {
   p->completion_time = g_system_time;
-  p->waiting_time = p->completion_time - p->arrival_time - p->originalBurstTime;
+  // Use the actual CPU time consumed instead of the initial burst estimate.
+  int actual_cpu_time = p->originalBurstTime - p->burstTime;
+  if (actual_cpu_time < 0) {
+    actual_cpu_time = 0;
+  }
+  p->waiting_time = p->completion_time - p->arrival_time - actual_cpu_time;
+  if (p->waiting_time < 0) {
+    p->waiting_time = 0;
+  }
   
   if (g_current_algorithm_id >= 0) {
     record_process_metrics(
       g_current_algorithm_id,
       p->pid,
       p->arrival_time,
-      p->originalBurstTime,
+      actual_cpu_time,
       p->completion_time,
       p->waiting_time,
       p->completion_time - p->arrival_time, // turnaround
@@ -505,8 +513,8 @@ uint32_t makeProcess(int pID,
 static void roundRobin(void) {
   PerfTimer timer;
   
-  transferProcesses(NORMAL);
   g_system_time = 0;
+  transferProcesses(NORMAL);
 
   printf("\nScheduling algorithm: Round Robin\n");
   printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
@@ -564,8 +572,8 @@ static void roundRobin(void) {
 static void firstComeFirstServe(void) {
   PerfTimer timer;
   
-  transferProcesses(NORMAL);
   g_system_time = 0;
+  transferProcesses(NORMAL);
   
   printf("\nScheduling algorithm: FCFS\n");
   printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
@@ -611,8 +619,8 @@ static void firstComeFirstServe(void) {
 static void shortestProcessNext(void) {
   PerfTimer timer;
   
-  transferProcesses(PRIORITYBURST);
   g_system_time = 0;
+  transferProcesses(PRIORITYBURST);
   
   printf("\nScheduling algorithm: SPN (Shortest Process Next)\n");
   printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
@@ -659,8 +667,8 @@ static void shortestProcessNext(void) {
 static void priorityBased(void) {
   PerfTimer timer;
   
-  transferProcesses(PRIORITYPRIORITY);
   g_system_time = 0;
+  transferProcesses(PRIORITYPRIORITY);
   
   printf("\nScheduling algorithm: Priority\n");
   printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
@@ -716,8 +724,8 @@ static void priorityBased(void) {
 static void shortestRemainingTime(void) {
   PerfTimer timer;
   
-  transferProcesses(PRIORITYBURST);
   g_system_time = 0;
+  transferProcesses(PRIORITYBURST);
   
   printf("\nScheduling algorithm: SRT (Shortest Remaining Time)\n");
   printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
@@ -773,8 +781,8 @@ static void shortestRemainingTime(void) {
 static void highestResponseRatioNext(void) {
   PerfTimer timer;
   
-  transferProcesses(NORMAL);
   g_system_time = 0;
+  transferProcesses(NORMAL);
   
   printf("\nScheduling algorithm: HRRN (Highest Response Ratio Next)\n");
   printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
@@ -839,8 +847,8 @@ static void feedBack(void) {
   int quantum1 = 2;
   int quantum2 = 4;
   PerfTimer timer;
-  transferProcesses(NORMAL);
   g_system_time = 0;
+  transferProcesses(NORMAL);
   printf("\nScheduling algorithm: MLFQ (Multi-Level Feedback Queue)\n");
   printf("Total processes to be scheduled\n");
   printf("=============================\n");
