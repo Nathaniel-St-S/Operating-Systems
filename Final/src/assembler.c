@@ -809,7 +809,9 @@ AssemblyResult assemble(const char *filename, int process_id) {
   result.program->text_size = ctx.text_count * 4;
   result.program->data_start = ctx.allocated_data_addr;  // ACTUAL allocated address
   result.program->data_size = ctx.data_segment.size;
-  result.program->stack_ptr = STACK_TOP - (process_id * MAX_PROCESS_SIZE);
+  uint32_t stack_size = 4096; // 4KB stack
+  uint32_t stack_addr = mallocate(process_id, stack_size);
+  result.program->stack_ptr = stack_addr + stack_size - 4;
   result.program->globl_ptr = GLOBAL_PTR + (process_id * MAX_PROCESS_SIZE);
 
   // Find entry point
