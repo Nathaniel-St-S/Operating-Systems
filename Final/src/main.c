@@ -105,6 +105,12 @@ int main(int argc, char *argv[])
 
   parse_args(argc, argv);
 
+  // In comparison mode, keep allocations around so the same
+  // text/data segments can be reused across multiple runs.
+  if (opts.compare_all_algorithms) {
+    set_memory_freeze(true);
+  }
+
   // Initialize memory system
   printf("Initializing memory system...\n");
   init_memory(opts.cache_policy);
