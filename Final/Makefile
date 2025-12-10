@@ -16,7 +16,7 @@ else
     BUILD_MODE = Release
 endif
 
-# Source files (skip unfinished performance stub)
+# Source files
 SRC_FILES = $(wildcard src/*.c)
 MAIN_SRC = src/main.c
 ifneq ($(wildcard $(MAIN_SRC)),)
@@ -80,22 +80,53 @@ run-test: $(TEST)
 # Run both
 run-all: run-test run-demo
 
-# Clean build artifacts
+# Run comparison of all algorithms
+compare: $(DEMO)
+	@echo "Running All Scheduling Algorithms Comparison..."
+	@echo ""
+	./$(DEMO) --compare-all --export-csv comparison_results.csv programs/*.asm
 
+# Run specific examples
+example-fcfs: $(DEMO)
+	@echo "Running FCFS Example..."
+	./$(DEMO) --fcfs programs/hello_world.asm programs/factorial.asm programs/goodbye_planet.asm
+
+example-rr: $(DEMO)
+	@echo "Running Round Robin Example..."
+	./$(DEMO) --round-robin programs/hello_world.asm programs/factorial.asm programs/goodbye_planet.asm
+
+example-priority: $(DEMO)
+	@echo "Running Priority Scheduling Example..."
+	./$(DEMO) --priority programs/hello_world.asm programs/factorial.asm programs/goodbye_planet.asm
+
+example-spn: $(DEMO)
+	@echo "Running SPN Example..."
+	./$(DEMO) --spn programs/hello_world.asm programs/factorial.asm programs/goodbye_planet.asm
+
+# Clean build artifacts
 clean:
 	rm -f $(CORE_OBJS) $(MAIN_OBJ) $(TEST_OBJ) $(DEMO) $(TEST)
+	rm -f *.csv
 	@echo "✓ Build artifacts cleaned"
 
 # Help target
 help:
 	@echo "Available targets:"
-	@echo "  make          - Build both demo and test executables"
-	@echo "  make demo     - Build only the demo executable"
-	@echo "  make test     - Build only the test executable"
-	@echo "  make run-demo - Build and run the demo"
-	@echo "  make run-test - Build and run the tests"
-	@echo "  make run-all  - Run tests then demo"
-	@echo "  make clean    - Remove all build artifacts"
-	@echo "  make help     - Show this help message"
+	@echo "  make              - Build both demo and test executables"
+	@echo "  make demo         - Build only the demo executable"
+	@echo "  make test         - Build only the test executable"
+	@echo "  make run-demo     - Build and run the demo"
+	@echo "  make run-test     - Build and run the tests"
+	@echo "  make run-all      - Run tests then demo"
+	@echo ""
+	@echo "Performance Analysis:"
+	@echo "  make compare      - Run all algorithms and generate comparison report"
+	@echo "  make example-fcfs - Run FCFS with sample programs"
+	@echo "  make example-rr   - Run Round Robin with sample programs"
+	@echo "  make example-priority - Run Priority scheduling with sample programs"
+	@echo "  make example-spn  - Run SPN with sample programs"
+	@echo ""
+	@echo "  make clean        - Remove all build artifacts"
+	@echo "  make help         - Show this help message"
 
-.PHONY: all clean run-demo run-test run-all help
+.PHONY: all clean run-demo run-test run-all compare example-fcfs example-rr example-priority example-spn help

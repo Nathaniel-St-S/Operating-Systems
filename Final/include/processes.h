@@ -17,12 +17,15 @@ void init_queues(void);
 
 void free_queues(void);
 
-// This serves as a rapper for the ctx in the assembler pretty
+// Reset process storage (for running multiple algorithms in comparison mode)
+void reset_process_storage(void);
+
+// This serves as a wrapper for the ctx in the assembler pretty
 // much. there isn't really another way to make a process out-
 // side of this, since all the data is in the assembly. the 
 // entry point will initialize the cpu, and the function 
 // keeps track of a processes size so that we don't have to
-// allocate 1MB for eah one. 
+// allocate 1MB for each one. 
 //
 // delete this once you understand. ask me questions
 //

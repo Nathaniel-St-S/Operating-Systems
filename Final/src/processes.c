@@ -61,7 +61,7 @@ typedef struct {
 
 //-------------------------------------Constants-------------------------------------//
 #define QUANTUM 3
-#define MAX_PROCESSES 10
+// #define MAX_PROCESSES 10
 
 static Queue* Ready_Queue = NULL;
 static Queue* Running_Queue = NULL;
@@ -425,6 +425,12 @@ static void record_process_completion(Process *p) {
 
 static Process global_process_storage[MAX_PROCESSES];
 static int process_storage_index = 0;
+
+// Public function to reset process storage between algorithm runs
+void reset_process_storage(void) {
+  process_storage_index = 0;
+  memset(global_process_storage, 0, sizeof(global_process_storage));
+}
 
 uint32_t makeProcess(int pID, 
                      uint32_t entry_point,
