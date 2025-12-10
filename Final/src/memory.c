@@ -810,3 +810,23 @@ void print_cache_stats(void) {
   }
   printf("========================\n");
 }
+unsigned long get_L1_hits(void) {
+    return L1cache_hit;
+}
+
+unsigned long get_L1_misses(void) {
+    return L1cache_miss;
+}
+
+unsigned long get_L2_hits(void) {
+    return L2cache_hit;
+}
+
+unsigned long get_L2_misses(void) {
+    return L2cache_miss;
+}
+
+unsigned long get_write_backs(void) {
+    return write_backs;
+}
+

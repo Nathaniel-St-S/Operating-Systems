@@ -111,6 +111,14 @@ uint32_t mallocate(int pid, size_t size);
  */
 void liberate(int pid);
 
+// getters for memory stats
+unsigned long get_L1_hits(void);
+unsigned long get_L1_misses(void);
+unsigned long get_L2_hits(void);
+unsigned long get_L2_misses(void);
+unsigned long get_write_backs(void);
+
+
 // print the number of cache hits & misses
 void print_cache_stats(void);
 #endif

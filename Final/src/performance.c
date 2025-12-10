@@ -135,17 +135,13 @@ void capture_memory_stats(int algorithm_id) {
     return;
   }
   
-  // Note: You'll need to add getter functions to memory.c
-  // For now, these are placeholders
   PerformanceMetrics *metrics = &g_tracker->algorithms[algorithm_id];
   
-  // These would come from memory.c via getter functions
-  metrics->l1_cache_hits = 0;
-  metrics->l1_cache_misses = 0;
-  metrics->l2_cache_hits = 0;
-  metrics->l2_cache_misses = 0;
-  metrics->write_backs = 0;
-}
+  metrics->l1_cache_hits   = get_L1_hits();
+  metrics->l1_cache_misses = get_L1_misses();
+  metrics->l2_cache_hits   = get_L2_hits();
+  metrics->l2_cache_misses = get_L2_misses();
+  metrics->write_backs     = get_write_backs();}
 
 void calculate_algorithm_metrics(int algorithm_id) {
   if (!g_tracker || algorithm_id < 0 || algorithm_id >= g_tracker->algorithm_count) {

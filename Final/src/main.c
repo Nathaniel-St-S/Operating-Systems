@@ -76,7 +76,7 @@ static void run_single_algorithm(SchedulingAlgorithm algo) {
       results[i].program->data_size,
       results[i].program->stack_ptr,
       opts.priorities[i],
-      opts.burst_estimates[i]
+      results[i].program->text_size // opts.burst_estimates[i]
     );
     
     if (process_addr == UINT32_MAX) {
