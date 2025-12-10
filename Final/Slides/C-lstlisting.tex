@@ -1,0 +1,69 @@
+% Default style for C listings (Nord themed)
+\lstset{
+  % --- Line numbers ---
+  numbersep=6pt,                         % distance between numbers and code
+  numberstyle=\tiny\color{Nord3},        % line number color
+  numbers=left,
+  stepnumber=1,
+  % --- Basics ---
+  basicstyle=\ttfamily\small\color{Nord6},  % main code font + color
+  sensitive=true,                         % case-sensitive
+  tabsize=2,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces,
+  showstringspaces=false,
+  upquote=true,
+}
+
+\lstset{
+  numbers=left,
+  xleftmargin=2em,
+  framexleftmargin=1.5em
+}
+
+% Usage: \begin{lstlisting}[language=MyC] ...
+\lstdefinelanguage{MyC}{
+  % --- Comments ---
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle={\color{Nord14}\slshape\sffamily}, % green-ish for comments
+  % --- Strings ---
+  morestring=[b]",
+  stringstyle=\color{Nord13},            % warm yellow for strings
+  % --- Literal replacements / operators ---
+  literate=
+    {*}{{\color{Nord8}{*}}}1
+    {||}{{\color{Nord9}{||}}}1,
+  % --- Keywords / classes ---
+  classoffset=1,
+  morekeywords={
+    void, main, typedef, struct, enum, static, int, float, return
+  },
+  keywordstyle=\color{Nord9},            % primary keyword blue
+  classoffset=2,
+  morekeywords={
+    if, for, while, else, do, switch, case, default
+  },
+  keywordstyle=\color{Nord11},           % reddish for control flow
+  classoffset=3,
+  morekeywords={
+    import, export
+  },
+  keywordstyle=\color{Nord13},           % yellow-ish for pseudo-modules
+  classoffset=4,
+  morekeywords={
+    Cpu, ProcessState, uint32_t, size_t, Process, Queue
+  },
+  keywordstyle=\color{Nord8},            % cyan-ish for types / structs
+  classoffset=5,
+  morekeywords={
+    define, include
+  },
+  keywordstyle=\color{Nord15},           % purple for preprocessor-ish tokens
+  classoffset=0,                         % reset class offset
+  % --- Extra letters to treat as part of identifiers ---
+  alsoletter={',`,-,/,>,<,\#,\%,?,=,&,|},
+}
+% End of Nord-themed C listing style
+

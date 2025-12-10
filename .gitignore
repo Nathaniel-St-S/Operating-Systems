@@ -64,6 +64,9 @@ _minted/
 *.synctex.gz
 *.fdb_latexmk
 *.log
+*.nav
+*.snm
+*.toc
 Final/tests
 Final/tests
 
@@ -80,3 +83,5 @@ Final/tests
 *.vsix
 *.csv
 Final/charts
+Final/Slides/FinalProjectSlides.pdf
+Final/Slides/FinalProjectSlides.vrb
