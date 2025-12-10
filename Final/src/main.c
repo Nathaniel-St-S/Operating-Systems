@@ -3,6 +3,7 @@
 #include "../include/assembler.h"
 #include "../include/processes.h"
 #include "../include/isa.h"
+#include "../include/performance.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +41,7 @@ static volatile sig_atomic_t g_panic_handler_active = 0;
 static int result_count = 0;
 static bool memory_initialized = false;
 static bool queues_initialized = false;
+static bool perf_initialized = false;
 
 static void panic_handler(int sig);
 
@@ -65,6 +67,10 @@ int main(int argc, char *argv[])
   }
 
   parse_args(argc, argv);
+
+  // Initialize performance tracking before any algorithms start
+  init_performance_tracking();
+  perf_initialized = true;
 
   // Initialize memory system
   printf("Initializing memory system...\n");
@@ -177,6 +183,11 @@ cleanup:
   if (queues_initialized){
     free_queues();
     queues_initialized = false;
+  }
+
+  if (perf_initialized) {
+    free_performance_tracking();
+    perf_initialized = false;
   }
 
   g_panic_handler_active = 0;
