@@ -78,3 +78,4 @@ Final/tests
 
 # Built Visual Studio Code Extensions
 *.vsix
+*.csv

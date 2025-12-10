@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 // Memory layout constants
 #define TEXT_BASE 0x00400000 // Location in memory to write instructions to
@@ -82,6 +83,13 @@ void write_word(uint32_t addr, uint32_t data);
  * Set the currently executing process (for access control)
  */
 void set_current_process(int pid);
+
+/*
+ * Control whether liberate actually frees memory blocks.
+ * Useful for comparison runs where the same allocations are
+ * reused across multiple scheduler executions.
+ */
+void set_memory_freeze(bool freeze);
 
 /*
  * Allocate memory for the given process

@@ -140,6 +140,7 @@ static MemoryTable MEMORY_TABLE = {0};
 static int current_process_id = -1;
 
 static CachePolicy cache_policy_type = CACHE_WRITE_THROUGH;
+static bool freeze_liberate = false;
 
 /* ---------------------------------------------------------------------------------------------------- */
 /* ========================================== UTILITY FUNCTS ========================================== */
@@ -495,6 +496,8 @@ void free_memory(void) {
 
 void set_current_process(const int pid) { current_process_id = pid; }
 
+void set_memory_freeze(bool freeze) { freeze_liberate = freeze; }
+
 // Reads a single byte
 // Uses the cache hierarchy
 // Updates cache along the way
@@ -741,6 +744,10 @@ uint32_t mallocate(int pid, size_t size) {
 
 // Free up the memory allocated by a specific process.
 void liberate(int pid) {
+  if (freeze_liberate) {
+    return;
+  }
+
   size_t idx = SIZE_MAX;
   for (size_t i = 0; i < MEMORY_TABLE.block_count; ++i) {
     if (!MEMBLOCK(i).is_free && MEMBLOCK(i).pid == pid) {

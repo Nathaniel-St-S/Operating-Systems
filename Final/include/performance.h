@@ -126,4 +126,7 @@ void export_comparison_csv(const char *filename);
 // Visualization helpers (generates data for plotting)
 void generate_chart_data(const char *chart_type, const char *output_file);
 
+// Reset process storage (called before each algorithm run in compare mode)
+void reset_process_storage(void);
+
 #endif // PERFORMANCE_H
