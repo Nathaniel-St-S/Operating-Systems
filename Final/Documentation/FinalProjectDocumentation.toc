@@ -47,9 +47,23 @@
 \contentsline {subsection}{\numberline {10.2}Implementation}{12}{subsection.10.2}%
 \contentsline {subsubsection}{\numberline {10.2.1}Process Control Block Enhancements}{12}{subsubsection.10.2.1}%
 \contentsline {subsubsection}{\numberline {10.2.2}Scheduling Algorithms}{13}{subsubsection.10.2.2}%
-\contentsline {subsubsection}{\numberline {10.2.3}Context Switching}{16}{subsubsection.10.2.3}%
-\contentsline {subsubsection}{\numberline {10.2.4}Integration with Fetch-Decode-Execute Cycle}{16}{subsubsection.10.2.4}%
-\contentsline {section}{\numberline {11}The Simulation}{20}{section.11}%
-\contentsline {section}{\numberline {12}Testing and Debugging}{21}{section.12}%
-\contentsline {section}{\numberline {13}Conclusion}{22}{section.13}%
-\contentsline {section}{\numberline {14}Appendix A: Screenshots}{23}{section.14}%
+\contentsline {subsubsection}{\numberline {10.2.3}Context Switching}{17}{subsubsection.10.2.3}%
+\contentsline {subsubsection}{\numberline {10.2.4}Integration with Fetch-Decode-Execute Cycle}{18}{subsubsection.10.2.4}%
+\contentsline {section}{\numberline {11}Module 4: Interrupt Handling and Dispatcher}{20}{section.11}%
+\contentsline {subsection}{\numberline {11.1}Problem Statement}{20}{subsection.11.1}%
+\contentsline {subsection}{\numberline {11.2}Implementation}{20}{subsection.11.2}%
+\contentsline {subsubsection}{\numberline {11.2.1}Types of Interruption}{20}{subsubsection.11.2.1}%
+\contentsline {subsubsection}{\numberline {11.2.2}Interrupt Vector Table}{20}{subsubsection.11.2.2}%
+\contentsline {subsubsection}{\numberline {11.2.3}Context Switching}{20}{subsubsection.11.2.3}%
+\contentsline {section}{\numberline {12}Module 5: Efficiency Analysis of Concurrency}{21}{section.12}%
+\contentsline {subsection}{\numberline {12.1}Problem Statement}{21}{subsection.12.1}%
+\contentsline {subsection}{\numberline {12.2}Implementation}{21}{subsection.12.2}%
+\contentsline {subsubsection}{\numberline {12.2.1}Performance Metrics Setup}{21}{subsubsection.12.2.1}%
+\contentsline {subsubsection}{\numberline {12.2.2}Implementation of Time Tracking}{21}{subsubsection.12.2.2}%
+\contentsline {subsubsection}{\numberline {12.2.3}Data Comparison}{21}{subsubsection.12.2.3}%
+\contentsline {subsubsection}{\numberline {12.2.4}Performance Comparison}{21}{subsubsection.12.2.4}%
+\contentsline {subsubsection}{\numberline {12.2.5}Visualization and Reporting}{21}{subsubsection.12.2.5}%
+\contentsline {section}{\numberline {13}The Simulation}{22}{section.13}%
+\contentsline {section}{\numberline {14}Testing and Debugging}{23}{section.14}%
+\contentsline {section}{\numberline {15}Conclusion}{24}{section.15}%
+\contentsline {section}{\numberline {16}Appendix A: Screenshots}{25}{section.16}%

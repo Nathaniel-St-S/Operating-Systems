@@ -78,42 +78,45 @@ typedef struct {
 	\label{queue-impl}
 \end{figure}
 
+
 To implement the seven scheduling algorithms for our \os{}, we first needed a queue to hold all of the processes. This led to creating the Queue structure displayed in \Cref{queue-impl}. The queue structure contains the index to the next open space in the queue (next), the size of queue (capacity), and an array holding all of the processes (PCB). We made a queue for each state that the process can have as well as priority ready queue with respect to burst time and priority. In the interest of brevity, the scheduling algorithm will be explained at a high level of abstraction. 
+
+\begin{figure}[h]
+	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+		//the round robin scheduling algorithm
+		static void roundRobin(void) {
+			int idx = 0;
+			while (Ready_Queue->next != 0) {
+				transferProcesses(NORMAL);
+				Process currentProcess = Ready_Queue->PCB[idx];
+				set_current_process(currentProcess.pid);
+				transitionState(currentProcess, NORMAL);
+				
+				for (int i = 0; i < QUANTUM; i++) {
+					fetch();
+					execute();
+					currentProcess.burstTime-=1; 
+				}
+				
+				if (currentProcess.burstTime > 0 && idx+1 >= Ready_Queue->next) {
+					context_switch(NORMAL, true);
+					idx = 0;
+				} else if (currentProcess.burstTime > 0) {
+					context_switch(NORMAL, true);
+					idx+=1;
+				} else {
+					transitionState(currentProcess, NORMAL);
+				}
+			}
+		\end{lstlisting}
+		\caption{The Round-Robin Scheduling algorithm}
+		\label{RR-impl}
+	\end{figure}
 
 \subsubsection*{Round-Robin}
 \label{RR}
 
-\begin{figure}[h]
-	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
-//the round robin scheduling algorithm
-static void roundRobin(void) {
-	int idx = 0;
-	while (Ready_Queue->next != 0) {
-		transferProcesses(NORMAL);
-		Process currentProcess = Ready_Queue->PCB[idx];
-		set_current_process(currentProcess.pid);
-		transitionState(currentProcess, NORMAL);
-		
-		for (int i = 0; i < QUANTUM; i++) {
-			fetch();
-			execute();
-			currentProcess.burstTime-=1; 
-		}
-		
-		if (currentProcess.burstTime > 0 && idx+1 >= Ready_Queue->next) {
-			context_switch(NORMAL, true);
-			idx = 0;
-		} else if (currentProcess.burstTime > 0) {
-			context_switch(NORMAL, true);
-			idx+=1;
-		} else {
-			transitionState(currentProcess, NORMAL);
-		}
-	}
-	\end{lstlisting}
-	\caption{The Round-Robin Scheduling algorithm}
-	\label{RR-impl}
-\end{figure}
+
 
 The Round-Robin scheduling algorithm is displayed \Cref{RR-impl} and we chose to have a time quantum of 3. While the ready queue is not empty, we loop over the following sequence:
 
@@ -279,7 +282,7 @@ The implementation of the Highest Response Ratio Next scheduling algorithm is fo
 \subsubsection*{First Come First Serve}
 \label{FCFS}
 
-\begin{figure}[h]
+\begin{figure}[h!]
 	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
 		//The first come first serve scheduling algorithm
 		static void firstComeFirstServe(void) {
@@ -405,7 +408,7 @@ The implementation of the Feed Back scheduling algorithm is found in \Cref{FBS-i
 \subsubsection{Context Switching}
 \label{cont-sw}
 
-\begin{figure}[h]
+\begin{figure}[h!]
 	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
 		//Switches from one process to another
 		static void context_switch(int queue_type, bool needTransition) {
