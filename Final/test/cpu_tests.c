@@ -304,10 +304,10 @@ TEST_CASE(CPU, ArgumentRegisters) {
 
 TEST_CASE(CPU, ReturnValueRegisters) {
   reset_cpu_and_memory();
-  GP_REGISTER(REG_VO) = 0x100;
+  GP_REGISTER(REG_V0) = 0x100;
   GP_REGISTER(REG_V1) = 0x200;
   
-  ASSERT_EQ(GP_REGISTER(REG_VO), 0x100);
+  ASSERT_EQ(GP_REGISTER(REG_V0), 0x100);
   ASSERT_EQ(GP_REGISTER(REG_V1), 0x200);
 }
 

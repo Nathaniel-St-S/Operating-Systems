@@ -10,7 +10,7 @@
 enum {
   REG_ZERO, // Constant zero, reads as zero, writes ignored
   REG_AT,   // Assembler Temporary
-  REG_VO,   // Function Return Values
+  REG_V0,   // Function Return Values
   REG_V1,
   REG_A0,   // Function Argument
   REG_A1,

@@ -5,6 +5,12 @@
 #include <stdio.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <time.h>
+#include <sys/time.h>
+
 
 static inline uint32_t mask_reg_index(uint32_t reg) {
   return (uint32_t)reg & 0x1F;
@@ -331,8 +337,8 @@ static void jalr(uint32_t rs, uint32_t rd) {
   THE_CPU.hw_registers[PC] = target;
 }
 
-static void syscall() {
-  uint32_t code = (uint32_t)read_gpr(REG_VO);
+static void systemcall() {
+  uint32_t code = (uint32_t)read_gpr(REG_V0);
 
   switch (code) {
     case 1: { // print integer in $a0
@@ -351,9 +357,67 @@ static void syscall() {
       fflush(stdout);
       break;
     }
-    case 10: // exit
+    case 5: {   // read integer
+      int x;
+      if (scanf("%d", &x) == 1)
+        write_gpr(REG_V0, (uint32_t)x);
+      else
+        write_gpr(REG_V0, 0);
+    break;
+    }
+    case 10: {  // exit
       THE_CPU.hw_registers[PC] = CPU_HALT;
       break;
+    }
+    case 11: {  // clear_screen
+      // ANSI clear + cursor home
+      printf("\033[2J\033[H");
+      fflush(stdout);
+    break;
+    }
+    case 12: {  // read_char_nb
+      struct termios oldt, newt;
+      tcgetattr(STDIN_FILENO, &oldt);
+      newt = oldt;
+
+      newt.c_lflag &= ~(ICANON | ECHO);
+      newt.c_cc[VTIME] = 0;  // no timeout
+      newt.c_cc[VMIN] = 0;   // non-blocking
+
+      tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+      int ch = getchar();   // non-blocking now
+      if (ch == EOF)
+          ch = 0;           // no key pressed → return 0
+
+      tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
+      write_gpr(REG_V0, (uint32_t)ch);
+      break;
+    }
+    case 13: {  // sleep_ms
+      uint32_t ms = read_gpr(REG_A0);
+
+      struct timespec ts;
+      ts.tv_sec = ms / 1000;
+      ts.tv_nsec = (ms % 1000) * 1000000;
+
+      while (nanosleep(&ts, &ts) == -1) {
+        // If interrupted by signal, nanosleep updates ts
+        continue;
+      }
+    break;
+    }
+    case 14: {  // get_time_ms
+      struct timeval tv;
+      gettimeofday(&tv, NULL);
+
+      uint64_t ms = (uint64_t)tv.tv_sec * 1000ULL
+                  + (uint64_t)tv.tv_usec / 1000ULL;
+
+      write_gpr(REG_V0, (uint32_t)ms);   // wrap is fine for MIPS32
+      break;
+    }
     default:
       fprintf(stderr, "Unhandled syscall code %u\n", code);
       break;
@@ -395,7 +459,7 @@ static void handle_r_type_instruction(uint32_t instruction) {
     case FUNCT_SRAV: srav(rs, rt, rd); break;
     case FUNCT_JR: jr(rs); break;
     case FUNCT_JALR: jalr(rs, rd); break;
-    case FUNCT_SYSCALL: syscall(); break;
+    case FUNCT_SYSCALL: systemcall(); break;
     case FUNCT_BREAK: breakk(); break;
   }
 }
