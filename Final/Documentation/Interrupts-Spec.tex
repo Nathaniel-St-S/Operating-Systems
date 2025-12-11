@@ -1,18 +1,244 @@
 \section{Module 4: Interrupt Handling and Dispatcher}
 \label{Interrupts-Spec}
 
-las
-
-
 \subsection{Problem Statement}
 \label{PS-m4}
+The objective of this module is to develop an advanced interrupt handling and dispatching system that enables the CPU to manage asynchronous events and process transitions efficiently.
+%
+The system must allow the CPU to pause its current execution in response to various interrupts—such as timer, I/O, system call, trap, and priority interrupts—and appropriately service each event before resuming or switching processes.
+%
+An Interrupt Vector Table (IVT) will be implemented to map interrupt types to their corresponding handlers, enabling fast and accurate interrupt resolution.
+%
+Each handler will process its specific event, update process states, and invoke the dispatcher when necessary.
+%
+The dispatcher will perform context switching by saving the current process state and restoring the next process’s context based on the selected scheduling algorithm (Round-Robin or Priority-Based).
+%
+This module ensures smooth and controlled transitions between processes, accurate interrupt servicing, and efficient CPU utilization in a multitasking environment.
+
 \subsection{Implementation}
 \label{IMP-m4}
+\subsubsection{Interrupt Types}
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	typedef enum irq{
+		SAY_HI = 0x1,
+		SAY_GOODBYE,
+		TIMER_INTR,
+		IO_INTR,
+		SYS_CALL_INTR,
+		TRAP_INTR,
+		PRIORITY_INTR,
+		EOI, //end of interrupt, make sure this is the last in the list
+	} IRQ;
+\end{lstlisting}
 
-\subsubsection{Types of Interruption}
-
-\subsubsection{Interrupt Vector Table}
-
+%\subsubsection*{Interrupt Vector Table}
 %\subsubsection*{Interrupt Handler}
 %\subsubsection*{Dispatcher}
-\subsubsection{Context Switching}
+%\subsubsection*{Context Switching}
+We provide three types of interrupt opcodes \texttt{SAY\_HI}, \texttt{SAY\_GOODBYE}, and \texttt{EOI}.
+%
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	typedef enum irq{
+		SAY_HI = 0x1,
+		SAY_GOODBYE,
+		EOI, //end of interrupt
+	} IRQ;
+\end{lstlisting}
+%
+Each interrupt instance contains one of these opcodes and a priority with 0 being the most important.
+%
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	typedef struct {
+		IRQ irq;
+		int priority;
+	} Interrupt;
+\end{lstlisting}
+%
+The interrupt controller is structured as an \texttt{InterruptHeap} which is a min-heap with constant time access to the highest priority interrupt and logarithmic insertion for new interrupts.
+%
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	typedef struct {
+		Interrupt data[MAX_INTERRUPTS];
+		int size;
+	} InterruptHeap;
+\end{lstlisting}
+%
+Finally, we store CPU states in a stack which allows for the pausing and resumption of processes by storing the information necessary to restart them.
+%
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	typedef struct {
+		Cpu* items;
+		int SP;
+	} stack;
+\end{lstlisting}
+%
+
+Interrupts are checked for every CPU cycle.
+%
+If there is no interrupt then nothing happens.
+%
+If there is an interrupt, its priority is checked against the potential current interrupt; if its priority is higher then it is immediately executed, if not it is added to the heap.
+%
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	void check_for_interrupt() {
+		if (!CPU.flags.INTERRUPT) return;
+		if (INTERRUPTCONTROLLER.size == 0){
+			//no more interrupts in que, so clear flag
+			set_interrupt_flag(false);
+			return;
+		}
+		
+		Interrupt intrpt = next_interrupt();
+		if(curr_intrrpt.irq == -1 || intrpt.priority < curr_intrrpt.priority){
+			curr_intrrpt = intrpt;
+			interrupt_handler(curr_intrrpt);
+		}else{
+			interrupt_handler(curr_intrrpt);
+			add_interrupt(intrpt.irq, intrpt.priority);
+		}
+		
+		//clear flag if heap is empty after handle
+		if(INTERRUPTCONTROLLER.size == 0) set_interrupt_flag(false);
+	}
+\end{lstlisting}
+%
+Interrupts are dispatched to their appropriate functions via the \texttt{interrupt\_handler}:
+%
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	void interrupt_handler(Interrupt intrpt) {
+		//push the current CPU state to stack
+		Cpu init_cpu_state = CPU;
+		callstack.items[callstack.SP] = init_cpu_state;
+		callstack.SP++;
+		
+		//decode the given interrupt and handle it
+		switch(intrpt.irq) {
+			case SAY_HI :
+			printf("INTERRUPT: hello\n");
+			set_interrupt_flag(false);
+			reset_curr_interrupt();
+			break;
+			...
+			case EOI : 
+			set_interrupt_flag(false); 
+			reset_curr_interrupt();
+			break;
+			default:
+			printf("ERROR: Invalid irq -> %u <-\n", (unsigned)intrpt.irq);
+			CPU.PC = CPU_HALT;
+			break;
+		}
+		
+		//decrement the CPU stack
+		callstack.SP--;
+		//reset the CPU to it's original state
+		CPU = callstack.items[callstack.SP];
+		//increment the PC to start normal execution
+		//CPU.PC++;
+	}
+\end{lstlisting}
+
+\subsubsection{Handling Interrupts}
+We use a min-heap to store our interrupts based on priority giving us logarithmic insertions and constant time removals.
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	static void swap(Interrupt* a, Interrupt* b)
+	{
+		Interrupt tmp = *a;
+		*a = *b;
+		*b = tmp;
+	}
+	
+	static int parent(int i) { return (i - 1) / 2; }
+	static int left(int i)   { return 2 * i + 1; }
+	static int right(int i)  { return 2 * i + 2; }
+	
+	/* --------------------- Core Functions --------------------- */
+	
+	void init_interrupt_controller(void)
+	{
+		INTERRUPTCONTROLLER.size = 0;
+		
+		for (int i = 0; i < MAX_INTERRUPTS; i++) {
+			INTERRUPTCONTROLLER.data[i].irq = EOI;
+			INTERRUPTCONTROLLER.data[i].priority = 100000;
+		}
+		
+		callstack.SP = 0;
+		callstack.items = malloc(sizeof(Cpu) * CALLSTACK_SIZE);
+		if (!callstack.items)
+		{
+			fprintf(stderr, "Failed to allocate callstack\n");
+			exit(EXIT_FAILURE);
+		}
+		
+		curr_intrrpt.irq = EOI;
+		curr_intrrpt.priority = 100000;
+		
+		printf("Initialized interrupt controller.\n");
+	}
+	
+	// No more memory leaks yay :)
+	void free_interrupt_controller(void) {
+		free(callstack.items);
+		callstack.items = NULL;
+	}
+	
+	// Add an interrupt to the heap (lower number = higher priority)
+	void add_interrupt(IRQ irq, int priority)
+	{
+		if (INTERRUPTCONTROLLER.size >= MAX_INTERRUPTS)
+		{
+			fprintf(stderr, "Interrupt queue full!\n");
+			return;
+		}
+		
+		int i = INTERRUPTCONTROLLER.size++;
+		INTERRUPTCONTROLLER.data[i].irq = irq;
+		INTERRUPTCONTROLLER.data[i].priority = priority;
+		
+		
+		while (i != 0 && INTERRUPTCONTROLLER.data[parent(i)].priority > INTERRUPTCONTROLLER.data[i].priority)
+		{
+			swap(&INTERRUPTCONTROLLER.data[i], &INTERRUPTCONTROLLER.data[parent(i)]);
+			i = parent(i);
+		}
+		
+		printf("[INTERRUPT] Queued IRQ %d (priority %d)\n", irq, priority);
+	}
+	
+	/* Pop the highest-priority interrupt */
+	static Interrupt next_interrupt(void)
+	{
+		if (INTERRUPTCONTROLLER.size <= 0)
+		{
+			Interrupt none = { EOI, 100000 };
+			return none;
+		}
+		
+		Interrupt root = INTERRUPTCONTROLLER.data[0];
+		INTERRUPTCONTROLLER.data[0] = INTERRUPTCONTROLLER.data[--INTERRUPTCONTROLLER.size];
+		
+		int i = 0;
+		while (1)
+		{
+			int l = left(i), r = right(i), smallest = i;
+			
+			if (l < INTERRUPTCONTROLLER.size &&
+			INTERRUPTCONTROLLER.data[l].priority < INTERRUPTCONTROLLER.data[smallest].priority)
+			smallest = l;
+			
+			if (r < INTERRUPTCONTROLLER.size &&
+			INTERRUPTCONTROLLER.data[r].priority < INTERRUPTCONTROLLER.data[smallest].priority)
+			smallest = r;
+			
+			if (smallest != i)
+			{
+				swap(&INTERRUPTCONTROLLER.data[i], &INTERRUPTCONTROLLER.data[smallest]);
+				i = smallest;
+			}
+			else break;
+		}
+		
+		return root;
+	}
+\end{lstlisting}

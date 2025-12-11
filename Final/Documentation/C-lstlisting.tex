@@ -32,19 +32,20 @@
 		stringstyle=\color{vscString},
 		% --- Literal replacements ---
 		literate=
-		{*}{{\color{cyan}{*}}}1
+		{\$}{\$}1,
+		%{*}{{\color{cyan}{*}}}1
 		%{&}{\color{blue}{&}}1
 		%{&&}{{\color{cyan}{&&}}}1,
-		{||}{{\color{cyan}{||}}}1,
-		%	{lambda}{{$\lambda$}}1
-		%{->}{{$\rightarrow$}}1
+		%{||}{{\color{cyan}{||}}}1,
+		%	{lambda}{{\$\lambda\$}}1
+		%{->}{{\$\rightarrow\$}}1
 		%{*}{{*}}1
 		%{lambda}{{\textcolor{blue}{\(\lambda\)}}}1
 		%{EMP}{{\ep{}}}1,
 		%{'}{{\quot{}}}1,
 		classoffset=1,
 		morekeywords={
-			void, main, typedef, struct, enum, static, int, float, double, bool, true, false, stderr, NULL, sizeof, const, char, unsigned, long, inline
+			void, main, typedef, struct, enum, static, int, float, double, bool, true, false, stderr, NULL, sizeof, const, char, unsigned, long, inline, printf, fprintf
 		},
 		keywordstyle=\color{oceanboatblue},
 		classoffset=2,
@@ -59,7 +60,7 @@
 		keywordstyle=\color{yellow},
 		classoffset=4,
 		morekeywords={
-			Cpu, ProcessState, uint32_t, size_t, Process, Queue, MemoryBlock, Cache, CachePolicy, uint8_t, CacheLine, MemoryTable, uint16_t, int32_t, uint64_t, int64_t, AssemblyContext, int8_t, int16_t, DataSegment, TextEntry, Macro, Symbol, AssemblyResult, AssembledProgram, SymbolInfo, PerformanceTracker, ProcessMetrics, PerformanceMetrics, timespec, PerfTimer, SchedulingAlgorithm
+			Cpu, ProcessState, uint32_t, size_t, Process, Queue, MemoryBlock, Cache, CachePolicy, uint8_t, CacheLine, MemoryTable, uint16_t, int32_t, uint64_t, int64_t, AssemblyContext, int8_t, int16_t, DataSegment, TextEntry, Macro, Symbol, AssemblyResult, AssembledProgram, SymbolInfo, PerformanceTracker, ProcessMetrics, PerformanceMetrics, timespec, PerfTimer, SchedulingAlgorithm, IRQ, InterruptHeap, Interrupt, stack, Entry, dword, word, hword
 			},
 		keywordstyle=\color{palatinateblue},
 		classoffset=5,
@@ -68,7 +69,7 @@
 		},
 		keywordstyle=\color{vscPreproc},
 		%classoffset=0,
-		alsoletter={',`,-,/,>,<,\#,\%,?,=,&&},
+		alsoletter={',`,-,/,>,<,\#,\$,?,=,&&},
 		%moredelim=**[is][\color{lightgray}]{<<@<<}{>>@>>},
 		%moredelim=**[is][\itshape\color{OliveGreen}]{<<;<<}{>>;>>},
 	}

@@ -17,7 +17,7 @@ This section outlines the our solution to the problem statement. \Cref{PCB} pres
 \label{PCB}
 
 \begin{figure}[h]
-	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+	\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
 typedef enum {
     READY,
     RUNNING,
@@ -66,7 +66,7 @@ The process structure contains a process id (pid), the state of the process (sta
 \label{Scheduling}
 
 \begin{figure}[h!]
-	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+	\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
 //To represent a queue
 typedef struct {
     int next; //the index to next open space
@@ -82,7 +82,7 @@ typedef struct {
 To implement the seven scheduling algorithms for our \os{}, we first needed a queue to hold all of the processes. This led to creating the Queue structure displayed in \Cref{queue-impl}. The queue structure contains the index to the next open space in the queue (next), the size of queue (capacity), and an array holding all of the processes (PCB). We made a queue for each state that the process can have as well as priority ready queue with respect to burst time and priority. In the interest of brevity, the scheduling algorithm will be explained at a high level of abstraction. 
 
 \begin{figure}[h]
-	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+	\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
 		//the round robin scheduling algorithm
 		static void roundRobin(void) {
 			int idx = 0;
@@ -135,7 +135,7 @@ The Round-Robin scheduling algorithm is displayed \Cref{RR-impl} and we chose to
 \label{PBS}
 
 \begin{figure}[h]
-	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+	\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
 		//uses priorityPriorityQueue 
 		//the priority based scheduling algorithm
 		static void priorityBased(void) {
@@ -186,7 +186,7 @@ The implementation of the Priority-Based scheduling algorithm is found in \Cref{
 \label{SRT}
 
 \begin{figure}[h]
-	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+	\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
 		//uses priorityBurstQueue 
 		//the shortest time remaining scheduling algorithm
 		static void shortestRemainingTime(void) {
@@ -237,7 +237,7 @@ The implementation of the Shortest Time Remaining scheduling algorithm is found 
 \label{HRRN}
 
 \begin{figure}[h]
-	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+	\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
 		//the highest response ratio next scheduling algorithm
 		static void highestResponseRatioNext(void) {
 			transferProcesses(NORMAL);
@@ -283,7 +283,7 @@ The implementation of the Highest Response Ratio Next scheduling algorithm is fo
 \label{FCFS}
 
 \begin{figure}[h!]
-	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+	\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
 		//The first come first serve scheduling algorithm
 		static void firstComeFirstServe(void) {
 			while (Ready_Queue->next != 0) {
@@ -319,7 +319,7 @@ The implementation of the First Come First Serve scheduling algorithm is found i
 \label{SPN}
 
  \begin{figure}[h]
- 	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+ 	\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
  		//uses priorityBurstQueue 
  		//the shortest process next scheduling algorithm
  		static void shortestProcessNext(void) {
@@ -356,7 +356,7 @@ The implementation of the Shortest Process Next scheduling algorithm is found in
 \label{FBS}
 
 \begin{figure}[h]
-	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+	\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
 		//the feedback scheduling algorithm
 		static void feedBack(void) {
 			Queue* feedBack_Q2 = init_FeedBack_Queue(MAX_PROCESSES);
@@ -409,7 +409,7 @@ The implementation of the Feed Back scheduling algorithm is found in \Cref{FBS-i
 \label{cont-sw}
 
 \begin{figure}[h!]
-	\begin{lstlisting}[language=MyC, escapechar=\%, numbers=none]
+	\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
 		//Switches from one process to another
 		static void context_switch(int queue_type, bool needTransition) {
 			Process curr = Running_Queue->PCB[0];

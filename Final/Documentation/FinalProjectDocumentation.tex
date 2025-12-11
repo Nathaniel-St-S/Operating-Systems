@@ -33,7 +33,7 @@
 \usepackage{bm}
 \usepackage[dvipsnames]{xcolor}
 
-%\usepackage[outputdir]{minted}
+%\usepackage[outputdir]{lstlisting}
 %\usepackage{fontspec}
 %\setmonofont{JetBrainsMono Nerd Font}[
 %    Scale=MatchLowercase
@@ -66,7 +66,7 @@
 \newcommand{\C}{\texttt{C}}
 \newcommand{\N}{\texttt{n}}
 \newcommand{\os}{\texttt{OS}}
-
+\newcommand{\Update}{\textcolor{red}{\large{needs Updating!!}}}
 
 
 \begin{document}
@@ -115,17 +115,17 @@ Eventually, this project aims to deepen your understanding of system-level progr
 \end{itemize}
 
 
-\section{Key Concepts and Features}
-
-\subsection{Project 1}
-
-\subsection{Project 2}
-
-\subsection{Project 3}
-Wasn't Assigned
-
-\subsection{Project 4}
-Wasn't Assigned
+%\section{Key Concepts and Features}
+%
+%\subsection{Project 1}
+%
+%\subsection{Project 2}
+%
+%\subsection{Project 3}
+%Wasn't Assigned
+%
+%\subsection{Project 4}
+%Wasn't Assigned
 
 \pagebreak
 
@@ -140,23 +140,17 @@ Wasn't Assigned
 \subsubsection{Core CPU Components and Registers}
 \include{ISA-Spec}
 
-\subsubsection{Process Control Block}
 
-
-\subsubsection{Fetch-Decode-Execute Cycle}
-
-
-\pagebreak
 \include{Memory-Spec}
 
-\pagebreak
+
 %%%\section{Module 3: Process Scheduling and Context Switching}
 \include{Process-Spec}
 
-\pagebreak
+
 \include{Interrupts-Spec}
 
-\pagebreak
+
 \include{OS-Performance}
 
 
@@ -164,7 +158,9 @@ Wasn't Assigned
 
 \pagebreak
 \section{The Simulation}
-\label{simulation}
+\Update{}
+\include{Simulation}
+
 
 \pagebreak
 \section{Testing and Debugging}

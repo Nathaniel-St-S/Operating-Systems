@@ -1,13 +1,300 @@
 \section{Module 2: Advanced Memory Management}
 \label{Memory-Spec}
 
+\Update{}
+
 \subsection{Problem Statement}
 \label{PS-m2}
+The objective of this module is to enhance the existing memory management system by implementing a hierarchical memory architecture consisting of main memory (RAM) and two levels of cache (L1 and L2).
+%
+This design aims to simulate realistic memory behavior, where data is accessed through progressively slower layers of storage, improving efficiency through caching frequently used data.
+%
+Additionally, a Memory Table will be introduced to track memory allocation and availability for each process, ensuring proper management of system resources.
+%
+The module will support dynamic memory allocation and deallocation, allowing processes to request and release memory as needed using strategies such as First-Fit or Best-Fit.
+%
+Through these implementations, the system will demonstrate efficient memory utilization, process-level memory tracking, and realistic cache behavior for multi-process and multithreaded environments.
 
 \subsection{Implementation}
 \label{IMP-m2}
 \subsubsection{Hierarchical Memory System}
+To simulate a hierarchical memory system, we implemented the RAM as an array of \texttt{word} and the L1 and L2 caches are structures: 
+
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	typedef struct
+	{
+		Entry* items;
+		int front;
+		int count;
+		int size;
+	} Cache;
+\end{lstlisting}
+%
+where \texttt{Entry} is a structure: 
+%
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	typedef struct
+	{
+		word val;
+		mem_addr addr;
+	} Entry;
+\end{lstlisting}
+
+The two main functions for this module is \texttt{read\textunderscore{}mem} and \texttt{write\textunderscore{}mem}. 
+%
+The former takes in as input a memory and returns the value at that address.
+%
+It first checks the L1 cache, then the L2 cache, then finally the RAM.
+%
+It also updates the hit/miss stats for the different caches.
+%
+The latter takes a memory address and a value and writes that value at the given memory address.
+%
+These are the core operations used to fetch and store information from the CPU to the main memory and vice versa.
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	//return the value at the given memory address
+	word read_mem(const mem_addr addr)
+	{
+		int index;
+		index = cache_search(&L1, addr);
+		if(index != EMPTY_ADDR)
+		{
+			//Cache hit at L1
+			L1cache_hit++;
+			return L1.items[index].val;
+		}
+		
+		//cache miss at L1
+		L1cache_miss++;
+		
+		index = cache_search(&L2, addr);
+		if(index != EMPTY_ADDR)
+		{
+			//Cache hit at l2
+			L2cache_hit++;
+			word val = L2.items[index].val;
+			//Update L1 cache to prevent future cache misses
+			update_cache(&L1, addr, val);
+			return val;
+		}
+		
+		//Cache miss at L2
+		L2cache_miss++;
+		
+		//Complete cache miss, so read RAM and update cache
+		word val = RAM[addr];
+		update_cache(&L1, addr, val);
+		update_cache(&L2, addr, val);
+		return val;
+	}
+	
+	//write the given value to the given memory address.
+	void write_mem(const mem_addr addr, const word val)
+	{
+		RAM[addr] = val;
+		
+		int index;
+		
+		//Update L1 Cache
+		index = cache_search(&L1, addr);
+		if(index != EMPTY_ADDR)
+		{
+			L1.items[index].val = val;
+		}
+		
+		//Update L2 Cache
+		index = cache_search(&L2, addr);
+		if(index != EMPTY_ADDR)
+		{
+			L2.items[index].val = val;
+		}
+	}
+\end{lstlisting}
+%
+The helper functions \texttt{cache\textunderscore{}search} and \texttt{update\textunderscore{}cache} are used to manage interfacing with the caches.
+%
+The former checks if the data can be found in the cache and if so returns the index.
+%
+The latter inserts data into the cache following the interface of a double ended queue.
+%
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	//find the address of the value if it exists in cache
+	int cache_search(Cache* cache, const mem_addr addr)
+	{
+		for(int i = 0; i < cache->size; i++)
+		{
+			//the address we want was found in cache
+			//so return the index of that address
+			if(cache->items[i].addr == addr)
+			{
+				return i;
+			}
+		}
+		//address not found so return signifier
+		return EMPTY_ADDR;
+	}
+	
+	//Update the given cache in case of misses
+	void update_cache(Cache* cache, const mem_addr addr, const word val)
+	{
+		//calculate where in the cache to store the value
+		int index = (cache->front + cache->count) % cache->size;
+		cache->items[index].addr = addr;
+		cache->items[index].val = val;
+		
+		//update the size and count of the cache
+		if(cache->count < cache->size)
+		{
+			//cache isn't full so we can just put the new
+			//value in the next index in the cache
+			cache->count++;
+		}
+		else
+		{
+			//cache is full, so loop around to put the new
+			//value at the front
+			cache->front = (cache->front + 1) % cache->size;
+		}
+	}
+\end{lstlisting}
 
 \subsubsection{Memory Table}
-
+We implement our Memory Table as a structure containing an array of memory blocks and a count.
+%
+Each memory block contains the ID of the process it belongs to, the starting address in memory, the ending address in memory, and a flag for if that block is free.
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	typedef struct {
+		int pid;
+		dword start_addr;
+		dword end_addr;
+		bool is_free;
+	} MemoryBlock;
+	
+	typedef struct
+	{
+		MemoryBlock *blocks;
+		int block_count;
+	} MemoryTable;
+	
+	void init_memtable(const int size)
+	{
+		//make the first entry into the table one large free block of memory
+		MEMORY_TABLE.blocks = (MemoryBlock*)malloc(sizeof(MemoryBlock) * size);
+		MEMORY_TABLE.blocks[0].pid = NO_PID;
+		MEMORY_TABLE.blocks[0].is_free = true;
+		MEMORY_TABLE.blocks[0].start_addr = 0;
+		MEMORY_TABLE.blocks[0].end_addr = (size - 1);
+		
+		MEMORY_TABLE.block_count = 1;
+		printf("initialized memory table with size %d \n" , size);
+	}
+\end{lstlisting}
 \subsubsection{Dynamic Memory Allocation and Deallocation}
+We use the best fit method to dynamically allocate memory.
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	// allocate memory for a specific process
+	// using the best fit method
+	dword mallocate(int pid, int size)
+	{
+		int best_size = WRS + 1;
+		int index = -1;
+		
+		for(int i = 0; i < MEMORY_TABLE.block_count; i++)
+		{
+			if (MEMORY_TABLE.blocks[i].is_free)
+			{
+				int mem_block_size = (MEMORY_TABLE.blocks[i].end_addr - MEMORY_TABLE.blocks[i].start_addr) + 1;
+				if(mem_block_size >= size && mem_block_size < best_size)
+				{
+					best_size = mem_block_size;
+					index = i;
+				}
+			}
+		}
+		
+		//No memory free so ...idk
+		if(index == -1)
+		{
+			printf("Could not fullfill process(PID %d)'s request for a (%d byte) chunk of memory: Not Enough Free Space\n", pid, size);
+			return -1;
+		}
+		
+		//Modify the free space to house our process
+		//@david Boo! spooky mutation ~~ooooh~~
+		MemoryBlock* best_fit = &MEMORY_TABLE.blocks[index];
+		
+		//save the old start and end addresses
+		dword old_start_addr = best_fit->start_addr;
+		dword old_end_addr = best_fit->end_addr;
+		
+		dword new_end_addr = (old_start_addr + size) - 1;
+		
+		//give the process the space
+		best_fit->pid = pid;
+		best_fit->is_free = false;
+		best_fit->end_addr = new_end_addr;
+		
+		//cut down the size of the block
+		//to free up unused space
+		if(new_end_addr < old_end_addr)
+		{
+			//shift all the blocks to the right to make room
+			for(int i = MEMORY_TABLE.block_count; i > index + 1; i--)
+			{
+				MEMORY_TABLE.blocks[i] = MEMORY_TABLE.blocks[i - 1];
+			}
+			
+			MEMORY_TABLE.blocks[index +1].pid = NO_PID;
+			MEMORY_TABLE.blocks[index +1].is_free = true;
+			MEMORY_TABLE.blocks[index +1].start_addr = new_end_addr + 1;
+			MEMORY_TABLE.blocks[index +1].end_addr = old_end_addr;
+			
+			MEMORY_TABLE.block_count++;
+		}
+		
+		printf("Process (PID %d) given (%d bytes) of memory from [%d --> %d]\n", pid, size, best_fit->start_addr, best_fit->end_addr);
+		return best_fit->start_addr;
+	}
+	
+	// free up the memory block associated with the process
+	void liberate(int pid)
+	{
+		int index = 0;
+		for(index = 0; index < MEMORY_TABLE.block_count; index++)
+		{
+			if(MEMORY_TABLE.blocks[index].pid == pid && !MEMORY_TABLE.blocks[index].is_free)
+			{
+				MEMORY_TABLE.blocks[index].pid = NO_PID;
+				MEMORY_TABLE.blocks[index].is_free = true;
+				printf("Freed (PID %d) at memory [%d --> %d]\n", pid, MEMORY_TABLE.blocks[index].start_addr, MEMORY_TABLE.blocks[index].end_addr);
+				break;
+			}
+		}
+		//if the pid was not found
+		if(index == MEMORY_TABLE.block_count){return;}
+		
+		//merge newly freed block with the previous block if it's also free
+		if(index > 0 && MEMORY_TABLE.blocks[index - 1].is_free)
+		{
+			MEMORY_TABLE.blocks[index -1].end_addr = MEMORY_TABLE.blocks[index].end_addr;
+			//shift everything left to clean the gap
+			for(int i = index; i < MEMORY_TABLE.block_count - 1; i++)
+			{
+				MEMORY_TABLE.blocks[i] = MEMORY_TABLE.blocks[i + 1];
+			}
+			MEMORY_TABLE.block_count--;
+			index--;
+		}
+		
+		//merge with the next memory block if it's also free
+		if(index < MEMORY_TABLE.block_count - 1 && MEMORY_TABLE.blocks[index + 1].is_free)
+		{
+			MEMORY_TABLE.blocks[index].end_addr = MEMORY_TABLE.blocks[index + 1].end_addr;
+			//shift right to clean the gap
+			for(int i = index + 1; i < MEMORY_TABLE.block_count - 1; i++)
+			{
+				MEMORY_TABLE.blocks[i] = MEMORY_TABLE.blocks[i + 1];
+			}
+			MEMORY_TABLE.block_count--;
+	} }
+\end{lstlisting}
