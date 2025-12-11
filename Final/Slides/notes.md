@@ -3,9 +3,6 @@
 # Introduction
 
 # Module 1: Process Simulation
-- CPU Definition
-  - Registers
-- Process Control Block
 - Fetch-Decode-Execute Cycle
   - ISA
 

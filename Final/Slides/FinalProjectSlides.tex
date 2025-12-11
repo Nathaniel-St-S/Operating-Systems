@@ -140,18 +140,159 @@ enum {
 \end{lstlisting}
 \end{frame}
 
+\begin{frame}[fragile]{Process Control Block}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{9pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt
+]
+typedef struct {
+  int pid;
+  uint32_t pc;
+  ProcessState state;
+  int priority;
+  int burstTime, originalBurstTime;
+  float responseRatio;
 
+  Cpu cpu_state;
 
-\begin{frame}{CPU Registers}
-  % Registers
+  uint32_t text_start,  text_size;
+  uint32_t data_start,  data_size;
+  uint32_t stack_ptr;
+
+  // Performance tracking
+  int arrival_time;
+  int start_time;
+  int completion_time;
+  int waiting_time;
+  int response_time;
+  bool has_started;
+} Process;
+\end{lstlisting}
 \end{frame}
 
-\begin{frame}{Process Control Block}
-  % Process Control Block
+
+\begin{frame}{MIPS-I Subset 32-bit ISA Overview}
+\small
+
+\textbf{What this ISA is}
+\begin{itemize}
+  \item 32-bit load/store RISC ISA based closely on the original MIPS~I design.
+  \item All instructions are fixed 32 bits wide.
+\end{itemize}
+
+\medskip
+
+\textbf{Registers}
+\begin{itemize}
+  \item 32 general-purpose registers (GPRs), each 32 bits wide.
+  \item Special registers: \texttt{PC} (program counter), \texttt{HI}, \texttt{LO}.
+\end{itemize}
+
+\medskip
+
+\textbf{Instruction Formats}
+\begin{itemize}
+  \item Three formats: \textbf{R-type}, \textbf{I-type}, and \textbf{J-type}.
+  \item All instructions follow one of these three encodings.
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Fetch-Decode-Execute Cycle}
-  % Fetch-Decode-Execute Cycle
+\begin{frame}{Instruction Types}
+\scriptsize
+
+\textbf{R-Type Format}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+31--26 & 25--21 & 20--16 & 15--11 & 10--6 & 5--0 \\ \hline
+\texttt{opcode} & \texttt{rs} & \texttt{rt} & \texttt{rd} & \texttt{shamt} & \texttt{funct} \\ \hline
+6 bits & 5 bits & 5 bits & 5 bits & 5 bits & 6 bits \\ \hline
+\end{tabular}
+\end{center}
+
+\[
+\texttt{opcode} = 0 \text{ for all R-Type instructions}
+\]
+
+\vspace{0.4em}
+
+\textbf{I-Type Format}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+31--26 & 25--21 & 20--16 & 15--0 \\ \hline
+\texttt{opcode} & \texttt{rs} & \texttt{rt} & \texttt{immediate} \\ \hline
+6 bits & 5 bits & 5 bits & 16 bits \\ \hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+\footnotesize Immediate is sign-extended or zero-extended depending on the instruction.
+\end{center}
+
+\vspace{0.4em}
+
+\textbf{J-Type Format}
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+31--26 & 25--0 \\ \hline
+\texttt{opcode} & \texttt{target} \\ \hline
+6 bits & 26 bits \\ \hline
+\end{tabular}
+\end{center}
+
+\[
+\text{PC}_{\text{next}}
+= (\text{PC}_{\text{current}}[31{:}28] \ll 28)
+\;|\; (\texttt{target} \ll 2)
+\]
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]{Opcode and Funct Codes}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{6pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+enum { 
+  OP_ADD=0x0,  OP_ADDU=0x0, OP_SUB=0x0,  OP_SUBU=0x0,
+  OP_MULT=0x0, OP_MULTU=0x0, OP_DIV=0x0, OP_DIVU=0x0,
+  OP_MFHI=0x0, OP_MFLO=0x0, OP_MTHI=0x0, OP_MTLO=0x0,
+  OP_AND=0x0,  OP_OR=0x0,   OP_XOR=0x0,  OP_NOR=0x0,
+  OP_SLL=0x0,  OP_SRL=0x0,  OP_SRA=0x0,
+  OP_SLLV=0x0, OP_SRLV=0x0, OP_SRAV=0x0,
+
+  OP_ADDI=0x08,  OP_ADDIU=0x09, OP_ANDI=0x0C, OP_ORI=0x0D,
+  OP_XORI=0x0E, OP_SLTI=0x0A,   OP_SLTIU=0x0B, OP_LUI=0x0F,
+
+  OP_LW=0x23, OP_SW=0x2B, OP_LB=0x20, OP_LBU=0x24,
+  OP_LH=0x21, OP_LHU=0x25, OP_SB=0x28, OP_SH=0x29,
+
+  OP_BEQ=0x04, OP_BNE=0x05, OP_J=0x02, OP_JAL=0x03,
+  OP_JR=0x0,   OP_JALR=0x0, OP_SYSCALL=0x0, OP_BREAK=0x0,
+  OP_ERET=0x10
+};
+
+enum {
+  FUNCT_ADD=0x20, FUNCT_ADDU=0x21, FUNCT_SUB=0x22, FUNCT_SUBU=0x23,
+  FUNCT_MULT=0x18, FUNCT_MULTU=0x19, FUNCT_DIV=0x1A, FUNCT_DIVU=0x1B,
+  FUNCT_MFHI=0x10, FUNCT_MFLO=0x12, FUNCT_MTHI=0x11, FUNCT_MTLO=0x13,
+
+  FUNCT_AND=0x24, FUNCT_OR=0x25, FUNCT_XOR=0x26, FUNCT_NOR=0x27,
+  FUNCT_SLL=0x00, FUNCT_SRL=0x02, FUNCT_SRA=0x03,
+  FUNCT_SLLV=0x04, FUNCT_SRLV=0x06, FUNCT_SRAV=0x07,
+
+  FUNCT_JR=0x08, FUNCT_JALR=0x09,
+  FUNCT_SYSCALL=0x0C, FUNCT_BREAK=0x0D
+};
+\end{lstlisting}
 \end{frame}
 
 \begin{frame}{Instruction Set Architecture (ISA)}
