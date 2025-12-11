@@ -66,6 +66,7 @@
 \usepackage{fontspec}
 \setmonofont{JetBrainsMono Nerd Font}
 \usepackage{tikz}
+\usepackage{graphicx}
 
 
 % ---------------------------------------------------------
@@ -1240,28 +1241,64 @@ while (p->burstTime > 0 &&
 %================================================
 \section{Module 5: Efficiency Analysis of Scheduling Algorithms}
 %================================================
-
-\begin{frame}{Execution Time}
-  % Execution Time
+\begin{frame}{Avg Response Time Comparison}
+    \centering
+    \includegraphics[height=0.8\textheight]{../charts/comparison_AvgResponseTime.png}
 \end{frame}
 
-\begin{frame}{CPU Utilisation}
-  % CPU Utilisation
+\begin{frame}{Avg Turnaround Time Comparison}
+    \centering
+    \includegraphics[height=0.8\textheight]{../charts/comparison_AvgTurnaroundTime.png}
 \end{frame}
 
-\begin{frame}{Memory Utilisation}
-  % Memory Utilisation
+\begin{frame}{Avg Wait Time Comparison}
+    \centering
+    \includegraphics[height=0.8\textheight]{../charts/comparison_AvgWaitTime.png}
 \end{frame}
 
-\begin{frame}{Data Collection for Comparison}
-  % Data Collection for Comparison
+\begin{frame}{Context Switch Comparison}
+    \centering
+    \includegraphics[height=0.8\textheight]{../charts/comparison_ContextSwitches.png}
 \end{frame}
 
-\begin{frame}{Comparing Scheduling Algorithms}
-  % Compare scheduling algorithms
+\begin{frame}{CPU Utilization Comparison}
+    \centering
+    \includegraphics[height=0.8\textheight]{../charts/comparison_CPUUtilization.png}
 \end{frame}
 
-\begin{frame}{Graphs and Visualisation}
-  % Graphs
+\begin{frame}{L1 Cache: Hits vs Misses}
+  \centering
+  \begin{columns}[T,onlytextwidth]
+    \column{0.5\textwidth}
+      \centering
+      \textbf{L1 Cache Hits}\\[0.5em]
+      \includegraphics[width=\textwidth,height=0.7\textheight,keepaspectratio]{../charts/comparison_L1Hits.png}
+
+    \column{0.5\textwidth}
+      \centering
+      \textbf{L1 Cache Misses}\\[0.5em]
+      \includegraphics[width=\textwidth,height=0.7\textheight,keepaspectratio]{../charts/comparison_L1Misses.png}
+  \end{columns}
 \end{frame}
+
+\begin{frame}{L2 Cache: Hits vs Misses}
+  \centering
+  \begin{columns}[T,onlytextwidth]
+    \column{0.5\textwidth}
+      \centering
+      \textbf{L2 Cache Hits}\\[0.5em]
+      \includegraphics[width=\textwidth,height=0.7\textheight,keepaspectratio]{../charts/comparison_L2Hits.png}
+
+    \column{0.5\textwidth}
+      \centering
+      \textbf{L2 Cache Misses}\\[0.5em]
+      \includegraphics[width=\textwidth,height=0.7\textheight,keepaspectratio]{../charts/comparison_L2Misses.png}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Throughput Comparison}
+    \centering
+    \includegraphics[height=0.8\textheight]{../charts/comparison_Throughput.png}
+\end{frame}
+
 \end{document}
