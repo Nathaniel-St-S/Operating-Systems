@@ -263,6 +263,8 @@ static void handle_ascii(AssemblyContext *ctx, char *str, int null_terminate) {
 }
 
 static void handle_space(AssemblyContext *ctx, int bytes) {
+  // Align to 4 bytes for .space directives
+  align_data(ctx, 2);  // Add this line
   for (int i = 0; i < bytes && ctx->data_segment.size < MAX_DATA; i++) {
     ctx->data_segment.data[ctx->data_segment.size++] = 0;
   }
@@ -409,6 +411,34 @@ static int expand_pseudo(AssemblyContext *ctx, const char *op, char *operands,
     return 1;
   }
 
+  if ((strcmp(op, "lw") == 0 || strcmp(op, "sw") == 0 ||
+        strcmp(op, "lb") == 0 || strcmp(op, "sb") == 0 ||
+        strcmp(op, "lh") == 0 || strcmp(op, "sh") == 0 ||
+        strcmp(op, "lbu") == 0 || strcmp(op, "lhu") == 0) && argc == 2) {
+
+    // Check if second arg is a label (no parentheses)
+    if (strchr(args[1], '(') == NULL) {
+      // Label-based load/store: lw $rt, label
+      int label_addr = get_symbol_address(ctx, args[1]);
+      if (label_addr == -1) {
+        fprintf(stderr, "Warning: Undefined label '%s', using 0\n", args[1]);
+        label_addr = 0;
+      }
+
+      if (label_addr >= -32768 && label_addr <= 32767) {
+        // Address fits in 16-bit immediate: lw $rt, offset($zero)
+        sprintf(output[0], "%s %s, %d($zero)", op, args[0], label_addr);
+        return 1;
+      } else {
+        // Address requires lui/ori expansion
+        sprintf(output[0], "lui $at, %d", (label_addr >> 16) & 0xFFFF);
+        sprintf(output[1], "ori $at, $at, %d", label_addr & 0xFFFF);
+        sprintf(output[2], "%s %s, 0($at)", op, args[0]);
+        return 3;
+      }
+    }
+  }
+
   return 0;
 }
 
@@ -537,51 +567,79 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
       strcmp(op, "lb") == 0 || strcmp(op, "sb") == 0 ||
       strcmp(op, "lh") == 0 || strcmp(op, "sh") == 0 ||
       strcmp(op, "lbu") == 0 || strcmp(op, "lhu") == 0) {
-    char *rt = strtok_r(NULL, " \t,", &saveptr);
-    if (!rt) {
-      fprintf(stderr, "Error: Missing rt register for %s at PC 0x%08x\n", op, pc);
+
+    char operand_copy[MAX_LINE];
+    strncpy(operand_copy, rest, MAX_LINE - 1);
+    operand_copy[MAX_LINE - 1] = '\0';
+
+    // Check for label-based addressing: lw $rt, label
+    // vs offset-based: lw $rt, offset($rs)
+    char *comma = strchr(operand_copy, ',');
+    if (!comma) {
+      fprintf(stderr, "Error: Missing comma in %s at PC 0x%08x\n", op, pc);
       return 0;
     }
 
-    // Now parse "offset($rs)" or just "($rs)"
-    char *offset_part = strtok_r(NULL, "", &saveptr);  // Get rest of line
-    if (!offset_part) {
-      fprintf(stderr, "Error: Missing offset/base for %s at PC 0x%08x\n", op, pc);
+    *comma = '\0';
+    char *rt_str = operand_copy;
+    char *second_operand = comma + 1;
+
+    // Trim whitespace
+    while (*rt_str && isspace(*rt_str)) rt_str++;
+    while (*second_operand && isspace(*second_operand)) second_operand++;
+
+    // Check if second operand has parentheses (offset mode) or is a label
+    char *open_paren = strchr(second_operand, '(');
+
+    if (!open_paren) {
+      // LABEL MODE: lw $rt, label
+      // Translate to: lw $rt, 0(label_address_in_register)
+
+      int label_addr = get_symbol_address(ctx, second_operand);
+      if (label_addr == -1) {
+        fprintf(stderr, "Error: Undefined label '%s' for %s at PC 0x%08x\n", 
+            second_operand, op, pc);
+        return 0;
+      }
+
+      int rt_num = get_register(rt_str);
+      if (!validate_register_num(rt_num, rt_str, op, pc)) {
+        return 0;
+      }
+
+      // Use $zero as base, label address as offset
+      return assemble_i_type(op, rt_num, 0, (int16_t)label_addr);
+    }
+
+    // OFFSET MODE: lw $rt, offset($rs)
+    char *close_paren = strchr(second_operand, ')');
+
+    if (!close_paren) {
+      fprintf(stderr, "Error: Missing close paren in %s at PC 0x%08x\n", op, pc);
       return 0;
     }
 
-    // Trim leading whitespace
-    while (*offset_part && isspace((unsigned char)*offset_part)) offset_part++;
+    // Split offset and base
+    *open_paren = '\0';
+    *close_paren = '\0';
 
-    char *paren_open = strchr(offset_part, '(');
-    char *paren_close = strchr(offset_part, ')');
+    char *offset_str = second_operand;
+    char *rs_str = open_paren + 1;
 
-    if (!paren_open || !paren_close) {
-      fprintf(stderr, "Error: Invalid memory operand syntax for %s at PC 0x%08x\n", op, pc);
-      return 0;
-    }
+    // Trim
+    while (*offset_str && isspace(*offset_str)) offset_str++;
+    while (*rs_str && isspace(*rs_str)) rs_str++;
 
-    // Extract offset (everything before '(')
-    *paren_open = '\0';
-    char *offset_str = offset_part;
-
-    // Extract base register (between '(' and ')')
-    *paren_close = '\0';
-    char *rs_str = paren_open + 1;
-
-    int rt_num = get_register(rt);
+    // Parse registers and offset
+    int rt_num = get_register(rt_str);
     int rs_num = get_register(rs_str);
-    int16_t offset = 0;
+    int16_t offset = (offset_str && *offset_str) ? (int16_t)parse_num(offset_str) : 0;
 
-    // Handle empty offset (means 0)
-    if (offset_str && *offset_str) {
-      offset = (int16_t)parse_num(offset_str);
-    }
-
-    if (!validate_register_num(rt_num, rt, op, pc) ||
+    if (!validate_register_num(rt_num, rt_str, op, pc) ||
         !validate_register_num(rs_num, rs_str, op, pc)) {
       return 0;
     }
+
     return assemble_i_type(op, rt_num, rs_num, offset);
   }
 
@@ -888,7 +946,7 @@ AssemblyResult assemble(const char *filename, int process_id) {
   result.program->text_size = ctx.text_count * 4;
   result.program->data_start = ctx.allocated_data_addr;  // ACTUAL allocated address
   result.program->data_size = ctx.data_segment.size;
-  uint32_t stack_size = 4096; // 4KB stack
+  uint32_t stack_size = 8192; // 8KB stack
   uint32_t stack_addr = mallocate(process_id, stack_size);
   if (stack_addr == UINT32_MAX) {
     fprintf(stderr, "Failed to allocate stack for PID %d\n", process_id);
@@ -897,7 +955,7 @@ AssemblyResult assemble(const char *filename, int process_id) {
     result.program = NULL;
     return result;
   }
-  result.program->stack_ptr = stack_addr + stack_size - 4;
+  result.program->stack_ptr = stack_addr + stack_size - 16;
   result.program->globl_ptr = ctx.allocated_data_addr;
 
   // Find entry point

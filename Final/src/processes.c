@@ -462,11 +462,13 @@ uint32_t makeProcess(int pID,
   
   if (process_storage_index >= MAX_PROCESSES) {
     fprintf(stderr, "makeProcess: Too many processes (max %d)\n", MAX_PROCESSES);
+    exit(EXIT_FAILURE);
     return UINT32_MAX;
   }
 
   if (text_start == UINT32_MAX) {
     fprintf(stderr, "makeProcess: Invalid text_start address for PID %d\n", pID);
+    exit(EXIT_FAILURE);
     return UINT32_MAX;
   }
 
@@ -521,6 +523,11 @@ uint32_t makeProcess(int pID,
 //-------------------------------------Scheduling Algorithms-------------------------------------//
 
 static void roundRobin(void) {
+  // Clear any pending input
+  int c;
+  while ((c = getchar()) != EOF && c != '\n');
+  clearerr(stdin);
+
   PerfTimer timer;
   
   g_system_time = 0;
@@ -565,9 +572,7 @@ static void roundRobin(void) {
         if (THE_CPU.hw_registers[PC] == CPU_HALT) break;
         fetch();
         execute();
-        if (p->burstTime > 0) {
-          p->burstTime--;
-        }
+        p->burstTime--;
         g_system_time++;
       }
     }

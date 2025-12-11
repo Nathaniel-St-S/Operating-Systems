@@ -362,8 +362,13 @@ static void systemcall() {
       if (scanf("%d", &x) == 1)
         write_gpr(REG_V0, (uint32_t)x);
       else
+      {// EOF or invalid input - clear and return 0
+        clearerr(stdin);
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
         write_gpr(REG_V0, 0);
-    break;
+      }
+      break;
     }
     case 10: {  // exit
       THE_CPU.hw_registers[PC] = CPU_HALT;
@@ -373,25 +378,27 @@ static void systemcall() {
       // ANSI clear + cursor home
       printf("\033[2J\033[H");
       fflush(stdout);
-    break;
+      break;
     }
     case 12: {  // read_char_nb
-      struct termios oldt, newt;
-      tcgetattr(STDIN_FILENO, &oldt);
-      newt = oldt;
-
-      newt.c_lflag &= ~(ICANON | ECHO);
-      newt.c_cc[VTIME] = 0;  // no timeout
-      newt.c_cc[VMIN] = 0;   // non-blocking
-
+      static struct termios oldt, newt;
+      static bool terminal_configured = false;
+    
+      if (!terminal_configured) {
+        tcgetattr(STDIN_FILENO, &oldt);
+        newt = oldt;
+        newt.c_lflag &= ~(ICANON | ECHO);
+        newt.c_cc[VTIME] = 0;
+        newt.c_cc[VMIN] = 0;
+        terminal_configured = true;
+      }
+    
       tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-      int ch = getchar();   // non-blocking now
-      if (ch == EOF)
-          ch = 0;           // no key pressed → return 0
-
+      int ch = getchar();
       tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-
+    
+      if (ch == EOF) ch = 0;
+    
       write_gpr(REG_V0, (uint32_t)ch);
       break;
     }
@@ -406,7 +413,7 @@ static void systemcall() {
         // If interrupted by signal, nanosleep updates ts
         continue;
       }
-    break;
+      break;
     }
     case 14: {  // get_time_ms
       struct timeval tv;
