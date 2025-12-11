@@ -36,7 +36,7 @@
 \setbeamerfont{frametitle}{size=\large,series=\bfseries}
 
 % Section titles
-\setbeamercolor{section title}{fg=Nord8}
+\setbeamercolor{section title}{fg=Nord11}
 
 % Itemize
 \setbeamercolor{itemize item}{fg=Nord9}
@@ -63,6 +63,8 @@
 \definecolor{vscPreproc}{RGB}{198,120,221}
 \definecolor{neonfuchsia}{RGB}{254, 89, 194}
 \input{C-lstlisting}
+\usepackage{fontspec}
+\setmonofont{JetBrainsMono Nerd Font}
 
 
 % ---------------------------------------------------------
@@ -78,7 +80,16 @@
 % Document
 % ---------------------------------------------------------
 \begin{document}
-
+\AtBeginSection[]
+{
+  \begin{frame}
+    \centering
+    {%
+      \hypersetup{hidelinks}%
+      {\usebeamercolor[fg]{section title}\Huge\insertsection}%
+    }
+  \end{frame}
+}
 % ---------- TITLE SLIDE ----------
 {
 \setbeamercolor{title}{fg=Nord8}
@@ -92,210 +103,172 @@
     \tableofcontents
 \end{frame}
 
-% ========= 1. INTRO =========
-\section{Introduction}
-
-\begin{frame}{Project Overview}
-    \begin{itemize}
-        \item Advanced OS simulator in C that assembles multiple MIPS-like programs, loads them into isolated text/data/stack regions, and schedules them under different policies.
-        \item End-to-end pipeline: parse CLI options (\texttt{main.c}), assemble programs, allocate memory with selectable cache policy, create PCBs, then run the chosen scheduler.
-        \item Metrics captured per algorithm: waiting/turnaround/response time, context switches, CPU utilization, cache stats, and CSV exports for charting.
-    \end{itemize}
-\end{frame}
-
-% ========= 2. ARCHITECTURE =========
-\section{Simulator Architecture}
-
-\begin{frame}{High-Level Architecture}
-    \begin{itemize}
-        \item \textbf{Execution pipeline}: \texttt{main.c} parses flags (scheduler + cache policy), assembles programs, calls \texttt{init\_memory}/\texttt{init\_queues}, builds PCBs with \texttt{makeProcess()}, then invokes \texttt{scheduler()}.
-        \item \textbf{CPU + ISA}: fetch/execute loop in \texttt{cpu.c}/\texttt{isa.c} drives instructions from RAM; register files are plain arrays for GP/HW regs and FLAGS.
-        \item \textbf{Memory system}: 128\,MB RAM backed by 64\,B L1 and 128\,B L2 caches (64\,B lines), plus SSD/HDD buffers; runtime switchable between write-through and write-back.
-        \item \textbf{Scheduling layer}: ready/running/blocked queues feed FCFS, RR, Priority, SRT, SPN, HRRN, and MLFQ; scheduler swaps \texttt{THE\_CPU} state between PCBs and logs performance metrics.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}[fragile]{Core Data Structures}
-    \begin{itemize}
-        \item \textbf{PCB (\texttt{Process} in \texttt{processes.c})}: tracks PID, PC, priority/burst estimates, response ratio, full CPU register snapshot, text/data/stack bounds, and timing stats for reporting.
-    \end{itemize}
-\vspace{0.4em}
-\begin{lstlisting}[language=MyC]
-typedef struct {
-  int pid;
-  uint32_t pc;
-  ProcessState state;
-  int priority, burstTime, originalBurstTime;
-  float responseRatio;
-  Cpu cpu_state;
-  uint32_t text_start, text_size;
-  uint32_t data_start, data_size;
-  uint32_t stack_ptr;
-  int arrival_time, start_time;
-  int completion_time, waiting_time, response_time;
-  bool has_started;
-} Process;
-\end{lstlisting}
-\vspace{0.4em}
-    \begin{itemize}
-        \item \textbf{Queues}: each ready/blocked/suspend queue is a fixed-capacity \texttt{Queue} with an in-place PCB array; priority and burst-based heaps are used for SPN/SRT/Priority.
-        \item \textbf{Memory metadata}: \texttt{CacheLine} (tag/valid/dirty + 64\,B payload) powers L1/L2, while \texttt{MemoryBlock}/\texttt{MemoryTable} track best-fit allocations per PID with 1\,MB virtual spacing.
-        \item \textbf{Performance tracker}: \texttt{PerformanceMetrics} aggregates per-algorithm latency stats, cache hits/misses, context-switch timings, and exports comparison CSVs.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}[fragile]{Instruction Set \& Syscalls}
-    \begin{itemize}
-        \item MIPS-like ISA with R/I/J formats: arithmetic (add/sub/mult/div), logic (and/or/xor/nor), shifts, compare (\texttt{slti/sltiu}), branches (\texttt{beq/bne}), jumps (\texttt{j/jal/jr/jalr}).
-        \item Memory ops: byte/half/word loads with sign/zero extend (\texttt{lb/lbu/lh/lhu/lw}) and stores (\texttt{sb/sh/sw}) routed through cache-backed \texttt{read\_*/write\_*}.
-        \item Trap instructions: \texttt{syscall} handles I/O/exit; \texttt{break} halts; \texttt{eret} reserved (stubbed).
-    \end{itemize}
-\end{frame}
-
-% ========= 3. MODULE 1 =========
+%================================================
 \section{Module 1: Process Simulation}
+%================================================
 
-\begin{frame}{CPU Model \& Registers}
-    \begin{itemize}
-        \item Implemented registers: PC, ACC, IR, Status Register.
-        \item Fetch–Decode–Execute cycle in the simulator.
-        \item How you represent instructions (e.g., struct, enum, opcodes).
-    \end{itemize}
+\begin{frame}[fragile]{CPU Definition}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{9pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt
+]
+typedef struct Cpu {
+  uint32_t gp_registers[GP_REG_COUNT];
+  uint32_t hw_registers[HW_REG_COUNT];
+} Cpu;
+
+// General Purpose Registers
+enum {
+  REG_ZERO, REG_AT, REG_VO, REG_V1,
+  REG_A0, REG_A1, REG_A2, REG_A3,
+  REG_T0, REG_T1, REG_T2, REG_T3, REG_T4, REG_T5, REG_T6, REG_T7,
+  REG_S0, REG_S1, REG_S2, REG_S3, REG_S4, REG_S5, REG_S6, REG_S7,
+  REG_T8, REG_T9, REG_K0, REG_K1,
+  REG_GP, REG_SP, REG_FP, REG_RA,
+  GP_REG_COUNT,
+};
+
+// Hardware Registers
+enum {
+  PC, IR, MAR, MBR,
+  IO_AR, IO_BR,
+  FLAGS, HI, LO,
+  HW_REG_COUNT,
+};
+\end{lstlisting}
 \end{frame}
 
-\begin{frame}{Process Control Block \& States}
-    \begin{itemize}
-        \item PCB fields and why they are needed.
-        \item Process states: READY, RUNNING, BLOCKED (and FINISHED if used).
-        \item Example: life cycle of a process in your simulator.
-    \end{itemize}
+
+
+\begin{frame}{CPU Registers}
+  % Registers
 \end{frame}
 
-% ========= 4. MODULE 2 =========
+\begin{frame}{Process Control Block}
+  % Process Control Block
+\end{frame}
+
+\begin{frame}{Fetch-Decode-Execute Cycle}
+  % Fetch-Decode-Execute Cycle
+\end{frame}
+
+\begin{frame}{Instruction Set Architecture (ISA)}
+  % ISA
+\end{frame}
+
+%------------------------------------------------
 \section{Module 2: Memory Management}
+%------------------------------------------------
 
-\begin{frame}{Memory Hierarchy Design}
-    \begin{itemize}
-        \item L1 cache: size, role, typical hit rate (if measured).
-        \item L2 cache: relation to L1 and RAM.
-        \item RAM layout for processes and code/data.
-    \end{itemize}
+\begin{frame}{Memory Hierarchy}
+  % L1, L2, RAM, Disk
 \end{frame}
 
-\begin{frame}{Memory Table \& Allocation}
-    \begin{itemize}
-        \item Structure of the memory table.
-        \item Implemented strategies: First-Fit, Best-Fit.
-        \item Example allocation / deallocation scenario.
-    \end{itemize}
+\begin{frame}{Cache Lookup}
+  % Cache Lookup
 \end{frame}
 
 \begin{frame}{Cache Policies}
-    \begin{itemize}
-        \item Read path: L1 → L2 → RAM.
-        \item Write-through vs write-back (which you implemented / compared).
-        \item Any interesting cache hit/miss behavior you observed.
-    \end{itemize}
+  % Write through and write back
 \end{frame}
 
-% ========= 5. MODULE 3 =========
-\section{Module 3: Scheduling \& Context Switching}
-
-\begin{frame}{Implemented Scheduling Algorithms}
-    \begin{itemize}
-        \item FCFS, Round Robin, Priority-based.
-        \item Shortest Remaining Time (SRT), SPN, HRRN.
-        \item Feedback (multi-level queue) scheduling.
-    \end{itemize}
+\begin{frame}{Memory Table}
+  % Memory Table
 \end{frame}
 
-\begin{frame}{Context Switching \& Integration}
-    \begin{itemize}
-        \item \texttt{contextSwitch(from, to)}: what gets saved and restored.
-        \item Integration with fetch–decode–execute cycle (time slice checks, preemption).
-        \item Handling CPU-bound vs I/O-bound processes.
-    \end{itemize}
+\begin{frame}{Memory Allocation}
+  % Allocation
 \end{frame}
 
-% ========= 6. MODULE 4 =========
-\section{Module 4: Interrupt Handling}
-
-\begin{frame}{Interrupt Types \& IVT}
-    \begin{itemize}
-        \item Timer, I/O, System Call, Trap interrupts.
-        \item Structure of the Interrupt Vector Table.
-        \item How an interrupt is detected in the simulator.
-    \end{itemize}
+\begin{frame}{Memory Deallocation}
+  % Deallocation
 \end{frame}
 
-\begin{frame}{ISRs \& Dispatcher}
-    \begin{itemize}
-        \item Steps inside an ISR: save state, handle event, signal scheduler.
-        \item Dispatcher role after an interrupt: choosing next process.
-        \item Example: timer interrupt causing a context switch.
-    \end{itemize}
+%================================================
+\section{Module 3: Process Scheduling and Context Switching}
+%================================================
+
+\subsection{Scheduling Algorithms}
+
+\begin{frame}{Round Robin}
+  % Round Robin
 \end{frame}
 
-% ========= 7. MODULE 5 =========
-\section{Module 5: Performance Analysis}
-
-\begin{frame}{Metrics and Workloads}
-    \begin{itemize}
-        \item Metrics: execution time, average waiting time, turnaround time.
-        \item CPU utilization and (optionally) memory/cache utilization.
-        \item Workloads: CPU-bound, I/O-bound, mixed; sample process set.
-    \end{itemize}
+\begin{frame}{Priority Based Scheduling}
+  % Priority Based Scheduling
 \end{frame}
 
-\begin{frame}{Scheduling Results (Table)}
-    \begin{itemize}
-        \item Present table: Algorithm vs Avg Waiting Time vs Avg Turnaround vs CPU usage.
-        \item Highlight a couple of key numbers (best/worst algorithms).
-        \item Mention how measurements were obtained (e.g., \texttt{clock()}).
-    \end{itemize}
-    % Insert screenshot or table here
+\begin{frame}{Shortest Remaining Time}
+  % Shortest Remaining Time
 \end{frame}
 
-\begin{frame}{Graphs \& Observations}
-    \begin{itemize}
-        \item Bar/line charts comparing algorithms (waiting time, turnaround).
-        \item Which algorithm works best for CPU-bound vs I/O-bound vs mixed.
-        \item Trade-offs: fairness vs response time vs complexity.
-    \end{itemize}
+\begin{frame}{Highest Response Ratio Next}
+  % Highest Response Ratio Next
 \end{frame}
 
-% ========= 8. DEMO PLAN =========
-\section{Live Demo}
-
-\begin{frame}{Demo Scenario}
-    \begin{itemize}
-        \item Input: small set of processes (arrival, burst, priority).
-        \item Show: scheduler switching, context switch messages, interrupt events.
-        \item What you want the professor to notice in the demo (e.g., differences between algorithms).
-    \end{itemize}
+\begin{frame}{First-Come First-Served (FCFS)}
+  % FCFS
 \end{frame}
 
-% ========= 9. CONCLUSION =========
-\section{Conclusion}
-
-\begin{frame}{Challenges \& Debugging}
-    \begin{itemize}
-        \item Major bugs/issues you faced (race conditions, incorrect metrics, etc.).
-        \item How you tested and validated correctness.
-    \end{itemize}
+\begin{frame}{Shortest Process Next}
+  % Shortest Process Next
 \end{frame}
 
-\begin{frame}{Key Learnings \& Future Work}
-    \begin{itemize}
-        \item What you learned about OS internals and system-level programming.
-        \item Limitations of the current simulator.
-        \item Possible extensions (e.g., more realistic I/O, threads, new policies).
-    \end{itemize}
+\begin{frame}{Feedback Scheduling Algorithm}
+  % Feedback Scheduling Algorithm
 \end{frame}
 
-\begin{frame}{Q \& A}
-    \centering
-    \Large Questions?
+\begin{frame}{Context Switching}
+  % Context Switching
 \end{frame}
 
+\begin{frame}{Integration with Fetch-Decode-Execute}
+  % Integration with Fetch-Decode-Execute
+\end{frame}
+
+%================================================
+\section{Module 4: Enhanced Interrupt Handling}
+%================================================
+
+\begin{frame}{Interrupts}
+  % Interrupts
+\end{frame}
+
+\begin{frame}{Interrupt Vector Table (IVT)}
+  % Interrupt Vector Table (IVT)
+\end{frame}
+
+\begin{frame}{Interrupt Handlers and Dispatcher}
+  % Interrupt Handlers and Dispatcher
+\end{frame}
+
+%================================================
+\section{Module 5: Efficiency Analysis of Scheduling Algorithms}
+%================================================
+
+\begin{frame}{Execution Time}
+  % Execution Time
+\end{frame}
+
+\begin{frame}{CPU Utilisation}
+  % CPU Utilisation
+\end{frame}
+
+\begin{frame}{Memory Utilisation}
+  % Memory Utilisation
+\end{frame}
+
+\begin{frame}{Data Collection for Comparison}
+  % Data Collection for Comparison
+\end{frame}
+
+\begin{frame}{Comparing Scheduling Algorithms}
+  % Compare scheduling algorithms
+\end{frame}
+
+\begin{frame}{Graphs and Visualisation}
+  % Graphs
+\end{frame}
 \end{document}
