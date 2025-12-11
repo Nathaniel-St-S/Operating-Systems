@@ -558,16 +558,16 @@ MemoryTable MEMORY_TABLE;
   belowskip=0pt,
 ]
 int cache_search(Cache* cache, const dword addr, int* hit_counter, int* miss_counter) {
-	for(int i = 0; i < cache->size; i++) {
-		// The address we want was found in cache so return the index of that address
-		if(cache->items[i].addr == addr) {
+  for (int i = 0; i < cache->size; i++) {
+    // The address we want was found in cache so return the index of that address
+    if(cache->items[i].addr == addr) {
       (*hit_counter)++;
-			return i;
-		}
-	}
-	// Address not found so return signifier
+      return i;
+    }
+  }
+  // Address not found so return signifier
   (*miss_counter)++;
-	return EMPTY_ADDR;
+  return EMPTY_ADDR;
 }
 // Searches the L1 cache and updates it's hit/miss counters
 static int L1_cache_search(const dword addr) {
