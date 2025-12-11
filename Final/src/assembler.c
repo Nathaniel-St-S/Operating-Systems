@@ -537,16 +537,52 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
       strcmp(op, "lb") == 0 || strcmp(op, "sb") == 0 ||
       strcmp(op, "lh") == 0 || strcmp(op, "sh") == 0 ||
       strcmp(op, "lbu") == 0 || strcmp(op, "lhu") == 0) {
-    char *rt = strtok_r(NULL, " \t,()", &saveptr);
-    char *offset = strtok_r(NULL, " \t,()", &saveptr);
-    char *rs = strtok_r(NULL, " \t,()", &saveptr);
-    int rt_num = get_register(rt);
-    int rs_num = get_register(rs);
-    if (!validate_register_num(rt_num, rt, op, pc) ||
-        !validate_register_num(rs_num, rs, op, pc)) {
+    char *rt = strtok_r(NULL, " \t,", &saveptr);
+    if (!rt) {
+      fprintf(stderr, "Error: Missing rt register for %s at PC 0x%08x\n", op, pc);
       return 0;
     }
-    return assemble_i_type(op, rt_num, rs_num, (int16_t)parse_num(offset));
+
+    // Now parse "offset($rs)" or just "($rs)"
+    char *offset_part = strtok_r(NULL, "", &saveptr);  // Get rest of line
+    if (!offset_part) {
+      fprintf(stderr, "Error: Missing offset/base for %s at PC 0x%08x\n", op, pc);
+      return 0;
+    }
+
+    // Trim leading whitespace
+    while (*offset_part && isspace((unsigned char)*offset_part)) offset_part++;
+
+    char *paren_open = strchr(offset_part, '(');
+    char *paren_close = strchr(offset_part, ')');
+
+    if (!paren_open || !paren_close) {
+      fprintf(stderr, "Error: Invalid memory operand syntax for %s at PC 0x%08x\n", op, pc);
+      return 0;
+    }
+
+    // Extract offset (everything before '(')
+    *paren_open = '\0';
+    char *offset_str = offset_part;
+
+    // Extract base register (between '(' and ')')
+    *paren_close = '\0';
+    char *rs_str = paren_open + 1;
+
+    int rt_num = get_register(rt);
+    int rs_num = get_register(rs_str);
+    int16_t offset = 0;
+
+    // Handle empty offset (means 0)
+    if (offset_str && *offset_str) {
+      offset = (int16_t)parse_num(offset_str);
+    }
+
+    if (!validate_register_num(rt_num, rt, op, pc) ||
+        !validate_register_num(rs_num, rs_str, op, pc)) {
+      return 0;
+    }
+    return assemble_i_type(op, rt_num, rs_num, offset);
   }
 
   // Branches
