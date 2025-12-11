@@ -22,6 +22,8 @@ typedef struct {
   bool compare_all_algorithms;
   bool export_csv;
   const char *csv_filename;
+  bool quiet_mode;
+  bool interactive_mode;  // NEW: interactive mode flag
 } Options;
 
 static Options opts = {
@@ -33,7 +35,9 @@ static Options opts = {
   .burst_estimates = NULL,
   .compare_all_algorithms = false,
   .export_csv = false,
-  .csv_filename = "performance_results.csv"
+  .csv_filename = "performance_results.csv",
+  .quiet_mode = false,
+  .interactive_mode = false  // NEW: default to normal burst
 };
 
 static AssemblyResult *results;
@@ -105,6 +109,9 @@ int main(int argc, char *argv[])
 
   parse_args(argc, argv);
 
+  // NEW: Set global quiet mode for scheduler
+  set_quiet_mode(opts.quiet_mode);
+
   // In comparison mode, keep allocations around so the same
   // text/data segments can be reused across multiple runs.
   if (opts.compare_all_algorithms) {
@@ -112,17 +119,17 @@ int main(int argc, char *argv[])
   }
 
   // Initialize memory system
-  printf("Initializing memory system...\n");
+  if (!opts.quiet_mode) printf("Initializing memory system...\n");
   init_memory(opts.cache_policy);
   memory_initialized = true;
 
   // Initialize process queues
-  printf("Initializing process queues...\n");
+  if (!opts.quiet_mode) printf("Initializing process queues...\n");
   init_queues();
   queues_initialized = true;
   
   // Initialize performance tracking
-  printf("Initializing performance tracking...\n");
+  if (!opts.quiet_mode) printf("Initializing performance tracking...\n");
   init_performance_tracking();
   perf_initialized = true;
 
@@ -136,9 +143,13 @@ int main(int argc, char *argv[])
   }
 
   // Assemble all programs
-  printf("\n=== Assembling Programs ===\n");
+  if (!opts.quiet_mode) {
+    printf("\n=== Assembling Programs ===\n");
+  }
   for (int i = 0; i < opts.program_count; i++) {
-    printf("\n[%d/%d] Processing: %s\n", i+1, opts.program_count, opts.program_files[i]);
+    if (!opts.quiet_mode) {
+      printf("\n[%d/%d] Processing: %s\n", i+1, opts.program_count, opts.program_files[i]);
+    }
     
     results[i] = assemble(opts.program_files[i], i);
     
@@ -147,15 +158,19 @@ int main(int argc, char *argv[])
       continue;
     }
     
-    printf("  ✓ Assembly successful\n");
+    if (!opts.quiet_mode) {
+      printf("  ✓ Assembly successful\n");
+    }
   }
 
   if (opts.compare_all_algorithms) {
     // Run all algorithms for comparison
-    printf("\n");
-    printf("================================================================================\n");
-    printf("           RUNNING ALL SCHEDULING ALGORITHMS FOR COMPARISON\n");
-    printf("================================================================================\n");
+    if (!opts.quiet_mode) {
+      printf("\n");
+      printf("================================================================================\n");
+      printf("           RUNNING ALL SCHEDULING ALGORITHMS FOR COMPARISON\n");
+      printf("================================================================================\n");
+    }
     
     SchedulingAlgorithm algorithms[] = {
       SCHED_FCFS,
@@ -180,14 +195,18 @@ int main(int argc, char *argv[])
     int num_algorithms = sizeof(algorithms) / sizeof(algorithms[0]);
     
     for (int i = 0; i < num_algorithms; i++) {
-      printf("\n");
-      printf("********************************************************************************\n");
-      printf("                    Running: %s\n", algo_names[i]);
-      printf("********************************************************************************\n");
+      if (!opts.quiet_mode) {
+        printf("\n");
+        printf("********************************************************************************\n");
+        printf("                    Running: %s\n", algo_names[i]);
+        printf("********************************************************************************\n");
+      }
       
       run_single_algorithm(algorithms[i]);
       
-      printf("\n");
+      if (!opts.quiet_mode) {
+        printf("\n");
+      }
     }
     
     // Print comparison after all algorithms
@@ -208,13 +227,18 @@ int main(int argc, char *argv[])
     
   } else {
     // Run single algorithm
-    printf("\n");
-    printf("================================================================================\n");
-    printf("                    Creating Processes for Scheduling\n");
-    printf("================================================================================\n");
+    if (!opts.quiet_mode) {
+      printf("\n");
+      printf("================================================================================\n");
+      printf("                    Creating Processes for Scheduling\n");
+      printf("================================================================================\n");
+    }
     
     for (int i = 0; i < opts.program_count; i++) {
       if (!results[i].success) continue;
+      
+      // Use INFINITE_BURST if interactive mode is enabled
+      int burst = opts.interactive_mode ? INFINITE_BURST : opts.burst_estimates[i];
       
       uint32_t process_addr = makeProcess(
         i,
@@ -225,37 +249,44 @@ int main(int argc, char *argv[])
         results[i].program->data_size,
         results[i].program->stack_ptr,
         opts.priorities[i],
-        opts.burst_estimates[i]
+        burst
       );
       
       if (process_addr == UINT32_MAX) {
         fprintf(stderr, "  ✗ Failed to create process\n");
         exit_code = EXIT_FAILURE;
       } else {
-        printf("  ✓ Process created (PID: %d, Entry: 0x%08x)\n", 
-               i, results[i].program->entry_point);
+        if (!opts.quiet_mode) {
+          printf("  ✓ Process created (PID: %d, Entry: 0x%08x)\n", 
+                 i, results[i].program->entry_point);
+        }
       }
     }
 
     // Run the scheduler
-    printf("\n=== Starting Scheduler ===\n");
-    printf("Algorithm: ");
-    switch (opts.scheduler) {
-      case SCHED_FCFS: printf("First-Come First-Served\n"); break;
-      case SCHED_ROUND_ROBIN: printf("Round Robin\n"); break;
-      case SCHED_PRIORITY: printf("Priority\n"); break;
-      case SCHED_SRT: printf("Shortest Remaining Time\n"); break;
-      case SCHED_HRRN: printf("Highest Response Ratio Next\n"); break;
-      case SCHED_SPN: printf("Shortest Process Next\n"); break;
-      case SCHED_MLFQ: printf("Multi-Level Feedback Queue\n"); break;
+    if (!opts.quiet_mode) {
+      printf("\n=== Starting Scheduler ===\n");
+      printf("Algorithm: ");
+      switch (opts.scheduler) {
+        case SCHED_FCFS: printf("First-Come First-Served\n"); break;
+        case SCHED_ROUND_ROBIN: printf("Round Robin\n"); break;
+        case SCHED_PRIORITY: printf("Priority\n"); break;
+        case SCHED_SRT: printf("Shortest Remaining Time\n"); break;
+        case SCHED_HRRN: printf("Highest Response Ratio Next\n"); break;
+        case SCHED_SPN: printf("Shortest Process Next\n"); break;
+        case SCHED_MLFQ: printf("Multi-Level Feedback Queue\n"); break;
+        default: break;
+      }
+      printf("\n");
     }
-    printf("\n");
 
     scheduler(opts.scheduler);
   }
 
-  printf("\n=== Execution Complete ===\n");
-  print_cache_stats();
+  if (!opts.quiet_mode) {
+    printf("\n=== Execution Complete ===\n");
+    print_cache_stats();
+  }
 
 cleanup:
   g_panic_handler_active = 1;
@@ -362,6 +393,16 @@ static void parse_args(int argc, char* argv[]){
         opts.csv_filename = argv[++i];
       }
     }
+    else if (strcmp(argv[i], "--quiet") == 0 || strcmp(argv[i], "-q") == 0) {
+      opts.quiet_mode = true;
+    }
+    else if (strcmp(argv[i], "--interactive") == 0 || strcmp(argv[i], "-i") == 0) {
+      opts.interactive_mode = true;
+      // Interactive programs typically want quiet mode too
+      if (!opts.quiet_mode) {
+        opts.quiet_mode = true;
+      }
+    }
     else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
       print_usage(argv[0]);
       exit(EXIT_SUCCESS);
@@ -412,9 +453,19 @@ static void print_usage(const char *prog_name) {
   printf("    --compare-all         Run all scheduling algorithms and compare\n");
   printf("    --export-csv [file]   Export results to CSV (default: performance_results.csv)\n");
   printf("\n");
+  printf("  Output Control:\n");
+  printf("    --quiet, -q           Suppress scheduler debug output (for interactive programs)\n");
+  printf("    --interactive, -i     Run programs indefinitely until exit (auto-enables --quiet)\n");
+  printf("\n");
   printf("EXAMPLES:\n");
   printf("  # Run single algorithm:\n");
   printf("  %s --round-robin programs/hello_world.asm\n", prog_name);
+  printf("\n");
+  printf("  # Run interactive game (infinite burst, quiet mode):\n");
+  printf("  %s --interactive --fcfs programs/snake.asm\n", prog_name);
+  printf("\n");
+  printf("  # Or use short form:\n");
+  printf("  %s -i programs/2048.asm\n", prog_name);
   printf("\n");
   printf("  # Compare all algorithms:\n");
   printf("  %s --compare-all programs/*.asm\n", prog_name);

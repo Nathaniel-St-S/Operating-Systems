@@ -1,4 +1,3 @@
-// TODO add security measures to stop execution when check access fails
 #include "../include/memory.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -213,51 +212,19 @@ static bool check_access(uint32_t addr) {
     return true; // System/kernel mode - allow all access
   }
   
-  bool valid_id = false;
+  // Check if this address belongs to any memory block owned by current process
   for (size_t i = 0; i < MEMORY_TABLE.block_count; i++){
     MemoryBlock *b = &MEMBLOCK(i);
-    if (b->pid != current_process_id) {
-      continue;
-    }
-
-    valid_id = true;
-    if (!b->is_free && addr >= b->start_addr && addr <= b->end_addr) {
-      return true;
+    if (b->pid == current_process_id && !b->is_free) {
+      if (addr >= b->start_addr && addr <= b->end_addr) {
+        return true;
+      }
     }
   }
-
-  if (!valid_id){
-    fprintf(stderr, "Pocess read/write access: Invalid process id\n");
-    return false;
-  }
-
-  // Also check if address is in process's TEXT/DATA segments
-  // Process 0: TEXT_BASE (0x00400000) to TEXT_BASE + 0x00100000
-  // Process N: TEXT_BASE + (N * 0x00100000)
-  // 1MB per process
-  uint32_t process_text_start =
-      TEXT_BASE + (current_process_id * MAX_PROCESS_SIZE);
-  uint32_t process_text_end = process_text_start + MAX_PROCESS_SIZE;
-  if (addr >= process_text_start && addr < process_text_end) {
-    return true;
-  }
-
-  uint32_t process_data_start =
-      DATA_BASE + (current_process_id * MAX_PROCESS_SIZE);
-  uint32_t process_data_end = process_data_start + MAX_PROCESS_SIZE;
-  if (addr >= process_data_start && addr < process_data_end) {
-    return true;
-  }
-
-  // Data pushed to the stack is accessible to all procsses
-  uint32_t process_stack_base = STACK_TOP - ((current_process_id + 1) * MAX_PROCESS_SIZE);
-  uint32_t process_stack_top = STACK_TOP - (current_process_id * MAX_PROCESS_SIZE);
-  if (addr >= process_stack_base && addr < process_stack_top) {
-    return true;
-  }
-
+  
   return false;
 }
+
 
 static uint8_t read_byte_no_check(uint32_t addr){
 
@@ -504,6 +471,7 @@ void set_memory_freeze(bool freeze) { freeze_liberate = freeze; }
 uint8_t read_byte(uint32_t addr) {
   if (!in_bounds(addr, 1)) {
     fprintf(stderr, "read [byte]: out of bounds addr=0x%08x\n", addr);
+    exit(EXIT_FAILURE);
     return 0;
   }
 
@@ -511,6 +479,7 @@ uint8_t read_byte(uint32_t addr) {
     fprintf(stderr,
             "read [byte]: access violation - PID %d cannot access 0x%08x\n",
             current_process_id, addr);
+    exit(EXIT_FAILURE);
     return 0;
   }
 
@@ -521,6 +490,7 @@ uint8_t read_byte(uint32_t addr) {
 uint16_t read_hword(uint32_t addr) {
   if (!in_bounds(addr, 2)) {
     fprintf(stderr, "read [hword]: out of bounds addr=0x%08x\n", addr);
+    exit(EXIT_FAILURE);
     return 0;
   }
 
@@ -528,6 +498,7 @@ uint16_t read_hword(uint32_t addr) {
     fprintf(stderr,
             "read [hword]: access violation - PID %d cannot access 0x%08x\n",
             current_process_id, addr);
+    exit(EXIT_FAILURE);
     return 0;
   }
 
@@ -539,6 +510,7 @@ uint16_t read_hword(uint32_t addr) {
 uint32_t read_word(uint32_t addr) {
   if (!in_bounds(addr, 4)) {
     fprintf(stderr, "read [word]: out of bounds addr=0x%08x\n", addr);
+    exit(EXIT_FAILURE);
     return 0;
   }
 
@@ -546,6 +518,7 @@ uint32_t read_word(uint32_t addr) {
     fprintf(stderr,
         "read [word]: access violation - PID %d cannot access 0x%08x\n",
         current_process_id, addr);
+    exit(EXIT_FAILURE);
     return 0;
   }
 
@@ -560,6 +533,7 @@ uint32_t read_word(uint32_t addr) {
 void write_byte(uint32_t addr, uint8_t value) {
   if (!in_bounds(addr, 1)) {
     fprintf(stderr, "write [byte]: out of bounds addr=0x%08x\n", addr);
+    exit(EXIT_FAILURE);
     return;
   }
 
@@ -567,6 +541,7 @@ void write_byte(uint32_t addr, uint8_t value) {
     fprintf(stderr,
             "write [byte]: access violation - PID %d cannot write to 0x%08x\n",
             current_process_id, addr);
+    exit(EXIT_FAILURE);
     return;
   }
 
@@ -576,6 +551,7 @@ void write_byte(uint32_t addr, uint8_t value) {
 void write_hword(uint32_t addr, uint16_t data) {
   if (!in_bounds(addr, 2)) {
     fprintf(stderr, "write [hword]: out of bounds addr=0x%08x\n", addr);
+    exit(EXIT_FAILURE);
     return;
   }
 
@@ -583,6 +559,7 @@ void write_hword(uint32_t addr, uint16_t data) {
     fprintf(stderr,
         "write [hword]: access violation - PID %d cannot write to 0x%08x\n",
         current_process_id, addr);
+    exit(EXIT_FAILURE);
     return;
   }
 
@@ -601,6 +578,7 @@ void write_hword(uint32_t addr, uint16_t data) {
 void write_word(uint32_t addr, uint32_t data) {
   if (!in_bounds(addr, 4)) {
     fprintf(stderr, "write [word]: out of bounds addr=0x%08x\n", addr);
+    exit(EXIT_FAILURE);
     return;
   }
   
@@ -608,6 +586,7 @@ void write_word(uint32_t addr, uint32_t data) {
     fprintf(stderr,
             "write [word]: access violation - PID %d cannot write to 0x%08x\n",
             current_process_id, addr);
+    exit(EXIT_FAILURE);
     return;
   }
 

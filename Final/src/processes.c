@@ -60,8 +60,18 @@ typedef struct {
 } Queue;
 
 //-------------------------------------Constants-------------------------------------//
-#define QUANTUM 3
+#define QUANTUM 15
 // #define MAX_PROCESSES 10
+
+// Global quiet mode flag
+static bool g_quiet_mode = false;
+
+// Helper macro for conditional printing
+#define SCHED_PRINTF(...) do { if (!g_quiet_mode) printf(__VA_ARGS__); } while(0)
+
+void set_quiet_mode(bool quiet) {
+  g_quiet_mode = quiet;
+}
 
 static Queue* Ready_Queue = NULL;
 static Queue* Running_Queue = NULL;
@@ -516,34 +526,48 @@ static void roundRobin(void) {
   g_system_time = 0;
   transferProcesses(NORMAL);
 
-  printf("\nScheduling algorithm: Round Robin\n");
-  printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
-  printf("=============================\n");
+  SCHED_PRINTF("\nScheduling algorithm: Round Robin\n");
+  SCHED_PRINTF("Total %d tasks to be scheduled\n", Ready_Queue->next);
+  SCHED_PRINTF("=============================\n");
 
   while (Ready_Queue->next > 0) {
     Process *p = &Ready_Queue->PCB[0];
     
-    // Record response time on first execution
     if (!p->has_started) {
       p->has_started = true;
       p->start_time = g_system_time;
       p->response_time = g_system_time - p->arrival_time;
     }
 
-    printf("<system time %d> process %d starts running\n", g_system_time, p->pid);
+    SCHED_PRINTF("<system time %d> process %d starts running\n", g_system_time, p->pid);
     
     perf_timer_start(&timer);
     set_current_process(p->pid);
     THE_CPU = p->cpu_state;
     record_context_switch(g_current_algorithm_id);
 
-    int slice = (p->burstTime < QUANTUM) ? p->burstTime : QUANTUM;
-    for (int i = 0; i < slice; i++) {
-      if (THE_CPU.hw_registers[PC] == CPU_HALT) break;
-      fetch();
-      execute();
-      if (p->burstTime > 0) {
-        p->burstTime--;
+    // Check for infinite burst (interactive programs)
+    bool is_infinite = (p->originalBurstTime == INT32_MAX);
+    
+    // For infinite processes, run until halt or much longer slice
+    // For finite processes, use normal quantum
+    if (is_infinite) {
+      // Run interactive programs until they halt (don't time slice them)
+      while (THE_CPU.hw_registers[PC] != CPU_HALT) {
+        fetch();
+        execute();
+        g_system_time++;
+      }
+    } else {
+      // Normal round robin for finite burst processes
+      int slice = (p->burstTime < QUANTUM) ? p->burstTime : QUANTUM;
+      for (int i = 0; i < slice; i++) {
+        if (THE_CPU.hw_registers[PC] == CPU_HALT) break;
+        fetch();
+        execute();
+        if (p->burstTime > 0) {
+          p->burstTime--;
+        }
         g_system_time++;
       }
     }
@@ -552,20 +576,23 @@ static void roundRobin(void) {
     double ctx_time = perf_timer_end(&timer);
     record_context_switch_time(g_current_algorithm_id, ctx_time);
 
-    bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
+    bool finished = (THE_CPU.hw_registers[PC] == CPU_HALT) || 
+                    (!is_infinite && p->burstTime <= 0);
+    
     if (finished) {
-      printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+      SCHED_PRINTF("<system time %d> process %d finished.\n", g_system_time, p->pid);
       record_process_completion(p);
       liberate(p->pid);
       shift_ready_left();
     } else {
+      // Only requeue if not finished
       Process tmp = *p;
       shift_ready_left();
       push_ready_back(tmp);
     }
   }
 
-  printf("<system time %d> All processes finished.\n", g_system_time);
+  SCHED_PRINTF("<system time %d> All processes finished.\n", g_system_time);
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
@@ -575,9 +602,9 @@ static void firstComeFirstServe(void) {
   g_system_time = 0;
   transferProcesses(NORMAL);
   
-  printf("\nScheduling algorithm: FCFS\n");
-  printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
-  printf("=============================\n");
+  SCHED_PRINTF("\nScheduling algorithm: FCFS\n");
+  SCHED_PRINTF("Total %d tasks to be scheduled\n", Ready_Queue->next);
+  SCHED_PRINTF("=============================\n");
   
   while (Ready_Queue->next > 0) {
     Process *p = &Ready_Queue->PCB[0];
@@ -588,7 +615,7 @@ static void firstComeFirstServe(void) {
       p->response_time = g_system_time - p->arrival_time;
     }
     
-    printf("<system time %d> process %d starts running\n", g_system_time, p->pid);
+    SCHED_PRINTF("<system time %d> process %d starts running\n", g_system_time, p->pid);
     
     perf_timer_start(&timer);
     set_current_process(p->pid);
@@ -606,13 +633,13 @@ static void firstComeFirstServe(void) {
     double ctx_time = perf_timer_end(&timer);
     record_context_switch_time(g_current_algorithm_id, ctx_time);
     
-    printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+    SCHED_PRINTF("<system time %d> process %d finished.\n", g_system_time, p->pid);
     record_process_completion(p);
     liberate(p->pid);
     shift_ready_left();
   }
   
-  printf("<system time %d> All processes finished.\n", g_system_time);
+  SCHED_PRINTF("<system time %d> All processes finished.\n", g_system_time);
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
@@ -622,9 +649,9 @@ static void shortestProcessNext(void) {
   g_system_time = 0;
   transferProcesses(PRIORITYBURST);
   
-  printf("\nScheduling algorithm: SPN (Shortest Process Next)\n");
-  printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
-  printf("=============================\n");
+  SCHED_PRINTF("\nScheduling algorithm: SPN (Shortest Process Next)\n");
+  SCHED_PRINTF("Total %d tasks to be scheduled\n", Ready_Queue->next);
+  SCHED_PRINTF("=============================\n");
   
   while (Ready_Queue->next > 0) {
     Process *p = &Ready_Queue->PCB[0];
@@ -635,7 +662,7 @@ static void shortestProcessNext(void) {
       p->response_time = g_system_time - p->arrival_time;
     }
     
-    printf("<system time %d> process %d starts running\n", g_system_time, p->pid);
+    SCHED_PRINTF("<system time %d> process %d starts running\n", g_system_time, p->pid);
     
     perf_timer_start(&timer);
     set_current_process(p->pid);
@@ -653,14 +680,14 @@ static void shortestProcessNext(void) {
     double ctx_time = perf_timer_end(&timer);
     record_context_switch_time(g_current_algorithm_id, ctx_time);
     
-    printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+    SCHED_PRINTF("<system time %d> process %d finished.\n", g_system_time, p->pid);
     record_process_completion(p);
     liberate(p->pid);
     dequeueGeneric(Ready_Queue);
     transferProcesses(PRIORITYBURST);
   }
   
-  printf("<system time %d> All processes finished.\n", g_system_time);
+  SCHED_PRINTF("<system time %d> All processes finished.\n", g_system_time);
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
@@ -670,9 +697,9 @@ static void priorityBased(void) {
   g_system_time = 0;
   transferProcesses(PRIORITYPRIORITY);
   
-  printf("\nScheduling algorithm: Priority\n");
-  printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
-  printf("=============================\n");
+  SCHED_PRINTF("\nScheduling algorithm: Priority\n");
+  SCHED_PRINTF("Total %d tasks to be scheduled\n", Ready_Queue->next);
+  SCHED_PRINTF("=============================\n");
   
   while (Ready_Queue->next > 0) {
     Process *p = &Ready_Queue->PCB[0];
@@ -710,14 +737,14 @@ static void priorityBased(void) {
     bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
     if (finished) {
       p->cpu_state = THE_CPU;
-      printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+      SCHED_PRINTF("<system time %d> process %d finished.\n", g_system_time, p->pid);
       record_process_completion(p);
       liberate(p->pid);
       dequeueGeneric(Ready_Queue);
     }
   }
   
-  printf("<system time %d> All processes finished.\n", g_system_time);
+  SCHED_PRINTF("<system time %d> All processes finished.\n", g_system_time);
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
@@ -727,9 +754,9 @@ static void shortestRemainingTime(void) {
   g_system_time = 0;
   transferProcesses(PRIORITYBURST);
   
-  printf("\nScheduling algorithm: SRT (Shortest Remaining Time)\n");
-  printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
-  printf("=============================\n");
+  SCHED_PRINTF("\nScheduling algorithm: SRT (Shortest Remaining Time)\n");
+  SCHED_PRINTF("Total %d tasks to be scheduled\n", Ready_Queue->next);
+  SCHED_PRINTF("=============================\n");
   
   while (Ready_Queue->next > 0) {
     Process *p = &Ready_Queue->PCB[0];
@@ -767,14 +794,14 @@ static void shortestRemainingTime(void) {
     bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
     if (finished) {
       p->cpu_state = THE_CPU;
-      printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+      SCHED_PRINTF("<system time %d> process %d finished.\n", g_system_time, p->pid);
       record_process_completion(p);
       liberate(p->pid);
       dequeueGeneric(Ready_Queue);
     }
   }
   
-  printf("<system time %d> All processes finished.\n", g_system_time);
+  SCHED_PRINTF("<system time %d> All processes finished.\n", g_system_time);
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
@@ -784,9 +811,9 @@ static void highestResponseRatioNext(void) {
   g_system_time = 0;
   transferProcesses(NORMAL);
   
-  printf("\nScheduling algorithm: HRRN (Highest Response Ratio Next)\n");
-  printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
-  printf("=============================\n");
+  SCHED_PRINTF("\nScheduling algorithm: HRRN (Highest Response Ratio Next)\n");
+  SCHED_PRINTF("Total %d tasks to be scheduled\n", Ready_Queue->next);
+  SCHED_PRINTF("=============================\n");
   
   int total_time = 0;
   
@@ -808,7 +835,7 @@ static void highestResponseRatioNext(void) {
       p->response_time = g_system_time - p->arrival_time;
     }
     
-    printf("<system time %d> process %d starts running\n", g_system_time, p->pid);
+    SCHED_PRINTF("<system time %d> process %d starts running\n", g_system_time, p->pid);
     
     perf_timer_start(&timer);
     set_current_process(p->pid);
@@ -829,7 +856,7 @@ static void highestResponseRatioNext(void) {
     record_context_switch_time(g_current_algorithm_id, ctx_time);
     total_time += process_time;
     
-    printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+    SCHED_PRINTF("<system time %d> process %d finished.\n", g_system_time, p->pid);
     record_process_completion(p);
     liberate(p->pid);
     shift_ready_left();
@@ -837,7 +864,7 @@ static void highestResponseRatioNext(void) {
     transferProcesses(NORMAL);
   }
   
-  printf("<system time %d> All processes finished.\n", g_system_time);
+  SCHED_PRINTF("<system time %d> All processes finished.\n", g_system_time);
   set_current_process(SYSTEM_PROCESS_ID);
 }
 
@@ -849,9 +876,9 @@ static void feedBack(void) {
   PerfTimer timer;
   g_system_time = 0;
   transferProcesses(NORMAL);
-  printf("\nScheduling algorithm: MLFQ (Multi-Level Feedback Queue)\n");
-  printf("Total processes to be scheduled\n");
-  printf("=============================\n");
+  SCHED_PRINTF("\nScheduling algorithm: MLFQ (Multi-Level Feedback Queue)\n");
+  SCHED_PRINTF("Total processes to be scheduled\n");
+  SCHED_PRINTF("=============================\n");
   while(Ready_Queue->next > 0 || feedBack_Q2->next > 0 || feedBack_Q3->next > 0) {
     transferProcesses(NORMAL);
     if (Ready_Queue->next > 0) {
@@ -881,7 +908,7 @@ static void feedBack(void) {
 
       bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
       if (finished) {
-        printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+        SCHED_PRINTF("<system time %d> process %d finished.\n", g_system_time, p->pid);
         record_process_completion(p);
         liberate(p->pid);
         shift_ready_left();
@@ -920,7 +947,7 @@ static void feedBack(void) {
 
       bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
       if (finished) {
-        printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+        SCHED_PRINTF("<system time %d> process %d finished.\n", g_system_time, p->pid);
         record_process_completion(p);
         liberate(p->pid);
         dequeueGeneric(feedBack_Q2);
@@ -956,13 +983,13 @@ static void feedBack(void) {
       double ctx_time = perf_timer_end(&timer);
       record_context_switch_time(g_current_algorithm_id, ctx_time);
 
-      printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+      SCHED_PRINTF("<system time %d> process %d finished.\n", g_system_time, p->pid);
       record_process_completion(p);
       liberate(p->pid);
       dequeueGeneric(feedBack_Q3);
     }
   }
-  printf("<system time %d> All processes finished.\n", g_system_time);
+  SCHED_PRINTF("<system time %d> All processes finished.\n", g_system_time);
   free_Queue(feedBack_Q2);
   free_Queue(feedBack_Q3);
   set_current_process(SYSTEM_PROCESS_ID);

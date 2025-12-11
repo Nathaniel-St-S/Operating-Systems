@@ -890,8 +890,15 @@ AssemblyResult assemble(const char *filename, int process_id) {
   result.program->data_size = ctx.data_segment.size;
   uint32_t stack_size = 4096; // 4KB stack
   uint32_t stack_addr = mallocate(process_id, stack_size);
+  if (stack_addr == UINT32_MAX) {
+    fprintf(stderr, "Failed to allocate stack for PID %d\n", process_id);
+    result.success = 0;
+    free(result.program);
+    result.program = NULL;
+    return result;
+  }
   result.program->stack_ptr = stack_addr + stack_size - 4;
-  result.program->globl_ptr = GLOBAL_PTR + (process_id * MAX_PROCESS_SIZE);
+  result.program->globl_ptr = ctx.allocated_data_addr;
 
   // Find entry point
   int entry_sym = get_symbol_address(&ctx, "main");
