@@ -2,7 +2,7 @@
 """
 Generate bar-chart visualizations (as PNG files) for the CSV metrics in this directory.
 
-Outputs PNG images to ./charts/.
+Outputs PNG images to ./charts/, using a Nord-inspired dark theme.
 """
 
 from __future__ import annotations
@@ -16,9 +16,28 @@ import matplotlib
 matplotlib.use("Agg")  # non-GUI backend
 import matplotlib.pyplot as plt
 
-
 ROOT = Path(__file__).resolve().parent
 OUTPUT_DIR = ROOT / "charts"
+
+# Nord color palette
+NORD = {
+    "nord0": "#2E3440",
+    "nord1": "#3B4252",
+    "nord2": "#434C5E",
+    "nord3": "#4C566A",
+    "nord4": "#D8DEE9",
+    "nord5": "#E5E9F0",
+    "nord6": "#ECEFF4",
+    "nord7": "#8FBCBB",
+    "nord8": "#88C0D0",
+    "nord9": "#81A1C1",
+    "nord10": "#5E81AC",
+    "nord11": "#BF616A",
+    "nord12": "#D08770",
+    "nord13": "#EBCB8B",
+    "nord14": "#A3BE8C",
+    "nord15": "#B48EAD",
+}
 
 
 def read_algorithm_metrics(csv_path: Path, value_field: str) -> Tuple[List[str], List[float]]:
@@ -40,17 +59,43 @@ def render_bar_chart(
     title: str,
     ylabel: str,
     output_path: Path,
-    bar_color: str = "#4e79a7",
+    bar_color: str = NORD["nord9"],
 ) -> None:
-    """Render a bar chart as a PNG."""
+    """Render a bar chart as a PNG (Nord-themed)."""
     labels = list(labels)
     values = list(values)
 
-    plt.figure(figsize=(8, 5))
-    bars = plt.bar(labels, values, color=bar_color)
-    plt.title(title)
-    plt.ylabel(ylabel)
-    plt.grid(axis="y", linestyle="--", alpha=0.35)
+    # Create figure and axes
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    # Apply Nord background colors
+    fig.patch.set_facecolor(NORD["nord0"])
+    ax.set_facecolor(NORD["nord1"])
+
+    # Draw bars
+    bars = ax.bar(labels, values, color=bar_color)
+
+    # Titles and labels with Nord text color
+    ax.set_title(title, color=NORD["nord6"])
+    ax.set_ylabel(ylabel, color=NORD["nord6"])
+
+    # Grid styling (subtle Nord grid)
+    ax.grid(
+        axis="y",
+        linestyle="--",
+        alpha=0.35,
+        color=NORD["nord3"],
+    )
+
+    # Tick styling
+    ax.tick_params(axis="x", colors=NORD["nord5"])
+    ax.tick_params(axis="y", colors=NORD["nord5"])
+    for label in ax.get_xticklabels():
+        label.set_color(NORD["nord5"])
+
+    # Axis spine styling
+    for spine in ax.spines.values():
+        spine.set_color(NORD["nord3"])
 
     # Add value labels above (or below) each bar.
     if values:
@@ -60,12 +105,19 @@ def render_bar_chart(
             y = bar.get_height()
             y_text = y + padding if value >= 0 else y - padding
             va = "bottom" if value >= 0 else "top"
-            plt.text(bar.get_x() + bar.get_width() / 2, y_text, f"{value:.2f}", ha="center", va=va)
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                y_text,
+                f"{value:.2f}",
+                ha="center",
+                va=va,
+                color=NORD["nord6"],
+            )
 
-    plt.tight_layout()
+    fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, dpi=200)
-    plt.close()
+    fig.savefig(output_path, dpi=200, facecolor=fig.get_facecolor())
+    plt.close(fig)
 
 
 def plot_single_metric(csv_filename: str, metric_field: str, ylabel: str) -> None:
@@ -95,13 +147,20 @@ def plot_comparison_metrics() -> None:
     for field, label in metrics.items():
         values = [float(row[field]) for row in rows]
         filename = f"comparison_{field}.png"
+
+        # Use a warm Nord red/orange for time-based metrics, cool blue for others
+        if "Time" in field:
+            color = NORD["nord11"]  # red
+        else:
+            color = NORD["nord9"]   # blue
+
         render_bar_chart(
             labels,
             values,
             title=f"{label} by Algorithm",
             ylabel=label,
             output_path=OUTPUT_DIR / filename,
-            bar_color="#e15759" if "Time" in field else "#4e79a7",
+            bar_color=color,
         )
 
 
@@ -115,3 +174,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
