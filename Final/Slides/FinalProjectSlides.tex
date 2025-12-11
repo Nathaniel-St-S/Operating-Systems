@@ -1231,58 +1231,129 @@ while (p->burstTime > 0 &&
 \section{Module 4: Enhanced Interrupt Handling}
 %================================================
 
-\begin{frame}{Interrupts}
-  % Interrupts
+\begin{frame}[fragile]{Interrupts}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{7pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt, belowskip=0pt,
+]
+// Types of interrupts in our simulator
+typedef enum irq {
+  IRQ_TIMER = 0x1,     // Periodic timer interrupt
+  IRQ_IO,              // I/O device completed
+  IRQ_TRAP,            // Software trap / exception
+  IRQ_SYSCALL,         // System call from user process
+  IRQ_EOI,             // End Of Interrupt
+} IRQ;
+
+// An interrupt request with a priority
+typedef struct {
+  IRQ irq;
+  int priority;
+} Interrupt;
+\end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
-\begin{frame}{Interrupt Vector Table (IVT)}
-  % Interrupt Vector Table (IVT)
+\begin{frame}[fragile]{Interrupt Vector Table (IVT)}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{7pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt, belowskip=0pt,
+]
+static isr_t IVT[] = {
+  [IRQ_TIMER]   = handle_timer_interrupt,
+  [IRQ_IO]      = handle_io_interrupt,
+  [IRQ_TRAP]    = handle_trap_interrupt,
+  [IRQ_SYSCALL] = handle_syscall_interrupt,
+  [IRQ_EOI]     = handle_eoi_interrupt,
+};
+\end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
-\begin{frame}{Interrupt Handlers and Dispatcher}
-  % Interrupt Handlers and Dispatcher
+
+\begin{frame}[fragile]{Interrupt Handler}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{7pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt, belowskip=0pt,
+]
+static void interrupt_handler(Interrupt intr) {
+  // Save the currently running CPU context
+  push_cpu_state(THE_CPU);
+
+  // Look up and invoke the correct ISR from the IVT
+  if (intr.irq >= IRQ_TIMER && intr.irq <= IRQ_EOI && IVT[intr.irq]) {
+    IVT[intr.irq](intr);
+  } else {
+    fprintf(stderr, "[INTERRUPT ERROR] Unknown IRQ %d\n", intr.irq);
+  }
+
+  // Restore CPU context and resume interrupted code
+  THE_CPU = pop_cpu_state();
+}
+\end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 %================================================
 \section{Module 5: Efficiency Analysis of Scheduling Algorithms}
 %================================================
 \begin{frame}{Avg Response Time Comparison}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
     \centering
     \includegraphics[height=0.8\textheight]{../charts/comparison_AvgResponseTime.png}
+  \end{beamercolorbox}
 \end{frame}
 
 \begin{frame}{Avg Turnaround Time Comparison}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
     \centering
     \includegraphics[height=0.8\textheight]{../charts/comparison_AvgTurnaroundTime.png}
+  \end{beamercolorbox}
 \end{frame}
 
 \begin{frame}{Avg Wait Time Comparison}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
     \centering
     \includegraphics[height=0.8\textheight]{../charts/comparison_AvgWaitTime.png}
+  \end{beamercolorbox}
 \end{frame}
 
 \begin{frame}{Context Switch Comparison}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
     \centering
     \includegraphics[height=0.8\textheight]{../charts/comparison_ContextSwitches.png}
+  \end{beamercolorbox}
 \end{frame}
 
 \begin{frame}{CPU Utilization Comparison}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
     \centering
     \includegraphics[height=0.8\textheight]{../charts/comparison_CPUUtilization.png}
+  \end{beamercolorbox}
 \end{frame}
 
 \begin{frame}{L1 Cache: Hits vs Misses}
   \centering
   \begin{columns}[T,onlytextwidth]
     \column{0.5\textwidth}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
       \centering
       \textbf{L1 Cache Hits}\\[0.5em]
       \includegraphics[width=\textwidth,height=0.7\textheight,keepaspectratio]{../charts/comparison_L1Hits.png}
+  \end{beamercolorbox}
 
     \column{0.5\textwidth}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
       \centering
       \textbf{L1 Cache Misses}\\[0.5em]
       \includegraphics[width=\textwidth,height=0.7\textheight,keepaspectratio]{../charts/comparison_L1Misses.png}
+  \end{beamercolorbox}
   \end{columns}
 \end{frame}
 
@@ -1290,20 +1361,64 @@ while (p->burstTime > 0 &&
   \centering
   \begin{columns}[T,onlytextwidth]
     \column{0.5\textwidth}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
       \centering
       \textbf{L2 Cache Hits}\\[0.5em]
       \includegraphics[width=\textwidth,height=0.7\textheight,keepaspectratio]{../charts/comparison_L2Hits.png}
+  \end{beamercolorbox}
 
     \column{0.5\textwidth}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
       \centering
       \textbf{L2 Cache Misses}\\[0.5em]
       \includegraphics[width=\textwidth,height=0.7\textheight,keepaspectratio]{../charts/comparison_L2Misses.png}
+  \end{beamercolorbox}
   \end{columns}
 \end{frame}
 
 \begin{frame}{Throughput Comparison}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
     \centering
     \includegraphics[height=0.8\textheight]{../charts/comparison_Throughput.png}
+  \end{beamercolorbox}
 \end{frame}
+
+
+%================================================
+\section{Assembler}
+%================================================
+\begin{frame}{MIPS-1 Assembler}
+\small
+
+\textbf{What the assembler does}
+\begin{itemize}
+  \item Parses \texttt{.text} and \texttt{.data} sections, collecting labels and directives.
+  \item Expands pseudo-instructions (e.g., \texttt{li}, \texttt{la}, \texttt{nop}) into real MIPS-1 ops.
+  \item Encodes each instruction into its 32-bit machine code format.
+  \item Builds a packed data segment (bytes, halfwords, words, strings).
+\end{itemize}
+
+\medskip
+
+\textbf{How it integrates with our OS simulator}
+\begin{itemize}
+  \item Allocates real memory for text/data using \texttt{mallocate()}.
+  \item Writes machine code and data directly into the simulated RAM.
+  \item Rebases label addresses so instructions like \texttt{j}, \texttt{la}, and \texttt{beq} point to the correct physical addresses.
+\end{itemize}
+
+\medskip
+
+\textbf{What it produces}
+\begin{itemize}
+  \item A complete \texttt{AssembledProgram}: text/data regions, entry point, stack pointer, and symbol table.
+  \item Fully loadable, runnable machine code for our CPU's Fetch--Decode--Execute loop.
+\end{itemize}
+
+\end{frame}
+
+%================================================
+\section{Demonstration}
+%================================================
 
 \end{document}
