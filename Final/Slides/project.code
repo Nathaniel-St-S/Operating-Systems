@@ -1,0 +1,476 @@
+tree structure
+./
+├── include/
+│   ├── assembler.h
+│   ├── cpu.h
+│   ├── isa.h
+│   ├── memory.h
+│   ├── performance.h
+│   └── processes.h
+├── programs/
+│   ├── 2048.asm
+│   ├── factorial.asm
+│   ├── goodbye_planet.asm
+│   ├── guess_number.asm
+│   ├── hello_world.asm
+│   └── snake.asm
+├── src/
+│   ├── assembler.c
+│   ├── cpu.c
+│   ├── isa.c
+│   ├── main.c
+│   ├── memory.c
+│   ├── performance.c
+│   └── processes.c
+├── Makefile
+├── PERFORMANCE.md
+├── README.md
+└── visualize_metrics.py
+
+// Memory structs
+/*
+ * A cache line stores data in an array
+ * to allow for multiple sizes of data
+ * (byte, hword, word) wothout overwriting data
+ * The tag represents the the adress data would be at
+ */
+typedef struct {
+  uint32_t tag;
+  bool is_valid;
+  bool is_dirty;
+  uint8_t data[CACHE_LINE_SIZE];
+} CacheLine;
+
+/*
+ * Cache data structure, storing
+ * an array of Entry as well as
+ * a pointer to the next open
+ * cache space. Also keeps track
+ * of the number of items in cache
+ * and the total size of the cache
+ */
+typedef struct {
+  CacheLine *lines;
+  size_t front;
+  size_t count;
+  size_t line_count;
+} Cache;
+
+/*
+ * Memory block data structure that tracks
+ * the appropriate starting and ending adresses
+ * for the memory associated with a specific process
+ * will also have a boolean 'isfree' for keeping track
+ * of wether the memory is safe to be free'd
+ */
+typedef struct {
+  int pid;
+  uint32_t start_addr;
+  uint32_t end_addr;
+  bool is_free;
+} MemoryBlock;
+
+/*
+ * Memory Table data structure to keep track of
+ * the number of memory blocks and where they're
+ * allocated
+ */
+typedef struct {
+  MemoryBlock *blocks;
+  size_t block_count;
+  size_t capacity;
+} MemoryTable;
+
+pretty liberate
+// Free up the memory allocated by a specific process.
+void liberate(int pid) {
+  if (freeze_liberate) {
+    return;
+  }
+
+  idx = search_for_block(pid);
+  if (idx == NOT_FOUND) {
+    printf("error");
+    return;
+  }
+
+  set_free(idx);
+  printf("freed");
+
+  // Merge block with the previous if it is free
+  merge_free_blocks_left();
+
+  // Merge block with the next block if it is free
+  merge_free_blocks_right();
+}
+
+real liberate
+// Free up the memory allocated by a specific process.
+void liberate(int pid) {
+  if (freeze_liberate) {
+    return;
+  }
+
+  size_t idx = SIZE_MAX;
+  for (size_t i = 0; i < MEMORY_TABLE.block_count; ++i) {
+    if (!MEMBLOCK(i).is_free && MEMBLOCK(i).pid == pid) {
+      idx = i;
+      break;
+    }
+  }
+  if (idx == SIZE_MAX) {
+    fprintf(stderr, "liberate: pid %d not found\n", pid);
+    return;
+  }
+
+  MEMBLOCK(idx).is_free = true;
+  MEMBLOCK(idx).pid = -1;
+  printf("liberate: freed pid %d [%u -> %u]\n", pid, MEMBLOCK(idx).start_addr,
+         MEMBLOCK(idx).end_addr);
+
+  // Merge block with the previous if it is free
+  if (idx > 0 && MEMBLOCK(idx - 1).is_free) {
+    MEMBLOCK(idx - 1).end_addr = MEMBLOCK(idx).end_addr;
+    // Shift left to make room
+    for (size_t i = idx; i + 1 < MEMORY_TABLE.block_count; i++) {
+      MEMBLOCK(i) = MEMBLOCK(i + 1);
+    }
+    MEMORY_TABLE.block_count--;
+    idx--;
+  }
+
+  // Merge block with the next block if it is free
+  if (idx + 1 < MEMORY_TABLE.block_count && MEMBLOCK(idx + 1).is_free) {
+    MEMBLOCK(idx).end_addr = MEMBLOCK(idx + 1).end_addr;
+    for (size_t j = idx + 1; j + 1 < MEMORY_TABLE.block_count; ++j) {
+      MEMBLOCK(j) = MEMBLOCK(j + 1);
+    }
+    MEMORY_TABLE.block_count--;
+  }
+}
+
+// real read byte
+// Reads a single byte
+// Uses the cache hierarchy
+// Updates cache along the way
+uint8_t read_byte(uint32_t addr) {
+  if (!in_bounds(addr, 1)) {
+    fprintf(stderr, "read [byte]: out of bounds addr=0x%08x\n", addr);
+    return 0;
+  }
+
+  if (!check_access(addr)) {
+    fprintf(stderr,
+            "read [byte]: access violation - PID %d cannot access 0x%08x\n",
+            current_process_id, addr);
+    return 0;
+  }
+
+  return read_byte_no_check(addr);
+}
+
+// read byte pretty
+uint8_t read_byte(uint32_t addr) {
+  if (!in_bounds(addr, 1)) {
+    printf("error");
+    return 0;
+  }
+
+  if (!check_access(addr)) {
+    printf("error");
+    return 0;
+  }
+
+  return read_byte_no_check(addr);
+}
+
+// real read no check
+static uint8_t read_byte_no_check(uint32_t addr){
+
+  uint32_t base = line_base(addr);
+  int idx = EMPTY_ADDR;
+
+  // L1 Cache
+  idx = find_line(&L1, base);
+  if (idx != EMPTY_ADDR) {
+    L1cache_hit++;
+    return L1.lines[idx].data[addr - base];
+  }
+  L1cache_miss++;
+
+  // L2 cache
+  idx = find_line(&L2, base);
+  if (idx != EMPTY_ADDR) {
+    L2cache_hit++;
+    // Copy to L1
+    int l1_idx;
+    if (L1.count < L1.line_count) {
+      l1_idx = (L1.front + L1.count) % L1.line_count;
+      L1.count++;
+    } else {
+      l1_idx = L1.front;
+      L1.front = (L1.front + 1) % L1.line_count;
+    }
+
+    L1.lines[l1_idx].tag = base;
+    L1.lines[l1_idx].is_valid = true;
+    memcpy(L1.lines[l1_idx].data, L2.lines[idx].data,
+        CACHE_LINE_SIZE); // Copy from L2!
+
+    return L1.lines[l1_idx].data[addr - base];
+  }
+  L2cache_miss++;
+
+  // Complete miss
+  load_line(&L2, base);
+  int l1_idx = load_line(&L1, base);
+  return L1.lines[l1_idx].data[addr - base];
+}
+
+// pretty read no check
+static uint8_t read_byte_no_check(uint32_t addr){
+
+  uint32_t base = line_base(addr);
+  int idx = EMPTY_ADDR;
+
+  // L1 Cache
+  idx = find_line(L1, base);
+  if (NOT_MISS) {
+    L1cache_hit++;
+    return L1.value;
+  }
+  L1cache_miss++;
+
+  // L2 cache
+  idx = find_line(L2, base);
+  if (NOT_MISS) {
+    L2cache_hit++;
+    // Copy to L1
+    set_l1();
+    copy_from_l2();
+
+    return L1.val;
+  }
+  L2cache_miss++;
+
+  // Complete miss
+  copy_to_cache();
+  return L1.val;
+}
+
+// real read word
+uint32_t read_word(uint32_t addr) {
+  if (!in_bounds(addr, 4)) {
+    fprintf(stderr, "read [word]: out of bounds addr=0x%08x\n", addr);
+    return 0;
+  }
+
+  if (!check_access(addr)) {
+    fprintf(stderr,
+        "read [word]: access violation - PID %d cannot access 0x%08x\n",
+        current_process_id, addr);
+    return 0;
+  }
+
+  uint32_t v = 0;
+  v |= ((uint32_t)read_byte_no_check(addr + 0)) << 0;
+  v |= ((uint32_t)read_byte_no_check(addr + 1)) << 8;
+  v |= ((uint32_t)read_byte_no_check(addr + 2)) << 16;
+  v |= ((uint32_t)read_byte_no_check(addr + 3)) << 24;
+  return v;
+}
+
+// pretty read word
+uint32_t read_word(uint32_t addr) {
+  if (!in_bounds(addr, 4)) {
+    printf("error");
+    return 0;
+  }
+
+  if (!check_access(addr)) {
+    printf("error");
+    return 0;
+  }
+
+  uint32_t v = 0;
+  v |= ((uint32_t)read_byte_no_check(addr + 0)) << 0;
+  v |= ((uint32_t)read_byte_no_check(addr + 1)) << 8;
+  v |= ((uint32_t)read_byte_no_check(addr + 2)) << 16;
+  v |= ((uint32_t)read_byte_no_check(addr + 3)) << 24;
+  return v;
+}
+
+// real write byte
+void write_byte(uint32_t addr, uint8_t value) {
+  if (!in_bounds(addr, 1)) {
+    fprintf(stderr, "write [byte]: out of bounds addr=0x%08x\n", addr);
+    return;
+  }
+
+  if (!check_access(addr)) {
+    fprintf(stderr,
+            "write [byte]: access violation - PID %d cannot write to 0x%08x\n",
+            current_process_id, addr);
+    return;
+  }
+
+  (cache_policy_type == CACHE_WRITE_THROUGH) ? write_through_no_check(addr, value) : write_back_no_check(addr, value);
+}
+
+// pretty writ byte
+void write_byte(uint32_t addr, uint8_t value) {
+  if (!in_bounds(addr, 1)) {
+    printf("error")
+    return;
+  }
+
+  if (!check_access(addr)) {
+    printf("error");
+    return;
+  }
+
+  write_through(); || write_back();
+}
+
+// Real fetch execute
+// Fetch the next instruction from the given memory and cpu and increments the program counter
+void fetch() {
+  HW_REGISTER(IR) = read_word(HW_REGISTER(PC));
+  HW_REGISTER(PC)+= 4;
+}
+
+// Executes the instruction in the given cpu's IR with the given RAM
+void execute() {
+  uint32_t instruction = HW_REGISTER(IR);
+
+  execute_instruction(instruction);
+}
+
+// real round robin
+static void roundRobin(void) {
+  PerfTimer timer;
+  
+  g_system_time = 0;
+  transferProcesses(NORMAL);
+
+  printf("\nScheduling algorithm: Round Robin\n");
+  printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
+  printf("=============================\n");
+
+  while (Ready_Queue->next > 0) {
+    Process *p = &Ready_Queue->PCB[0];
+    
+    // Record response time on first execution
+    if (!p->has_started) {
+      p->has_started = true;
+      p->start_time = g_system_time;
+      p->response_time = g_system_time - p->arrival_time;
+    }
+
+    printf("<system time %d> process %d starts running\n", g_system_time, p->pid);
+    
+    perf_timer_start(&timer);
+    set_current_process(p->pid);
+    THE_CPU = p->cpu_state;
+    record_context_switch(g_current_algorithm_id);
+
+    int slice = (p->burstTime < QUANTUM) ? p->burstTime : QUANTUM;
+    for (int i = 0; i < slice; i++) {
+      if (THE_CPU.hw_registers[PC] == CPU_HALT) break;
+      fetch();
+      execute();
+      if (p->burstTime > 0) {
+        p->burstTime--;
+        g_system_time++;
+      }
+    }
+
+    p->cpu_state = THE_CPU;
+    double ctx_time = perf_timer_end(&timer);
+    record_context_switch_time(g_current_algorithm_id, ctx_time);
+
+    bool finished = (p->burstTime <= 0) || (THE_CPU.hw_registers[PC] == CPU_HALT);
+    if (finished) {
+      printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+      record_process_completion(p);
+      liberate(p->pid);
+      shift_ready_left();
+    } else {
+      Process tmp = *p;
+      shift_ready_left();
+      push_ready_back(tmp);
+    }
+  }
+
+  printf("<system time %d> All processes finished.\n", g_system_time);
+  set_current_process(SYSTEM_PROCESS_ID);
+}
+
+// real fcfs
+static void firstComeFirstServe(void) {
+  PerfTimer timer;
+  
+  g_system_time = 0;
+  transferProcesses(NORMAL);
+  
+  printf("\nScheduling algorithm: FCFS\n");
+  printf("Total %d tasks to be scheduled\n", Ready_Queue->next);
+  printf("=============================\n");
+  
+  while (Ready_Queue->next > 0) {
+    Process *p = &Ready_Queue->PCB[0];
+    
+    if (!p->has_started) {
+      p->has_started = true;
+      p->start_time = g_system_time;
+      p->response_time = g_system_time - p->arrival_time;
+    }
+    
+    printf("<system time %d> process %d starts running\n", g_system_time, p->pid);
+    
+    perf_timer_start(&timer);
+    set_current_process(p->pid);
+    THE_CPU = p->cpu_state;
+    record_context_switch(g_current_algorithm_id);
+    
+    while (p->burstTime > 0 && THE_CPU.hw_registers[PC] != CPU_HALT) {
+      fetch();
+      execute();
+      p->burstTime--;
+      g_system_time++;
+    }
+    
+    p->cpu_state = THE_CPU;
+    double ctx_time = perf_timer_end(&timer);
+    record_context_switch_time(g_current_algorithm_id, ctx_time);
+    
+    printf("<system time %d> process %d finished.\n", g_system_time, p->pid);
+    record_process_completion(p);
+    liberate(p->pid);
+    shift_ready_left();
+  }
+  
+  printf("<system time %d> All processes finished.\n", g_system_time);
+  set_current_process(SYSTEM_PROCESS_ID);
+}
+
+// pretty fcfs
+static void firstComeFirstServe(void) {
+  
+  transferProcesses(NORMAL);
+    
+  switch_context();
+    
+    while (BURST_TIME > 0 && !CPU_HALT) {
+      fetch();
+      execute();
+      p->burstTime--;
+    }
+    
+    switch_context();
+    
+    free_process();
+  }
+  
+  set_current_process(SYSTEM_PROCESS_ID);
+}

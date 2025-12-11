@@ -61,6 +61,7 @@
 \definecolor{vscString}{RGB}{152,195,121}
 \definecolor{vscType}{RGB}{86,182,194}
 \definecolor{vscPreproc}{RGB}{198,120,221}
+\definecolor{neonfuchsia}{RGB}{254, 89, 194}
 \input{C-lstlisting}
 
 
@@ -126,7 +127,7 @@ typedef struct {
   ProcessState state;
   int priority, burstTime, originalBurstTime;
   float responseRatio;
-  Cpu cpu_state;                 // saved registers
+  Cpu cpu_state;
   uint32_t text_start, text_size;
   uint32_t data_start, data_size;
   uint32_t stack_ptr;
@@ -140,6 +141,14 @@ typedef struct {
         \item \textbf{Queues}: each ready/blocked/suspend queue is a fixed-capacity \texttt{Queue} with an in-place PCB array; priority and burst-based heaps are used for SPN/SRT/Priority.
         \item \textbf{Memory metadata}: \texttt{CacheLine} (tag/valid/dirty + 64\,B payload) powers L1/L2, while \texttt{MemoryBlock}/\texttt{MemoryTable} track best-fit allocations per PID with 1\,MB virtual spacing.
         \item \textbf{Performance tracker}: \texttt{PerformanceMetrics} aggregates per-algorithm latency stats, cache hits/misses, context-switch timings, and exports comparison CSVs.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Instruction Set \& Syscalls}
+    \begin{itemize}
+        \item MIPS-like ISA with R/I/J formats: arithmetic (add/sub/mult/div), logic (and/or/xor/nor), shifts, compare (\texttt{slti/sltiu}), branches (\texttt{beq/bne}), jumps (\texttt{j/jal/jr/jalr}).
+        \item Memory ops: byte/half/word loads with sign/zero extend (\texttt{lb/lbu/lh/lhu/lw}) and stores (\texttt{sb/sh/sw}) routed through cache-backed \texttt{read\_*/write\_*}.
+        \item Trap instructions: \texttt{syscall} handles I/O/exit; \texttt{break} halts; \texttt{eret} reserved (stubbed).
     \end{itemize}
 \end{frame}
 
