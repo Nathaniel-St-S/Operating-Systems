@@ -416,9 +416,8 @@ static int expand_pseudo(AssemblyContext *ctx, const char *op, char *operands,
         strcmp(op, "lh") == 0 || strcmp(op, "sh") == 0 ||
         strcmp(op, "lbu") == 0 || strcmp(op, "lhu") == 0) && argc == 2) {
 
-    // Check if second arg is a label (no parentheses)
+    // Check if second arg has no parentheses (it's a label)
     if (strchr(args[1], '(') == NULL) {
-      // Label-based load/store: lw $rt, label
       int label_addr = get_symbol_address(ctx, args[1]);
       if (label_addr == -1) {
         fprintf(stderr, "Warning: Undefined label '%s', using 0\n", args[1]);
@@ -426,11 +425,9 @@ static int expand_pseudo(AssemblyContext *ctx, const char *op, char *operands,
       }
 
       if (label_addr >= -32768 && label_addr <= 32767) {
-        // Address fits in 16-bit immediate: lw $rt, offset($zero)
         sprintf(output[0], "%s %s, %d($zero)", op, args[0], label_addr);
         return 1;
       } else {
-        // Address requires lui/ori expansion
         sprintf(output[0], "lui $at, %d", (label_addr >> 16) & 0xFFFF);
         sprintf(output[1], "ori $at, $at, %d", label_addr & 0xFFFF);
         sprintf(output[2], "%s %s, 0($at)", op, args[0]);
@@ -568,74 +565,45 @@ static uint32_t assemble_line(AssemblyContext *ctx, const char *line, uint32_t p
       strcmp(op, "lh") == 0 || strcmp(op, "sh") == 0 ||
       strcmp(op, "lbu") == 0 || strcmp(op, "lhu") == 0) {
 
-    char operand_copy[MAX_LINE];
-    strncpy(operand_copy, rest, MAX_LINE - 1);
-    operand_copy[MAX_LINE - 1] = '\0';
-
-    // Check for label-based addressing: lw $rt, label
-    // vs offset-based: lw $rt, offset($rs)
-    char *comma = strchr(operand_copy, ',');
-    if (!comma) {
-      fprintf(stderr, "Error: Missing comma in %s at PC 0x%08x\n", op, pc);
+    char *rt = strtok_r(NULL, " \t,", &saveptr);
+    if (!rt) {
+      fprintf(stderr, "Error: Missing rt for %s at PC 0x%08x\n", op, pc);
       return 0;
     }
 
-    *comma = '\0';
-    char *rt_str = operand_copy;
-    char *second_operand = comma + 1;
-
-    // Trim whitespace
-    while (*rt_str && isspace(*rt_str)) rt_str++;
-    while (*second_operand && isspace(*second_operand)) second_operand++;
-
-    // Check if second operand has parentheses (offset mode) or is a label
-    char *open_paren = strchr(second_operand, '(');
-
-    if (!open_paren) {
-      // LABEL MODE: lw $rt, label
-      // Translate to: lw $rt, 0(label_address_in_register)
-
-      int label_addr = get_symbol_address(ctx, second_operand);
-      if (label_addr == -1) {
-        fprintf(stderr, "Error: Undefined label '%s' for %s at PC 0x%08x\n", 
-            second_operand, op, pc);
-        return 0;
-      }
-
-      int rt_num = get_register(rt_str);
-      if (!validate_register_num(rt_num, rt_str, op, pc)) {
-        return 0;
-      }
-
-      // Use $zero as base, label address as offset
-      return assemble_i_type(op, rt_num, 0, (int16_t)label_addr);
-    }
-
-    // OFFSET MODE: lw $rt, offset($rs)
-    char *close_paren = strchr(second_operand, ')');
-
-    if (!close_paren) {
-      fprintf(stderr, "Error: Missing close paren in %s at PC 0x%08x\n", op, pc);
+    // Get offset($rs) part
+    char *offset_part = strtok_r(NULL, "", &saveptr);
+    if (!offset_part) {
+      fprintf(stderr, "Error: Missing offset($rs) for %s at PC 0x%08x\n", op, pc);
       return 0;
     }
 
-    // Split offset and base
+    // Trim and find parentheses
+    while (*offset_part && isspace((unsigned char)*offset_part)) offset_part++;
+
+    char *open_paren = strchr(offset_part, '(');
+    char *close_paren = strchr(offset_part, ')');
+
+    if (!open_paren || !close_paren) {
+      fprintf(stderr, "Error: Bad format for %s at PC 0x%08x (expected offset($rs))\n", op, pc);
+      return 0;
+    }
+
     *open_paren = '\0';
     *close_paren = '\0';
 
-    char *offset_str = second_operand;
+    char *offset_str = offset_part;
     char *rs_str = open_paren + 1;
 
     // Trim
     while (*offset_str && isspace(*offset_str)) offset_str++;
     while (*rs_str && isspace(*rs_str)) rs_str++;
 
-    // Parse registers and offset
-    int rt_num = get_register(rt_str);
+    int rt_num = get_register(rt);
     int rs_num = get_register(rs_str);
     int16_t offset = (offset_str && *offset_str) ? (int16_t)parse_num(offset_str) : 0;
 
-    if (!validate_register_num(rt_num, rt_str, op, pc) ||
+    if (!validate_register_num(rt_num, rt, op, pc) ||
         !validate_register_num(rs_num, rs_str, op, pc)) {
       return 0;
     }

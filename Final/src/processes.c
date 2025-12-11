@@ -523,13 +523,10 @@ uint32_t makeProcess(int pID,
 //-------------------------------------Scheduling Algorithms-------------------------------------//
 
 static void roundRobin(void) {
-  // Clear any pending input
-  int c;
-  while ((c = getchar()) != EOF && c != '\n');
-  clearerr(stdin);
-
   PerfTimer timer;
   
+  clearerr(stdin);
+
   g_system_time = 0;
   transferProcesses(NORMAL);
 
@@ -602,6 +599,10 @@ static void roundRobin(void) {
 }
 
 static void firstComeFirstServe(void) {
+  // Clear any pending input
+  int c;
+  while ((c = getchar()) != EOF && c != '\n');
+  clearerr(stdin);
   PerfTimer timer;
   
   g_system_time = 0;
@@ -649,6 +650,10 @@ static void firstComeFirstServe(void) {
 }
 
 static void shortestProcessNext(void) {
+  // Clear any pending input
+  int c;
+  while ((c = getchar()) != EOF && c != '\n');
+  clearerr(stdin);
   PerfTimer timer;
   
   g_system_time = 0;
@@ -697,6 +702,10 @@ static void shortestProcessNext(void) {
 }
 
 static void priorityBased(void) {
+  // Clear any pending input
+  int c;
+  while ((c = getchar()) != EOF && c != '\n');
+  clearerr(stdin);
   PerfTimer timer;
   
   g_system_time = 0;
@@ -754,6 +763,10 @@ static void priorityBased(void) {
 }
 
 static void shortestRemainingTime(void) {
+  // Clear any pending input
+  int c;
+  while ((c = getchar()) != EOF && c != '\n');
+  clearerr(stdin);
   PerfTimer timer;
   
   g_system_time = 0;
@@ -811,6 +824,10 @@ static void shortestRemainingTime(void) {
 }
 
 static void highestResponseRatioNext(void) {
+  // Clear any pending input
+  int c;
+  while ((c = getchar()) != EOF && c != '\n');
+  clearerr(stdin);
   PerfTimer timer;
   
   g_system_time = 0;
@@ -874,6 +891,10 @@ static void highestResponseRatioNext(void) {
 }
 
 static void feedBack(void) {
+  // Clear any pending input
+  int c;
+  while ((c = getchar()) != EOF && c != '\n');
+  clearerr(stdin);
   Queue* feedBack_Q2 = init_FeedBack_Queue(MAX_PROCESSES);
   Queue* feedBack_Q3 = init_FeedBack_Queue(MAX_PROCESSES);
   int quantum1 = 2;
