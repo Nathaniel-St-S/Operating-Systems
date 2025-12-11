@@ -109,6 +109,7 @@
 %================================================
 
 \begin{frame}[fragile]{CPU Definition}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{9pt}{7pt}\selectfont\ttfamily,
@@ -139,9 +140,11 @@ enum {
   HW_REG_COUNT,
 };
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Process Control Block}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{9pt}{7pt}\selectfont\ttfamily,
@@ -171,6 +174,7 @@ typedef struct {
   bool has_started;
 } Process;
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 
@@ -256,6 +260,7 @@ typedef struct {
 
 
 \begin{frame}[fragile]{Opcode and Funct Codes}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{6pt}{7pt}\selectfont\ttfamily,
@@ -294,10 +299,12 @@ enum {
   FUNCT_SYSCALL=0x0C, FUNCT_BREAK=0x0D
 };
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 % ---------------- Fetch + Top-Level Execute ----------------
 \begin{frame}[fragile]{Fetch--Decode--Execute: Fetch + Dispatch}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{8pt}{7pt}\selectfont\ttfamily,
@@ -328,10 +335,12 @@ void execute_instruction(uint32_t instruction) {
   report_invalid_opcode(opcode, instruction);
 }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 % ---------------- R-Type Handler ----------------
 \begin{frame}[fragile]{Fetch--Decode--Execute: R-Type Handler}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{5pt}{0pt}\selectfont\ttfamily,
@@ -375,10 +384,12 @@ static void handle_r_type_instruction(uint32_t instruction) {
   }
 }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 % ---------------- I-Type Handler ----------------
 \begin{frame}[fragile]{Fetch--Decode--Execute: I-Type Handler}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{5pt}{0pt}\selectfont\ttfamily,
@@ -424,10 +435,12 @@ static int handle_immediate_instruction(uint32_t instruction) {
   return 0;
 }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 % ---------------- J-Type Handler ----------------
 \begin{frame}[fragile]{Fetch--Decode--Execute: J-Type Handler}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[language=MyC]
 static int handle_jump_instruction(uint32_t instruction) {
   uint32_t opcode = get_opcode(instruction);
@@ -441,6 +454,7 @@ static int handle_jump_instruction(uint32_t instruction) {
   return 0;
 }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 
@@ -449,6 +463,7 @@ static int handle_jump_instruction(uint32_t instruction) {
 %------------------------------------------------
 
 \begin{frame}[fragile]{Memory Hierarchy}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[language=MyC]
 #define L1CACHE_SIZE 64
 #define L2CACHE_SIZE 128
@@ -465,9 +480,11 @@ dword* HDD = NULL;
 dword* SSD = NULL;
 MemoryTable MEMORY_TABLE;
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Cache Lookup}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{8pt}{7pt}\selectfont\ttfamily,
@@ -495,9 +512,11 @@ static int L2_cache_search(const dword addr) {
   return cache_search(&L2, addr, &L2cache_hit, &L2cache_miss);
 }
   \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Cache Policies}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{8pt}{7pt}\selectfont\ttfamily,
@@ -525,9 +544,11 @@ void write_byte(uint32_t addr, uint8_t value) {
   (cache_policy_type == CACHE_WRITE_THROUGH) ? write_through_no_check(addr, value) write_back_no_check(addr, value);
 }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Cache Policies}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{9pt}{7pt}\selectfont\ttfamily,
@@ -554,9 +575,11 @@ static void write_through_no_check (uint32_t addr, uint8_t value){
   }
 }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Cache Policies}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{9pt}{7pt}\selectfont\ttfamily,
@@ -582,9 +605,11 @@ static void write_back_no_check(uint32_t addr, uint8_t value) {
     return;
   }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Memory Table}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{7pt}{7pt}\selectfont\ttfamily,
@@ -617,9 +642,11 @@ void init_memtable(const int size)
   printf("initialized memory table with size %d\n" , size);
 }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Best-Fit Allocation: Search Phase}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{7pt}{7pt}\selectfont\ttfamily,
@@ -653,6 +680,7 @@ dword mallocate(int pid, int size) {
     return -1;
   }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}{Best-Fit Allocation: Search Visualization}
@@ -703,6 +731,7 @@ dword mallocate(int pid, int size) {
 \end{frame}
 
 \begin{frame}[fragile]{Best-Fit Allocation: Commit + Split}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{6pt}{7pt}\selectfont\ttfamily,
@@ -739,6 +768,7 @@ dword mallocate(int pid, int size) {
   return best_fit->start_addr;    // Return the starting address
 }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}{Best-Fit Allocation: Commit + Split Visualization}
@@ -808,6 +838,7 @@ dword mallocate(int pid, int size) {
 
 
 \begin{frame}[fragile]{Freeing Memory: Locate + Mark Free}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{7pt}{7pt}\selectfont\ttfamily,
@@ -840,9 +871,11 @@ void liberate(int pid)
   if (index == MEMORY_TABLE.block_count)
     return;
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Freeing Memory: Coalescing Adjacent Blocks}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{6pt}{7pt}\selectfont\ttfamily,
@@ -880,6 +913,7 @@ void liberate(int pid)
   }
 }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}{Freeing Memory: Visual Overview}
@@ -961,6 +995,7 @@ void liberate(int pid)
 \section{Module 3: Process Scheduling and Context Switching}
 %================================================
 \begin{frame}[fragile]{Schedulers}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{5pt}{7pt}\selectfont\ttfamily,
@@ -1000,9 +1035,11 @@ void scheduler(SchedulingAlgorithm algorithm) {
   }
 }
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Queues}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{11pt}{11pt}\selectfont\ttfamily,
@@ -1023,6 +1060,7 @@ static Queue* Suspend_Ready_Queue = NULL;
 static Queue* New_Queue = NULL;
 static Queue* Finished_Queue = NULL;
 \end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Round Robin: Context Switching in Our Simulator}
@@ -1041,7 +1079,7 @@ static Queue* Finished_Queue = NULL;
 \medskip
 
 \textbf{Switching into a process}
-\begin{block}{Load PCB $\rightarrow$ CPU}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
 language=MyC,
 basicstyle=\fontsize{5.8pt}{7.2pt}
@@ -1052,12 +1090,12 @@ set_current_process(p->pid);  // Update current PID
 THE_CPU = p->cpu_state;       // Restore registers & PC
 record_context_switch(g_current_algorithm_id);
 \end{lstlisting}
-\end{block}
+\end{beamercolorbox}
 
 \medskip
 
 \textbf{Switching out of a process}
-\begin{block}{CPU $\rightarrow$ PCB + queue update}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[language=MyC,
   basicstyle=\fontsize{5.8pt}{7.2pt}\selectfont\ttfamily]
 p->cpu_state = THE_CPU;  // Save registers & PC
@@ -1072,14 +1110,14 @@ if (finished) {
   push_ready_back(tmp);  // Requeue at back (preemption)
 }
 \end{lstlisting}
-\end{block}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{FCFS: Context Switching in Our Simulator}
 \small
 
 \textbf{Switching into a process (once per process)}
-\begin{block}{Load PCB $\rightarrow$ CPU}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[language=MyC,
   basicstyle=\fontsize{6.8pt}{7.2pt}\selectfont\ttfamily]
 Process *p = &Ready_Queue->PCB[0];
@@ -1095,12 +1133,12 @@ set_current_process(p->pid);   // Update current PID
 THE_CPU = p->cpu_state;        // Restore registers & PC
 record_context_switch(g_current_algorithm_id);
 \end{lstlisting}
-\end{block}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{FCFS: Context Switching in Our Simulator}
 \textbf{Running non-preemptively until completion}
-\begin{block}{CPU executes until burst time is exhausted}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[language=MyC,
   basicstyle=\fontsize{6.8pt}{7.2pt}\selectfont\ttfamily]
 while (p->burstTime > 0 &&
@@ -1111,12 +1149,12 @@ while (p->burstTime > 0 &&
   g_system_time++;
 }
 \end{lstlisting}
-\end{block}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{FCFS: Context Switching in Our Simulator}
 \textbf{Switching out of a process (save state + cleanup)}
-\begin{block}{CPU $\rightarrow$ PCB + remove from ready queue}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[language=MyC,
   basicstyle=\fontsize{6.8pt}{7.2pt}\selectfont\ttfamily]
 p->cpu_state = THE_CPU;              // Save final CPU state
@@ -1127,7 +1165,7 @@ record_process_completion(p);
 liberate(p->pid);                    // Free its memory
 shift_ready_left();                  // Next process moves to front
 \end{lstlisting}
-\end{block}
+\end{beamercolorbox}
 \end{frame}
 
 \begin{frame}[fragile]{Round Robin: Fetch--Decode--Execute Region}
@@ -1159,8 +1197,8 @@ for (int i = 0; i < slice; i++) {
 
 \begin{frame}[fragile]{FCFS: Fetch--Decode--Execute Region}
 
-\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
 \begin{lstlisting}[
   language=MyC,
   basicstyle=\fontsize{9pt}{7.2pt}\selectfont\ttfamily,
@@ -1178,8 +1216,8 @@ while (p->burstTime > 0 &&
   g_system_time++;  // Advance global system time
 }
 \end{lstlisting}
-
 \end{beamercolorbox}
+
 
 \end{frame}
 
