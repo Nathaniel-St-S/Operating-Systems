@@ -33,7 +33,53 @@
 
 % Frame titles
 \setbeamercolor{frametitle}{bg=Nord0, fg=Nord8}
+
+\setbeamertemplate{frametitle}{%
+  \vspace{0.6em}%
+  \nointerlineskip%
+  \begin{beamercolorbox}[wd=\textwidth, leftskip=-0.1cm, rightskip=0.3cm]{frametitle}%
+    % Nord14 triangle pointing right → toward the title text
+    \tikz[baseline=-0.23ex]{
+      \fill[Nord14] (0,0) -- (0,1.2ex) -- (1.2ex,0.6ex) -- cycle;
+    }%
+    \hspace{0.6em}%
+    {\color{Nord8}\usebeamerfont{frametitle}\insertframetitle}%
+    \vspace{0.3em}%
+  \end{beamercolorbox}%
+}
 \setbeamerfont{frametitle}{size=\large,series=\bfseries}
+
+% Table of Contents
+% Colors/fonts for ToC entries
+
+% Colors + fonts
+% Slightly larger section text
+\setbeamerfont{section in toc}{size=\large}
+\setbeamerfont{subsection in toc}{size=\normalsize}
+
+% Soft Nord colors
+\setbeamercolor{section in toc}{fg=Nord6}
+\setbeamercolor{subsection in toc}{fg=Nord5}
+
+% Simple sections: just text with vertical spacing
+\setbeamertemplate{section in toc}{%
+  \leavevmode
+  \hspace{0.3em}%
+  {\usebeamerfont{section in toc}%
+   \usebeamercolor[fg]{section in toc}%
+   \inserttocsection}%
+  \par\vspace{0.4em}%
+}
+
+% Simple subsections: indented text
+\setbeamertemplate{subsection in toc}{%
+  \leavevmode
+  \hspace{1.8em}%
+  {\usebeamerfont{subsection in toc}%
+   \usebeamercolor[fg]{subsection in toc}%
+   \inserttocsubsection}%
+  \par\vspace{0.2em}%
+}
 
 % Section titles
 \setbeamercolor{section title}{fg=Nord11}
@@ -68,6 +114,32 @@
 \usepackage{tikz}
 \usepackage{graphicx}
 
+% Commands
+\newcommand{\NordSectionPage}{
+  {
+    \setbeamertemplate{footline}{}
+    \begin{frame}[plain]
+      \vfill
+      \begin{center}
+        \begin{tikzpicture}
+          \node[
+            rounded corners=10pt,
+            fill=Nord1,
+            draw=Nord8,
+            line width=1pt,
+            inner sep=14pt,
+            text width=0.8\linewidth,
+            align=center
+          ] (box) {
+            {\usebeamercolor[fg]{section title}\LARGE\bfseries\insertsection}\\[0.5em]
+          };
+        \end{tikzpicture}
+      \end{center}
+      \vfill
+    \end{frame}
+  }
+}
+
 
 % ---------------------------------------------------------
 % Title Info
@@ -82,16 +154,7 @@
 % Document
 % ---------------------------------------------------------
 \begin{document}
-\AtBeginSection[]
-{
-  \begin{frame}
-    \centering
-    {%
-      \hypersetup{hidelinks}%
-      {\usebeamercolor[fg]{section title}\Huge\insertsection}%
-    }
-  \end{frame}
-}
+\AtBeginSection[]{\NordSectionPage}
 % ---------- TITLE SLIDE ----------
 {
 \setbeamercolor{title}{fg=Nord8}
