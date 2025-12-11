@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Iterable, List
 
 import matplotlib
 
@@ -19,37 +19,31 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parent
 OUTPUT_DIR = ROOT / "charts"
 
-# Nord color palette
-NORD = {
-    "nord0": "#2E3440",
-    "nord1": "#3B4252",
-    "nord2": "#434C5E",
-    "nord3": "#4C566A",
-    "nord4": "#D8DEE9",
-    "nord5": "#E5E9F0",
-    "nord6": "#ECEFF4",
-    "nord7": "#8FBCBB",
-    "nord8": "#88C0D0",
-    "nord9": "#81A1C1",
-    "nord10": "#5E81AC",
-    "nord11": "#BF616A",
-    "nord12": "#D08770",
-    "nord13": "#EBCB8B",
-    "nord14": "#A3BE8C",
-    "nord15": "#B48EAD",
+# Color palette taken from ColorBrewer Set2 shades to keep a consistent theme
+# across all generated charts.
+CATEGORY_COLORS = {
+    "time": "#4e79a7",
+    "cpu": "#f28e2b",
+    "throughput": "#59a14f",
+    "context": "#e15759",
+    "cache_hits": "#76b7b2",
+    "cache_misses": "#edc948",
 }
+DEFAULT_BAR_COLOR = "#4e79a7"
 
 
-def read_algorithm_metrics(csv_path: Path, value_field: str) -> Tuple[List[str], List[float]]:
-    """Read two-column (Algorithm + metric) CSV into label and value lists."""
-    with csv_path.open(newline="") as f:
-        reader = csv.DictReader(f)
-        labels: List[str] = []
-        values: List[float] = []
-        for row in reader:
-            labels.append(row["Algorithm"])
-            values.append(float(row[value_field]))
-    return labels, values
+COMPARISON_METRICS = [
+    ("AvgWaitTime", "Average Waiting Time", "time"),
+    ("AvgTurnaroundTime", "Average Turnaround Time", "time"),
+    ("AvgResponseTime", "Average Response Time", "time"),
+    ("CPUUtilization", "CPU Utilization (%)", "cpu"),
+    ("Throughput", "Throughput", "throughput"),
+    ("ContextSwitches", "Context Switches", "context"),
+    ("L1Hits", "L1 Cache Hits", "cache_hits"),
+    ("L1Misses", "L1 Cache Misses", "cache_misses"),
+    ("L2Hits", "L2 Cache Hits", "cache_hits"),
+    ("L2Misses", "L2 Cache Misses", "cache_misses"),
+]
 
 
 def render_bar_chart(
@@ -120,14 +114,6 @@ def render_bar_chart(
     plt.close(fig)
 
 
-def plot_single_metric(csv_filename: str, metric_field: str, ylabel: str) -> None:
-    csv_path = ROOT / csv_filename
-    labels, values = read_algorithm_metrics(csv_path, metric_field)
-    title = ylabel
-    output_path = OUTPUT_DIR / f"{csv_path.stem}.png"
-    render_bar_chart(labels, values, title=title, ylabel=ylabel, output_path=output_path)
-
-
 def plot_comparison_metrics() -> None:
     csv_path = ROOT / "comparison_results.csv"
     with csv_path.open(newline="") as f:
@@ -135,16 +121,7 @@ def plot_comparison_metrics() -> None:
         rows = [row for row in reader]
 
     labels = [row["Algorithm"] for row in rows]
-    metrics: Dict[str, str] = {
-        "AvgWaitTime": "Average Waiting Time",
-        "AvgTurnaroundTime": "Average Turnaround Time",
-        "AvgResponseTime": "Average Response Time",
-        "CPUUtilization": "CPU Utilization (%)",
-        "Throughput": "Throughput",
-        "ContextSwitches": "Context Switches",
-    }
-
-    for field, label in metrics.items():
+    for field, label, category in COMPARISON_METRICS:
         values = [float(row[field]) for row in rows]
         filename = f"comparison_{field}.png"
 
@@ -160,14 +137,11 @@ def plot_comparison_metrics() -> None:
             title=f"{label} by Algorithm",
             ylabel=label,
             output_path=OUTPUT_DIR / filename,
-            bar_color=color,
+            bar_color=CATEGORY_COLORS.get(category, DEFAULT_BAR_COLOR),
         )
 
 
 def main() -> None:
-    plot_single_metric("chart_cpu_utilization.csv", "CPUUtilization", "CPU Utilization (%)")
-    plot_single_metric("chart_context_switches.csv", "ContextSwitches", "Context Switches")
-    plot_single_metric("chart_waiting_time.csv", "AvgWaitingTime", "Average Waiting Time")
     plot_comparison_metrics()
     print(f"Charts written to: {OUTPUT_DIR}")
 
