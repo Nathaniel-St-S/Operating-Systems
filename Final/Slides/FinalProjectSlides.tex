@@ -65,6 +65,7 @@
 \input{C-lstlisting}
 \usepackage{fontspec}
 \setmonofont{JetBrainsMono Nerd Font}
+\usepackage{tikz}
 
 
 % ---------------------------------------------------------
@@ -295,38 +296,667 @@ enum {
 \end{lstlisting}
 \end{frame}
 
-\begin{frame}{Instruction Set Architecture (ISA)}
-  % ISA
+% ---------------- Fetch + Top-Level Execute ----------------
+\begin{frame}[fragile]{Fetch--Decode--Execute: Fetch + Dispatch}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{8pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+void fetch() {
+  HW_REGISTER(IR) = read_word(HW_REGISTER(PC));
+  HW_REGISTER(PC) += 4;
+}
+
+void execute_instruction(uint32_t instruction) {
+  uint32_t opcode = get_opcode(instruction);
+
+  // R-type instructions all have an opcode of 0
+  if (opcode == 0x0) { handle_r_type_instruction(instruction); return; }
+
+  // I-type instructions
+  if (handle_immediate_instruction(instruction)) { return; }
+
+  // J-type instructions
+  if (handle_jump_instruction(instruction)) { return; }
+
+  // Special case: ERET
+  if ((opcode == OP_ERET) & handle_eret_instruction(instruction)) { return; }
+
+  // Else: invalid opcode
+  report_invalid_opcode(opcode, instruction);
+}
+\end{lstlisting}
 \end{frame}
+
+% ---------------- R-Type Handler ----------------
+\begin{frame}[fragile]{Fetch--Decode--Execute: R-Type Handler}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{5pt}{0pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+static void handle_r_type_instruction(uint32_t instruction) {
+  uint32_t funct = instruction & FUNCT_MASK;
+  uint32_t rs    = (instruction >> RS_SHIFT) & RS_MASK;
+  uint32_t rt    = (instruction >> RT_SHIFT) & RT_MASK;
+  uint32_t rd    = (instruction >> RD_SHIFT) & RD_MASK;
+  uint32_t shamt = (instruction >> SHAMT_SHIFT) & SHAMT_MASK;
+
+  switch (funct) {
+    case FUNCT_ADD:   add(rs, rt, rd);   break;
+    case FUNCT_ADDU:  addu(rs, rt, rd);  break;
+    case FUNCT_SUB:   sub(rs, rt, rd);   break;
+    case FUNCT_SUBU:  subu(rs, rt, rd);  break;
+    case FUNCT_MULT:  mult(rs, rt);      break;
+    case FUNCT_MULTU: multu(rs, rt);     break;
+    case FUNCT_DIV:   divv(rs, rt);      break;
+    case FUNCT_DIVU:  divu(rs, rt);      break;
+    case FUNCT_MFHI:  mfhi(rd);          break;
+    case FUNCT_MFLO:  mflo(rd);          break;
+    case FUNCT_MTHI:  mthi(rs);          break;
+    case FUNCT_MTLO:  mtlo(rs);          break;
+    case FUNCT_AND:   and(rs, rt, rd);   break;
+    case FUNCT_OR:    or(rs, rt, rd);    break;
+    case FUNCT_XOR:   xor(rs, rt, rd);   break;
+    case FUNCT_NOR:   nor(rs, rt, rd);   break;
+    case FUNCT_SLL:   sll(rt, rd, shamt); break;
+    case FUNCT_SRL:   srl(rt, rd, shamt); break;
+    case FUNCT_SRA:   sra(rt, rd, shamt); break;
+    case FUNCT_SLLV:  sllv(rs, rt, rd);  break;
+    case FUNCT_SRLV:  srlv(rs, rt, rd);  break;
+    case FUNCT_SRAV:  srav(rs, rt, rd);  break;
+    case FUNCT_JR:    jr(rs);            break;
+    case FUNCT_JALR:  jalr(rs, rd);      break;
+    case FUNCT_SYSCALL: syscall();       break;
+    case FUNCT_BREAK:   breakk();        break;
+  }
+}
+\end{lstlisting}
+\end{frame}
+
+% ---------------- I-Type Handler ----------------
+\begin{frame}[fragile]{Fetch--Decode--Execute: I-Type Handler}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{5pt}{0pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+static int handle_immediate_instruction(uint32_t instruction) {
+  uint32_t opcode = get_opcode(instruction);
+  uint32_t rs = (instruction >> RS_SHIFT) & RS_MASK;
+  uint32_t rt = (instruction >> RT_SHIFT) & RT_MASK;
+  uint16_t imm = instruction & 0xFFFF;
+
+  // Immediate ALU operations
+  switch (opcode) {
+    case OP_ADDI:  addi(rs, rt, imm);  return 1;
+    case OP_ADDIU: addiu(rs, rt, imm); return 1;
+    case OP_ANDI:  andi(rs, rt, imm);  return 1;
+    case OP_ORI:   ori(rs, rt, imm);   return 1;
+    case OP_XORI:  xori(rs, rt, imm);  return 1;
+    case OP_SLTI:  slti(rs, rt, imm);  return 1;
+    case OP_SLTIU: sltiu(rs, rt, imm); return 1;
+    case OP_LUI:   lui(rt, imm);       return 1;
+  }
+
+  // Memory + branch operations
+  int32_t offset = sign_extend(imm, 16);
+  uint32_t base = (uint32_t)read_gpr(rs);
+  uint32_t effective_address = base + (uint32_t)offset;
+
+  switch (opcode) {
+    case OP_LW:  lw(rt, effective_address);  return 1;
+    case OP_SW:  sw(rt, effective_address);  return 1;
+    case OP_LB:  lb(rt, effective_address);  return 1;
+    case OP_LBU: lbu(rt, effective_address); return 1;
+    case OP_LH:  lh(rt, effective_address);  return 1;
+    case OP_LHU: lhu(rt, effective_address); return 1;
+    case OP_SB:  sb(rt, effective_address);  return 1;
+    case OP_SH:  sh(rt, effective_address);  return 1;
+    case OP_BEQ: beq(rs, rt, offset);        return 1;
+    case OP_BNE: bne(rs, rt, offset);        return 1;
+  }
+
+  return 0;
+}
+\end{lstlisting}
+\end{frame}
+
+% ---------------- J-Type Handler ----------------
+\begin{frame}[fragile]{Fetch--Decode--Execute: J-Type Handler}
+\begin{lstlisting}[language=MyC]
+static int handle_jump_instruction(uint32_t instruction) {
+  uint32_t opcode = get_opcode(instruction);
+  uint32_t target = instruction & 0x01FFFFFF;
+
+  switch (opcode) {
+    case OP_J:   j(target);   return 1;
+    case OP_JAL: jal(target); return 1;
+  }
+
+  return 0;
+}
+\end{lstlisting}
+\end{frame}
+
 
 %------------------------------------------------
 \section{Module 2: Memory Management}
 %------------------------------------------------
 
-\begin{frame}{Memory Hierarchy}
-  % L1, L2, RAM, Disk
+\begin{frame}[fragile]{Memory Hierarchy}
+\begin{lstlisting}[language=MyC]
+#define L1CACHE_SIZE 64
+#define L2CACHE_SIZE 128
+#define CACHE_LINE_SIZE 64
+#define RAM_SIZE 128 * 1024 * 1024
+#define SSD_SIZE 256 * 1024 * 1024
+#define HDD_SIZE 512 * 1024 * 1024
+#define MAX_MEM_BLOCKS 500
+
+Cache L1;
+Cache L2;
+dword* RAM = NULL;
+dword* HDD = NULL;
+dword* SSD = NULL;
+MemoryTable MEMORY_TABLE;
+\end{lstlisting}
 \end{frame}
 
-\begin{frame}{Cache Lookup}
-  % Cache Lookup
+\begin{frame}[fragile]{Cache Lookup}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{8pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+int cache_search(Cache* cache, const dword addr, int* hit_counter, int* miss_counter) {
+	for(int i = 0; i < cache->size; i++) {
+		// The address we want was found in cache so return the index of that address
+		if(cache->items[i].addr == addr) {
+      (*hit_counter)++;
+			return i;
+		}
+	}
+	// Address not found so return signifier
+  (*miss_counter)++;
+	return EMPTY_ADDR;
+}
+// Searches the L1 cache and updates it's hit/miss counters
+static int L1_cache_search(const dword addr) {
+  return cache_search(&L1, addr, &L1cache_hit, &L1cache_miss);
+}
+// Searches the L2 cache and updates it's hit/miss counters
+static int L2_cache_search(const dword addr) {
+  return cache_search(&L2, addr, &L2cache_hit, &L2cache_miss);
+}
+  \end{lstlisting}
 \end{frame}
 
-\begin{frame}{Cache Policies}
-  % Write through and write back
+\begin{frame}[fragile]{Cache Policies}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{8pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+typedef enum {
+  CACHE_WRITE_THROUGH,
+  CACHE_WRITE_BACK
+} CachePolicy;
+
+void write_byte(uint32_t addr, uint8_t value) {
+  if (!in_bounds(addr, 1)) {
+    fprintf(stderr, "write [byte]: out of bounds addr=0x%08x\n", addr);
+    return;
+  }
+
+  if (!check_access(addr)) {
+    fprintf(stderr,
+            "write [byte]: access violation - PID %d cannot write to 0x%08x\n",
+            current_process_id, addr);
+    return;
+  }
+
+  (cache_policy_type == CACHE_WRITE_THROUGH) ? write_through_no_check(addr, value) write_back_no_check(addr, value);
+}
+\end{lstlisting}
 \end{frame}
 
-\begin{frame}{Memory Table}
-  % Memory Table
+\begin{frame}[fragile]{Cache Policies}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{9pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+static void write_through_no_check (uint32_t addr, uint8_t value){
+  
+  RAM[addr] = value;
+
+  uint32_t base = line_base(addr);
+  int idx;
+
+  // Update L1 if present
+  idx = find_line(&L1, base);
+  if (idx >= 0) {
+    L1.lines[idx].data[addr - base] = value;
+  }
+
+  // Update L2 if present
+  idx = find_line(&L2, base);
+  if (idx >= 0) {
+    L2.lines[idx].data[addr - base] = value;
+  }
+}
+\end{lstlisting}
 \end{frame}
 
-\begin{frame}{Memory Allocation}
-  % Allocation
+\begin{frame}[fragile]{Cache Policies}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{9pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+static void write_back_no_check(uint32_t addr, uint8_t value) {
+  uint32_t base = line_base(addr);
+  int idx;
+
+  // L1 Cache
+  idx = find_line(&L1, base);
+  if (idx >= 0) {
+    L1.lines[idx].data[addr - base] = value;
+    L1.lines[idx].is_dirty = true;
+    
+    // Update L2 if present
+    idx = find_line(&L2, base);
+    if (idx >= 0) {
+      L2.lines[idx].data[addr - base] = value;
+      L2.lines[idx].is_dirty = true;
+    }
+    return;
+  }
+\end{lstlisting}
 \end{frame}
 
-\begin{frame}{Memory Deallocation}
-  % Deallocation
+\begin{frame}[fragile]{Memory Table}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{7pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+typedef struct {
+  int pid;
+  uint32_t start_addr;
+  uint32_t end_addr;
+  bool is_free;
+} MemoryBlock;
+
+typedef struct {
+  MemoryBlock *blocks;
+  size_t block_count;
+  size_t capacity;
+} MemoryTable;
+
+void init_memtable(const int size)
+{
+  // Make the first entry into the table one large free block of memory
+  MEMORY_TABLE.blocks = (MemoryBlock*)malloc(sizeof(MemoryBlock) * size);
+  MEMBLOCK(0).pid = NO_PID;
+  MEMBLOCK(0).is_free = true;
+  MEMBLOCK(0).start_addr = 0;
+  MEMBLOCK(0).end_addr = (size - 1);
+
+  MEMORY_TABLE.block_count = 1;
+  printf("initialized memory table with size %d\n" , size);
+}
+\end{lstlisting}
 \end{frame}
 
+\begin{frame}[fragile]{Best-Fit Allocation: Search Phase}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{7pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+dword mallocate(int pid, int size) {
+  int best_size = WRS + 1;   // Track smallest free block found so far
+  int index = -1;            // Index of the best-fit block
+
+  // Scan the memory table for free blocks
+  for(int i = 0; i < MEMORY_TABLE.block_count; i++) {
+    if (MEMBLOCK(i).is_free) {
+
+      // Compute size of this free block
+      int mem_block_size =
+        (MEMBLOCK(i).end_addr - MEMBLOCK(i).start_addr) + 1;
+
+      // Check if it fits and is better (smaller) than the current best
+      if (mem_block_size >= size && mem_block_size < best_size) {
+        best_size = mem_block_size;
+        index = i;
+      }
+    }
+  }
+
+  // No suitable block exists -> allocation fails
+  if (index == -1) {
+    printf("Could not fulfill PID %d's request for %d bytes: "
+           "Not enough free space\n", pid, size);
+    return -1;
+  }
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Best-Fit Allocation: Search Visualization}
+\centering
+\scriptsize
+
+\textbf{Free list before allocation (request: \texttt{size} bytes)}\\[0.4em]
+
+\begin{tikzpicture}[x=0.9cm,y=0.7cm,font=\scriptsize]
+  % Block 0: Free (large)
+  \draw[fill=Nord2,draw=Nord6] (0,0) rectangle (3,1);
+  \node at (1.5,0.5) {Free};
+  \node[below] at (1.5,0) {size = 96};
+
+  % Block 1: Allocated
+  \draw[fill=Nord11,draw=Nord6] (3,0) rectangle (5,1);
+  \node at (4,0.5) {PID A};
+  \node[below] at (4,0) {size = 32};
+
+  % Block 2: Free (smaller than needed)
+  \draw[fill=Nord2,draw=Nord6] (5,0) rectangle (7,1);
+  \node at (6,0.5) {Free};
+  \node[below] at (6,0) {size = 16};
+
+  % Block 3: Free (best-fit)
+  \draw[fill=Nord11!70,draw=Nord6,thick] (7,0) rectangle (9.5,1);
+  \node at (8.25,0.5) {Free};
+  \node[below] at (8.25,0) {size = 48};
+
+  % Annotation: request
+  \node[above] at (4.75,1.2)
+    {requested size between 32 and 48 bytes};
+
+  % Arrow to best-fit
+  \draw[->,Nord8,thick] (8.25,1.4) -- (8.25,1.05);
+  \node[above,Nord8] at (8.25,1.6)
+    {chosen best-fit block (smallest that fits)};
+\end{tikzpicture}
+
+\vspace{0.8em}
+
+\begin{itemize}
+  \item \texttt{mallocate} scans all blocks: only free blocks are considered.
+  \item For each free block, it computes the size and checks if it can fit \texttt{size}.
+  \item Among all fitting blocks, it chooses the smallest one.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]{Best-Fit Allocation: Commit + Split}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{6pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+  // Reference the chosen best-fit block
+  MemoryBlock* best_fit = &MEMBLOCK(index);
+  // Save old block bounds
+  dword old_start = best_fit->start_addr;
+  dword old_end   = best_fit->end_addr;
+  // New end address after allocating size bytes
+  dword new_end = (old_start + size) - 1;
+  // Mark the allocated region as owned by this PID
+  best_fit->pid = pid;
+  best_fit->is_free = false;
+  best_fit->end_addr = new_end;
+
+  // If the block was larger than needed, split the remainder
+  if (new_end < old_end) {
+    // Shift blocks right to make room for a new free block
+    for (int i = MEMORY_TABLE.block_count; i > index + 1; i--) {
+      MEMBLOCK(i) = MEMBLOCK(i - 1);
+    }
+    // Create a new free block with the leftover space
+    MEMBLOCK(index + 1).pid = NO_PID;
+    MEMBLOCK(index + 1).is_free = true;
+    MEMBLOCK(index + 1).start_addr = new_end + 1;
+    MEMBLOCK(index + 1).end_addr = old_end;
+    MEMORY_TABLE.block_count++;   // Increase block count
+  }
+  printf("PID %d allocated %d bytes at [%d --> %d]\n",
+         pid, size, best_fit->start_addr, best_fit->end_addr);
+  return best_fit->start_addr;    // Return the starting address
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Best-Fit Allocation: Commit + Split Visualization}
+\centering
+\scriptsize
+
+\textbf{Before allocation (best-fit block selected)}\\[0.3em]
+
+\begin{tikzpicture}[x=0.9cm,y=0.7cm,font=\scriptsize]
+  % Free (left)
+  \draw[fill=Nord2,draw=Nord6] (0,0) rectangle (3,1);
+  \node at (1.5,0.5) {Free};
+
+  % Best-fit free block
+  \draw[fill=Nord11!70,draw=Nord6,thick] (3,0) rectangle (7,1);
+  \node at (5,0.5) {Free};
+  \node[below] at (5,0) {size = 64};
+
+  % Allocated (right)
+  \draw[fill=Nord11,draw=Nord6] (7,0) rectangle (9,1);
+  \node at (8,0.5) {PID B};
+\end{tikzpicture}
+
+\vspace{0.8em}
+
+\textbf{After allocation of \texttt{size} bytes and split}\\[0.3em]
+
+\begin{tikzpicture}[x=0.9cm,y=0.7cm,font=\scriptsize]
+  % Free (left)
+  \draw[fill=Nord2,draw=Nord6] (0,0) rectangle (3,1);
+  \node at (1.5,0.5) {Free};
+
+  % New allocated block for this PID
+  \draw[fill=Nord11,draw=Nord6,thick] (3,0) rectangle (5.5,1);
+  \node at (4.25,0.5) {PID N};
+  \node[below] at (4.25,0) {size = requested};
+
+  % Remainder free block (split portion)
+  \draw[fill=Nord2!80,draw=Nord6,dashed] (5.5,0) rectangle (7,1);
+  \node at (6.25,0.5) {Free};
+  \node[below] at (6.25,0) {leftover};
+
+  % Allocated (right)
+  \draw[fill=Nord11,draw=Nord6] (7,0) rectangle (9,1);
+  \node at (8,0.5) {PID B};
+
+  % Arrows / explanation
+  \draw[->,Nord8,thick] (4.25,1.4) -- (4.25,1.05);
+  \node[above,Nord8] at (4.25,1.6)
+    {allocated to \texttt{pid}};
+
+  \draw[->,Nord8,thick] (6.25,-0.6) -- (6.25,-0.05);
+  \node[below,Nord8] at (6.25,-0.8)
+    {new free block created by split};
+\end{tikzpicture}
+
+\vspace{0.7em}
+
+\begin{itemize}
+  \item The chosen free block is partially consumed by the request.
+  \item The used portion becomes an allocated block for this \texttt{pid}.
+  \item Any leftover space is turned into a new, smaller free block.
+\end{itemize}
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]{Freeing Memory: Locate + Mark Free}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{7pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+void liberate(int pid)
+{
+  int index = 0;
+
+  // Find the memory block owned by this PID
+  for (index = 0; index < MEMORY_TABLE.block_count; index++) {
+    if (MEMBLOCK(index).pid == pid &&
+        !MEMBLOCK(index).is_free) {
+
+      // Mark the block as free
+      MEMBLOCK(index).pid = NO_PID;
+      MEMBLOCK(index).is_free = true;
+
+      printf("Freed (PID %d) at memory [%d --> %d]\n",
+             pid,
+             MEMBLOCK(index).start_addr,
+             MEMBLOCK(index).end_addr);
+
+      break;
+    }
+  }
+
+  // PID not found in any allocated block
+  if (index == MEMORY_TABLE.block_count)
+    return;
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Freeing Memory: Coalescing Adjacent Blocks}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{6pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+  // Merge with previous free block
+  if (index > 0 && MEMBLOCK(index - 1).is_free) {
+
+    // Extend previous block into this one
+    MEMBLOCK(index - 1).end_addr = MEMBLOCK(index).end_addr;
+
+    // Shift table left to remove the freed block's entry
+    for (int i = index; i < MEMORY_TABLE.block_count - 1; i++) {
+      MEMBLOCK(i) = MEMBLOCK(i + 1);
+    }
+
+    MEMORY_TABLE.block_count--;
+    index--;      // New merged block is now at (index - 1)
+  }
+
+  // Merge with next free block
+  if (index < MEMORY_TABLE.block_count - 1 &&
+      MEMBLOCK(index + 1).is_free) {
+
+    // Extend this block into the next
+    MEMBLOCK(index).end_addr = MEMBLOCK(index + 1).end_addr;
+
+    // Shift table left to remove the merged block
+    for (int i = index + 1; i < MEMORY_TABLE.block_count - 1; i++) {
+      MEMBLOCK(i) = MEMBLOCK(i + 1);
+    }
+
+    MEMORY_TABLE.block_count--;
+  }
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Freeing Memory: Visual Overview}
+\centering
+\scriptsize
+
+% 1) Before liberate(pid)
+\textbf{1. Before \texttt{liberate(pid)}}\\[0.3em]
+\begin{tikzpicture}[x=0.9cm,y=0.6cm,font=\scriptsize]
+  % Free
+  \draw[fill=Nord2,draw=Nord6] (0,0) rectangle (2,1)
+    node[midway,align=center]{Free};
+
+  % PID 7 (target)
+  \draw[fill=Nord11!60,draw=Nord6] (2,0) rectangle (4,1)
+    node[midway,align=center]{PID 7};
+
+  % PID X
+  \draw[fill=Nord12!60,draw=Nord6] (4,0) rectangle (6,1)
+    node[midway,align=center]{PID X};
+
+  % Free
+  \draw[fill=Nord2,draw=Nord6] (6,0) rectangle (8,1)
+    node[midway,align=center]{Free};
+
+  % PID Y
+  \draw[fill=Nord12,draw=Nord6] (8,0) rectangle (10,1)
+    node[midway,align=center]{PID Y};
+
+  % Arrow to show block being freed
+  \draw[->,Nord8,thick] (3,1.2) -- (3,1.8);
+  \node[above,Nord8] at (3,1.8) {block owned by \texttt{pid}};
+\end{tikzpicture}
+
+\vspace{0.8em}
+
+% 2) After mark free
+\textbf{2. After marking the block free}\\[0.3em]
+\begin{tikzpicture}[x=0.9cm,y=0.6cm,font=\scriptsize]
+  % Free
+  \draw[fill=Nord2,draw=Nord6] (0,0) rectangle (2,1)
+    node[midway,align=center]{Free};
+
+  % Newly freed block
+  \draw[fill=Nord2!80,draw=Nord6,dashed] (2,0) rectangle (4,1)
+    node[midway,align=center]{Free};
+
+  % PID X
+  \draw[fill=Nord12!60,draw=Nord6] (4,0) rectangle (6,1)
+    node[midway,align=center]{PID X};
+
+  % Free
+  \draw[fill=Nord2,draw=Nord6] (6,0) rectangle (8,1)
+    node[midway,align=center]{Free};
+
+  % PID Y
+  \draw[fill=Nord12,draw=Nord6] (8,0) rectangle (10,1)
+    node[midway,align=center]{PID Y};
+
+  \node[above] at (3,1.2) {newly freed block};
+\end{tikzpicture}
+
+\vspace{0.8em}
+
+% 3) After coalescing
+\textbf{3. After coalescing with neighbouring free blocks}\\[0.3em]
+\begin{tikzpicture}[x=0.9cm,y=0.6cm,font=\scriptsize]
+  % Merged free region (previous + freed + next)
+  \draw[fill=Nord2,draw=Nord6] (0,0) rectangle (8,1)
+    node[midway,align=center]{Merged Free Region};
+
+  % PID Y
+  \draw[fill=Nord12,draw=Nord6] (8,0) rectangle (10,1)
+    node[midway,align=center]{PID Y};
+\end{tikzpicture}
+
+\end{frame}
 %================================================
 \section{Module 3: Process Scheduling and Context Switching}
 %================================================
