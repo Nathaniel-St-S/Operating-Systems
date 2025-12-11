@@ -960,43 +960,227 @@ void liberate(int pid)
 %================================================
 \section{Module 3: Process Scheduling and Context Switching}
 %================================================
-
-\subsection{Scheduling Algorithms}
-
-\begin{frame}{Round Robin}
-  % Round Robin
+\begin{frame}[fragile]{Schedulers}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{5pt}{7pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+void scheduler(SchedulingAlgorithm algorithm) {
+  PerfTimer overall_timer;
+  perf_timer_start(&overall_timer);
+  const char *algo_name = "Unknown";
+  switch (algorithm) {
+    case SCHED_FCFS: algo_name = "FCFS"; break;
+    case SCHED_ROUND_ROBIN: algo_name = "Round Robin"; break;
+    case SCHED_PRIORITY: algo_name = "Priority"; break;
+    case SCHED_SRT: algo_name = "SRT"; break;
+    case SCHED_HRRN: algo_name = "HRRN"; break;
+    case SCHED_SPN: algo_name = "SPN"; break;
+    case SCHED_MLFQ: algo_name = "MLFQ"; break;
+    default: break;
+  }
+  g_current_algorithm_id = start_algorithm_tracking(algo_name);
+  switch (algorithm) {
+    case SCHED_ROUND_ROBIN: roundRobin(); break;
+    case SCHED_PRIORITY: priorityBased(); break;
+    case SCHED_SRT: shortestRemainingTime(); break;
+    case SCHED_HRRN: highestResponseRatioNext(); break;
+    case SCHED_FCFS: firstComeFirstServe(); break;
+    case SCHED_SPN: shortestProcessNext(); break;
+    case SCHED_MLFQ: feedBack(); break;
+    default: fprintf(stderr, "Unknown Scheduler Type\n"); break;
+  }
+  double total_time = perf_timer_end_seconds(&overall_timer);
+  if (g_current_algorithm_id >= 0) {
+    record_scheduler_time(g_current_algorithm_id, total_time * 1000.0);
+    end_algorithm_tracking(g_current_algorithm_id);
+    print_algorithm_results(g_current_algorithm_id);
+  }
+}
+\end{lstlisting}
 \end{frame}
 
-\begin{frame}{Priority Based Scheduling}
-  % Priority Based Scheduling
+\begin{frame}[fragile]{Queues}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{11pt}{11pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+typedef struct {
+  int next;
+  int capacity;
+  Process PCB[];
+} Queue;
+
+static Queue* Ready_Queue = NULL;
+static Queue* Running_Queue = NULL;
+static Queue* Blocked_Queue = NULL;
+static Queue* Suspend_Blocked_Queue = NULL;
+static Queue* Suspend_Ready_Queue = NULL;
+static Queue* New_Queue = NULL;
+static Queue* Finished_Queue = NULL;
+\end{lstlisting}
 \end{frame}
 
-\begin{frame}{Shortest Remaining Time}
-  % Shortest Remaining Time
+\begin{frame}[fragile]{Round Robin: Context Switching in Our Simulator}
+\small
+
+% \textbf{When does a context switch happen?}
+% \begin{itemize}
+%   \item At the start of each time slice, when we load a new process.
+%   \item At the end of the slice, when we save its CPU state and either:
+%     \begin{itemize}
+%       \item finish the process, or
+%       \item preempt it and move it to the back of the ready queue.
+%     \end{itemize}
+% \end{itemize}
+
+\medskip
+
+\textbf{Switching into a process}
+\begin{block}{Load PCB $\rightarrow$ CPU}
+\begin{lstlisting}[
+language=MyC,
+basicstyle=\fontsize{5.8pt}{7.2pt}
+\selectfont\ttfamily]
+Process *p = &Ready_Queue->PCB[0];
+
+set_current_process(p->pid);  // Update current PID
+THE_CPU = p->cpu_state;       // Restore registers & PC
+record_context_switch(g_current_algorithm_id);
+\end{lstlisting}
+\end{block}
+
+\medskip
+
+\textbf{Switching out of a process}
+\begin{block}{CPU $\rightarrow$ PCB + queue update}
+\begin{lstlisting}[language=MyC,
+  basicstyle=\fontsize{5.8pt}{7.2pt}\selectfont\ttfamily]
+p->cpu_state = THE_CPU;  // Save registers & PC
+
+if (finished) {
+  record_process_completion(p);
+  liberate(p->pid);      // Free its memory
+  shift_ready_left();    // Remove from ready queue
+} else {
+  Process tmp = *p;
+  shift_ready_left();    // Remove from front
+  push_ready_back(tmp);  // Requeue at back (preemption)
+}
+\end{lstlisting}
+\end{block}
 \end{frame}
 
-\begin{frame}{Highest Response Ratio Next}
-  % Highest Response Ratio Next
+\begin{frame}[fragile]{FCFS: Context Switching in Our Simulator}
+\small
+
+\textbf{Switching into a process (once per process)}
+\begin{block}{Load PCB $\rightarrow$ CPU}
+\begin{lstlisting}[language=MyC,
+  basicstyle=\fontsize{6.8pt}{7.2pt}\selectfont\ttfamily]
+Process *p = &Ready_Queue->PCB[0];
+
+if (!p->has_started) {
+  p->has_started = true;
+  p->start_time = g_system_time;
+  p->response_time = g_system_time - p->arrival_time;
+}
+
+perf_timer_start(&timer);
+set_current_process(p->pid);   // Update current PID
+THE_CPU = p->cpu_state;        // Restore registers & PC
+record_context_switch(g_current_algorithm_id);
+\end{lstlisting}
+\end{block}
 \end{frame}
 
-\begin{frame}{First-Come First-Served (FCFS)}
-  % FCFS
+\begin{frame}[fragile]{FCFS: Context Switching in Our Simulator}
+\textbf{Running non-preemptively until completion}
+\begin{block}{CPU executes until burst time is exhausted}
+\begin{lstlisting}[language=MyC,
+  basicstyle=\fontsize{6.8pt}{7.2pt}\selectfont\ttfamily]
+while (p->burstTime > 0 &&
+       THE_CPU.hw_registers[PC] != CPU_HALT) {
+  fetch();
+  execute();
+  p->burstTime--;
+  g_system_time++;
+}
+\end{lstlisting}
+\end{block}
 \end{frame}
 
-\begin{frame}{Shortest Process Next}
-  % Shortest Process Next
+\begin{frame}[fragile]{FCFS: Context Switching in Our Simulator}
+\textbf{Switching out of a process (save state + cleanup)}
+\begin{block}{CPU $\rightarrow$ PCB + remove from ready queue}
+\begin{lstlisting}[language=MyC,
+  basicstyle=\fontsize{6.8pt}{7.2pt}\selectfont\ttfamily]
+p->cpu_state = THE_CPU;              // Save final CPU state
+double ctx_time = perf_timer_end(&timer);
+record_context_switch_time(g_current_algorithm_id, ctx_time);
+
+record_process_completion(p);
+liberate(p->pid);                    // Free its memory
+shift_ready_left();                  // Next process moves to front
+\end{lstlisting}
+\end{block}
 \end{frame}
 
-\begin{frame}{Feedback Scheduling Algorithm}
-  % Feedback Scheduling Algorithm
+\begin{frame}[fragile]{Round Robin: Fetch--Decode--Execute Region}
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{9pt}{7.2pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+int slice = (p->burstTime < QUANTUM) ? p->burstTime : QUANTUM;
+
+// Preemptive time-sliced Fetch--Decode--Execute
+for (int i = 0; i < slice; i++) {
+  if (THE_CPU.hw_registers[PC] == CPU_HALT)
+    break;
+
+  fetch();    // Fetch next instruction into IR
+  execute();  // Decode + execute one instruction
+
+  if (p->burstTime > 0) {
+    p->burstTime--;   // Consume one unit of CPU burst
+    g_system_time++;  // Advance global system time
+  }
+}
+\end{lstlisting}
+\end{beamercolorbox}
 \end{frame}
 
-\begin{frame}{Context Switching}
-  % Context Switching
-\end{frame}
+\begin{frame}[fragile]{FCFS: Fetch--Decode--Execute Region}
 
-\begin{frame}{Integration with Fetch-Decode-Execute}
-  % Integration with Fetch-Decode-Execute
+\begin{beamercolorbox}[rounded=true,shadow=true,wd=\textwidth]{block body}
+
+\begin{lstlisting}[
+  language=MyC,
+  basicstyle=\fontsize{9pt}{7.2pt}\selectfont\ttfamily,
+  aboveskip=0pt,
+  belowskip=0pt,
+]
+// Non-preemptive Fetch--Decode--Execute: run until completion
+while (p->burstTime > 0 &&
+       THE_CPU.hw_registers[PC] != CPU_HALT) {
+
+  fetch();    // Fetch next instruction into IR
+  execute();  // Decode + execute one instruction
+
+  p->burstTime--;   // Consume one unit of CPU burst
+  g_system_time++;  // Advance global system time
+}
+\end{lstlisting}
+
+\end{beamercolorbox}
+
 \end{frame}
 
 %================================================
