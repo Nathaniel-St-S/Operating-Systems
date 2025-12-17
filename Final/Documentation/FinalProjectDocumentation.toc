@@ -49,11 +49,10 @@
 \contentsline {subsection}{\numberline {10.1}Problem Statement}{26}{subsection.10.1}%
 \contentsline {subsection}{\numberline {10.2}Implementation}{26}{subsection.10.2}%
 \contentsline {subsubsection}{\numberline {10.2.1}Performance Metrics Setup}{26}{subsubsection.10.2.1}%
-\contentsline {subsubsection}{\numberline {10.2.2}Implementation of Time Tracking}{26}{subsubsection.10.2.2}%
-\contentsline {subsubsection}{\numberline {10.2.3}Data Comparison}{26}{subsubsection.10.2.3}%
-\contentsline {subsubsection}{\numberline {10.2.4}Performance Comparison}{26}{subsubsection.10.2.4}%
-\contentsline {subsubsection}{\numberline {10.2.5}Visualization and Reporting}{26}{subsubsection.10.2.5}%
-\contentsline {section}{\numberline {11}The Simulation}{29}{section.11}%
-\contentsline {section}{\numberline {12}Testing and Debugging}{39}{section.12}%
-\contentsline {section}{\numberline {13}Conclusion}{40}{section.13}%
-\contentsline {section}{\numberline {14}Appendix A: Screenshots}{41}{section.14}%
+\contentsline {subsubsection}{\numberline {10.2.2}Implementation of Time Tracking}{27}{subsubsection.10.2.2}%
+\contentsline {subsubsection}{\numberline {10.2.3}Visualization and Reporting}{27}{subsubsection.10.2.3}%
+\contentsline {section}{\numberline {11}The Simulation}{32}{section.11}%
+\contentsline {section}{\numberline {12}Testing and Debugging}{49}{section.12}%
+\contentsline {section}{\numberline {13}Conclusion}{64}{section.13}%
+\contentsline {subsection}{\numberline {13.1}Summary}{64}{subsection.13.1}%
+\contentsline {subsection}{\numberline {13.2}Key Learning Insights}{64}{subsection.13.2}%

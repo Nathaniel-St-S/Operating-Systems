@@ -145,27 +145,983 @@ Eventually, this project aims to deepen your understanding of system-level progr
 
 \include{OS-Performance}
 
-
-
-
-\pagebreak
-\section{The Simulation}
-\Update{}
 \include{Simulation}
 
 
-\pagebreak
 \section{Testing and Debugging}
 \label{testNdebug}
+This test program evaluates the complete functionality and integration of the simulated computer system, including CPU execution, memory management, interrupt handling and process schedulers. It launches three concurrent processes: one that prints a message using CPU interrupts, another that performs intensive arithmetic operations and memory storage, and a third that simulates process being scheduled and completed by the process schedulers. Meanwhile, separate threads generate timer and I/O interrupts to test asynchronous event handling and process coordination. The system also runs a demo CPU program to verify correct instruction execution, memory access, and cache behavior. Overall, this test assesses whether all system components—CPU, memory hierarchy, interrupt controller, and process handling are work together smoothly to emulate a functioning
+multitasking operating system environment.
 
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	static void reset_cpu_and_memory(void) {
+		memset(&THE_CPU, 0, sizeof(Cpu));
+		free_memory();
+		init_memory(CACHE_WRITE_THROUGH);
+		set_current_process(SYSTEM_PROCESS_ID);
+	}
+	
+	// ============================================
+	// CPU Initialization Tests
+	// ============================================
+	
+	TEST_CASE(CPU, InitializationSetsPC) {
+		reset_cpu_and_memory();
+		init_cpu(0x1000);
+		ASSERT_EQ(HW_REGISTER(PC), 0x1000);
+	}
+	
+	TEST_CASE(CPU, InitializationSetsZeroFlag) {
+		reset_cpu_and_memory();
+		init_cpu(0x2000);
+		ASSERT_TRUE(HW_REGISTER(FLAGS) & F_ZERO);
+	}
+	
+	TEST_CASE(CPU, InitializationClearsRegisters) {
+		reset_cpu_and_memory();
+		init_cpu(0x3000);
+		for (int i = 1; i < GP_REG_COUNT; i++) {
+			ASSERT_EQ(GP_REGISTER(i), 0);
+		}
+	}
+	
+	TEST_CASE(CPU, InitializationSetsZeroRegister) {
+		reset_cpu_and_memory();
+		init_cpu(0x4000);
+		ASSERT_EQ(GP_REGISTER(REG_ZERO), 0);
+	}
+	
+	// ============================================
+	// Fetch Tests
+	// ============================================
+	
+	TEST_CASE(CPU, FetchLoadsInstructionFromMemory) {
+		reset_cpu_and_memory();
+		uint32_t test_addr = 0x1000;
+		uint32_t test_instruction = 0x12345678;
+		
+		write_word(test_addr, test_instruction);
+		init_cpu(test_addr);
+		fetch();
+		
+		ASSERT_EQ(HW_REGISTER(IR), test_instruction);
+	}
+	
+	TEST_CASE(CPU, FetchIncrementsPC) {
+		reset_cpu_and_memory();
+		uint32_t start_addr = 0x2000;
+		write_word(start_addr, 0xAAAAAAAA);
+		
+		init_cpu(start_addr);
+		fetch();
+		
+		ASSERT_EQ(HW_REGISTER(PC), start_addr + 4);
+	}
+	
+	TEST_CASE(CPU, FetchMultipleInstructions) {
+		reset_cpu_and_memory();
+		uint32_t base_addr = 0x3000;
+		
+		write_word(base_addr, 0x11111111);
+		write_word(base_addr + 4, 0x22222222);
+		write_word(base_addr + 8, 0x33333333);
+		
+		init_cpu(base_addr);
+		
+		fetch();
+		ASSERT_EQ(HW_REGISTER(IR), 0x11111111);
+		ASSERT_EQ(HW_REGISTER(PC), base_addr + 4);
+		
+		fetch();
+		ASSERT_EQ(HW_REGISTER(IR), 0x22222222);
+		ASSERT_EQ(HW_REGISTER(PC), base_addr + 8);
+		
+		fetch();
+		ASSERT_EQ(HW_REGISTER(IR), 0x33333333);
+		ASSERT_EQ(HW_REGISTER(PC), base_addr + 12);
+	}
+	
+	// ============================================
+	// Register Access Tests
+	// ============================================
+	
+	TEST_CASE(CPU, GeneralPurposeRegisterReadWrite) {
+		reset_cpu_and_memory();
+		GP_REGISTER(REG_T0) = 0xDEADBEEF;
+		ASSERT_EQ(GP_REGISTER(REG_T0), 0xDEADBEEF);
+	}
+	
+	TEST_CASE(CPU, AllGPRegistersIndependent) {
+		reset_cpu_and_memory();
+		for (int i = 1; i < GP_REG_COUNT; i++) {
+			GP_REGISTER(i) = i * 0x11;
+		}
+		for (int i = 1; i < GP_REG_COUNT; i++) {
+			ASSERT_EQ(GP_REGISTER(i), (uint32_t)(i * 0x11));
+		}
+	}
+	
+	TEST_CASE(CPU, HardwareRegisterAccess) {
+		reset_cpu_and_memory();
+		HW_REGISTER(PC) = 0x5000;
+		HW_REGISTER(IR) = 0xABCDEF12;
+		HW_REGISTER(FLAGS) = F_ZERO | F_CARRY;
+		
+		ASSERT_EQ(HW_REGISTER(PC), 0x5000);
+		ASSERT_EQ(HW_REGISTER(IR), 0xABCDEF12);
+		ASSERT_EQ(HW_REGISTER(FLAGS), (uint32_t)(F_ZERO | F_CARRY));
+	}
+	
+	TEST_CASE(CPU, StackPointerRegister) {
+		reset_cpu_and_memory();
+		GP_REGISTER(REG_SP) = 0x7FFFFFFC;
+		ASSERT_EQ(GP_REGISTER(REG_SP), 0x7FFFFFFC);
+		
+		GP_REGISTER(REG_SP) -= 4;
+		ASSERT_EQ(GP_REGISTER(REG_SP), 0x7FFFFFF8);
+	}
+	
+	TEST_CASE(CPU, ReturnAddressRegister) {
+		reset_cpu_and_memory();
+		GP_REGISTER(REG_RA) = 0x1234;
+		ASSERT_EQ(GP_REGISTER(REG_RA), 0x1234);
+	}
+	
+	// ============================================
+	// Flag Tests
+	// ============================================
+	
+	TEST_CASE(CPU, ZeroFlagSetAndClear) {
+		reset_cpu_and_memory();
+		HW_REGISTER(FLAGS) = 0;
+		HW_REGISTER(FLAGS) |= F_ZERO;
+		ASSERT_TRUE(HW_REGISTER(FLAGS) & F_ZERO);
+		
+		HW_REGISTER(FLAGS) &= ~F_ZERO;
+		ASSERT_TRUE(!(HW_REGISTER(FLAGS) & F_ZERO));
+	}
+	
+	TEST_CASE(CPU, CarryFlagSetAndClear) {
+		reset_cpu_and_memory();
+		HW_REGISTER(FLAGS) = 0;
+		HW_REGISTER(FLAGS) |= F_CARRY;
+		ASSERT_TRUE(HW_REGISTER(FLAGS) & F_CARRY);
+		
+		HW_REGISTER(FLAGS) &= ~F_CARRY;
+		ASSERT_TRUE(!(HW_REGISTER(FLAGS) & F_CARRY));
+	}
+	
+	TEST_CASE(CPU, OverflowFlagSetAndClear) {
+		reset_cpu_and_memory();
+		HW_REGISTER(FLAGS) = 0;
+		HW_REGISTER(FLAGS) |= F_OVERFLOW;
+		ASSERT_TRUE(HW_REGISTER(FLAGS) & F_OVERFLOW);
+		
+		HW_REGISTER(FLAGS) &= ~F_OVERFLOW;
+		ASSERT_TRUE(!(HW_REGISTER(FLAGS) & F_OVERFLOW));
+	}
+	
+	TEST_CASE(CPU, MultipleFlagsSimultaneous) {
+		reset_cpu_and_memory();
+		HW_REGISTER(FLAGS) = F_ZERO | F_CARRY | F_OVERFLOW;
+		
+		ASSERT_TRUE(HW_REGISTER(FLAGS) & F_ZERO);
+		ASSERT_TRUE(HW_REGISTER(FLAGS) & F_CARRY);
+		ASSERT_TRUE(HW_REGISTER(FLAGS) & F_OVERFLOW);
+	}
+	
+	TEST_CASE(CPU, ClearAllFlags) {
+		reset_cpu_and_memory();
+		HW_REGISTER(FLAGS) = F_ZERO | F_CARRY | F_OVERFLOW;
+		HW_REGISTER(FLAGS) = 0;
+		
+		ASSERT_EQ(HW_REGISTER(FLAGS), 0);
+	}
+	
+	// ============================================
+	// HI/LO Register Tests
+	// ============================================
+	
+	TEST_CASE(CPU, HIRegisterAccess) {
+		reset_cpu_and_memory();
+		HW_REGISTER(HI) = 0x12345678;
+		ASSERT_EQ(HW_REGISTER(HI), 0x12345678);
+	}
+	
+	TEST_CASE(CPU, LORegisterAccess) {
+		reset_cpu_and_memory();
+		HW_REGISTER(LO) = 0xABCDEF00;
+		ASSERT_EQ(HW_REGISTER(LO), 0xABCDEF00);
+	}
+	
+	TEST_CASE(CPU, HILOIndependentAccess) {
+		reset_cpu_and_memory();
+		HW_REGISTER(HI) = 0x11111111;
+		HW_REGISTER(LO) = 0x22222222;
+		
+		ASSERT_EQ(HW_REGISTER(HI), 0x11111111);
+		ASSERT_EQ(HW_REGISTER(LO), 0x22222222);
+	}
+	
+	// ============================================
+	// Fetch-Execute Cycle Integration Tests
+	// ============================================
+	
+	TEST_CASE(CPU, SimpleFetchExecuteCycle) {
+		reset_cpu_and_memory();
+		uint32_t addr = 0x1000;
+		
+		// NOP instruction (sll $zero, $zero, 0)
+		uint32_t nop = 0x00000000;
+		write_word(addr, nop);
+		
+		init_cpu(addr);
+		fetch();
+		execute();
+		
+		ASSERT_EQ(HW_REGISTER(PC), addr + 4);
+	}
+	
+	TEST_CASE(CPU, ExecutePreservesNonTargetRegisters) {
+		reset_cpu_and_memory();
+		
+		// Set up registers
+		GP_REGISTER(REG_T0) = 0xAAAAAAAA;
+		GP_REGISTER(REG_T1) = 0xBBBBBBBB;
+		GP_REGISTER(REG_T2) = 0xCCCCCCCC;
+		
+		// Execute NOP
+		HW_REGISTER(IR) = 0x00000000;
+		execute();
+		
+		// T0, T1, T2 should be unchanged
+		ASSERT_EQ(GP_REGISTER(REG_T0), 0xAAAAAAAA);
+		ASSERT_EQ(GP_REGISTER(REG_T1), 0xBBBBBBBB);
+		ASSERT_EQ(GP_REGISTER(REG_T2), 0xCCCCCCCC);
+	}
+	
+	// ============================================
+	// Memory Access Through CPU Tests
+	// ============================================
+	
+	TEST_CASE(CPU, CPUMemoryReadWrite) {
+		reset_cpu_and_memory();
+		uint32_t addr = 0x2000;
+		uint32_t value = 0x12345678;
+		
+		write_word(addr, value);
+		ASSERT_EQ(read_word(addr), value);
+	}
+	
+	TEST_CASE(CPU, InstructionFetchFromDifferentAddresses) {
+		reset_cpu_and_memory();
+		
+		write_word(0x1000, 0x11111111);
+		write_word(0x2000, 0x22222222);
+		write_word(0x3000, 0x33333333);
+		
+		init_cpu(0x1000);
+		fetch();
+		ASSERT_EQ(HW_REGISTER(IR), 0x11111111);
+		
+		HW_REGISTER(PC) = 0x2000;
+		fetch();
+		ASSERT_EQ(HW_REGISTER(IR), 0x22222222);
+		
+		HW_REGISTER(PC) = 0x3000;
+		fetch();
+		ASSERT_EQ(HW_REGISTER(IR), 0x33333333);
+	}
+	
+	// ============================================
+	// Register Naming Tests
+	// ============================================
+	
+	TEST_CASE(CPU, ArgumentRegisters) {
+		reset_cpu_and_memory();
+		GP_REGISTER(REG_A0) = 1;
+		GP_REGISTER(REG_A1) = 2;
+		GP_REGISTER(REG_A2) = 3;
+		GP_REGISTER(REG_A3) = 4;
+		
+		ASSERT_EQ(GP_REGISTER(REG_A0), 1);
+		ASSERT_EQ(GP_REGISTER(REG_A1), 2);
+		ASSERT_EQ(GP_REGISTER(REG_A2), 3);
+		ASSERT_EQ(GP_REGISTER(REG_A3), 4);
+	}
+	
+	TEST_CASE(CPU, ReturnValueRegisters) {
+		reset_cpu_and_memory();
+		GP_REGISTER(REG_V0) = 0x100;
+		GP_REGISTER(REG_V1) = 0x200;
+		
+		ASSERT_EQ(GP_REGISTER(REG_V0), 0x100);
+		ASSERT_EQ(GP_REGISTER(REG_V1), 0x200);
+	}
+	
+	TEST_CASE(CPU, TemporaryRegisters) {
+		reset_cpu_and_memory();
+		for (int i = REG_T0; i <= REG_T7; i++) {
+			GP_REGISTER(i) = i * 0x10;
+		}
+		for (int i = REG_T0; i <= REG_T7; i++) {
+			ASSERT_EQ(GP_REGISTER(i), (uint32_t)(i * 0x10));
+		}
+	}
+	
+	TEST_CASE(CPU, SavedRegisters) {
+		reset_cpu_and_memory();
+		for (int i = REG_S0; i <= REG_S7; i++) {
+			GP_REGISTER(i) = i * 0x100;
+		}
+		for (int i = REG_S0; i <= REG_S7; i++) {
+			ASSERT_EQ(GP_REGISTER(i), (uint32_t)(i * 0x100));
+		}
+	}
+	
+	// ============================================
+	// Edge Cases
+	// ============================================
+	
+	TEST_CASE(CPU, PCWrapAround) {
+		reset_cpu_and_memory();
+		HW_REGISTER(PC) = 0xFFFFFFFC;
+		// This would wrap on increment, but we test the value itself
+		ASSERT_EQ(HW_REGISTER(PC), 0xFFFFFFFC);
+	}
+	
+	TEST_CASE(CPU, MaximumRegisterValue) {
+		reset_cpu_and_memory();
+		GP_REGISTER(REG_T0) = 0xFFFFFFFF;
+		ASSERT_EQ(GP_REGISTER(REG_T0), 0xFFFFFFFF);
+	}
+	
+	TEST_CASE(CPU, MinimumRegisterValue) {
+		reset_cpu_and_memory();
+		GP_REGISTER(REG_T0) = 0x00000000;
+		ASSERT_EQ(GP_REGISTER(REG_T0), 0x00000000);
+	}
+	
+	// ============================================
+	// State Consistency Tests
+	// ============================================
+	
+	TEST_CASE(CPU, RepeatedInitialization) {
+		reset_cpu_and_memory();
+		
+		init_cpu(0x1000);
+		ASSERT_EQ(HW_REGISTER(PC), 0x1000);
+		
+		init_cpu(0x2000);
+		ASSERT_EQ(HW_REGISTER(PC), 0x2000);
+		
+		init_cpu(0x3000);
+		ASSERT_EQ(HW_REGISTER(PC), 0x3000);
+	}
+	
+	TEST_CASE(CPU, StateAfterMultipleOperations) {
+		reset_cpu_and_memory();
+		
+		init_cpu(0x1000);
+		GP_REGISTER(REG_T0) = 42;
+		HW_REGISTER(FLAGS) = F_ZERO;
+		
+		ASSERT_EQ(HW_REGISTER(PC), 0x1000);
+		ASSERT_EQ(GP_REGISTER(REG_T0), 42);
+		ASSERT_TRUE(HW_REGISTER(FLAGS) & F_ZERO);
+	}
+	
+	// ============================================
+	// MAR and MBR Tests
+	// ============================================
+	
+	TEST_CASE(CPU, MemoryAddressRegister) {
+		reset_cpu_and_memory();
+		HW_REGISTER(MAR) = 0x5000;
+		ASSERT_EQ(HW_REGISTER(MAR), 0x5000);
+	}
+	
+	TEST_CASE(CPU, MemoryBufferRegister) {
+		reset_cpu_and_memory();
+		HW_REGISTER(MBR) = 0xDEADBEEF;
+		ASSERT_EQ(HW_REGISTER(MBR), 0xDEADBEEF);
+	}
+	
+	// ============================================
+	// I/O Register Tests
+	// ============================================
+	
+	TEST_CASE(CPU, IOAddressRegister) {
+		reset_cpu_and_memory();
+		HW_REGISTER(IO_AR) = 0x100;
+		ASSERT_EQ(HW_REGISTER(IO_AR), 0x100);
+	}
+	
+	TEST_CASE(CPU, IOBufferRegister) {
+		reset_cpu_and_memory();
+		HW_REGISTER(IO_BR) = 0xFF;
+		ASSERT_EQ(HW_REGISTER(IO_BR), 0xFF);
+	}
+	
+	static void reset_memory(void) {
+		free_memory();
+		init_memory(CACHE_WRITE_THROUGH);
+		set_current_process(SYSTEM_PROCESS_ID);
+	}
+	
+	static void reset_memory_write_back(void) {
+		free_memory();
+		init_memory(CACHE_WRITE_BACK);
+		set_current_process(SYSTEM_PROCESS_ID);
+	}
+	
+	// ============================================
+	// Basic Read/Write Tests
+	// ============================================
+	
+	TEST_CASE(Memory, ReadWriteByte) {
+		reset_memory();
+		write_byte(100, 0x42);
+		ASSERT_EQ(read_byte(100), 0x42);
+	}
+	
+	TEST_CASE(Memory, ReadWriteHalfword) {
+		reset_memory();
+		write_hword(200, 0x1234);
+		ASSERT_EQ(read_hword(200), 0x1234);
+	}
+	
+	TEST_CASE(Memory, ReadWriteWord) {
+		reset_memory();
+		write_word(300, 0x12345678);
+		ASSERT_EQ(read_word(300), 0x12345678);
+	}
+	
+	TEST_CASE(Memory, WriteBytePreservesOtherBytes) {
+		reset_memory();
+		write_word(400, 0xAABBCCDD);
+		write_byte(401, 0xFF);
+		ASSERT_EQ(read_word(400), 0xAABBFFDD);
+	}
+	
+	TEST_CASE(Memory, WriteHalfwordPreservesOtherBytes) {
+		reset_memory();
+		write_word(500, 0x11223344);
+		write_hword(502, 0xAABB);
+		ASSERT_EQ(read_word(500), 0xAABB3344);
+	}
+	
+	TEST_CASE(Memory, MultipleWordWrites) {
+		reset_memory();
+		for (uint32_t i = 0; i < 10; i++) {
+			write_word(1000 + (i * 4), i * 100);
+		}
+		for (uint32_t i = 0; i < 10; i++) {
+			ASSERT_EQ(read_word(1000 + (i * 4)), i * 100);
+		}
+	}
+	
+	// ============================================
+	// Cache Tests (Write-Through)
+	// ============================================
+	
+	TEST_CASE(Memory, CacheWriteThroughUpdatesRAM) {
+		reset_memory();
+		write_word(2000, 0xDEADBEEF);
+		ASSERT_EQ(read_word(2000), 0xDEADBEEF);
+	}
+	
+	TEST_CASE(Memory, CacheHitOnRepeatedRead) {
+		reset_memory();
+		write_word(3000, 0x12345678);
+		uint32_t first = read_word(3000);
+		uint32_t second = read_word(3000);
+		ASSERT_EQ(first, second);
+		ASSERT_EQ(first, 0x12345678);
+	}
+	
+	TEST_CASE(Memory, CacheLineBoundary) {
+		reset_memory();
+		// Write at cache line boundary (64 bytes)
+		write_word(0, 0xAAAAAAAA);
+		write_word(64, 0xBBBBBBBB);
+		ASSERT_EQ(read_word(0), 0xAAAAAAAA);
+		ASSERT_EQ(read_word(64), 0xBBBBBBBB);
+	}
+	
+	TEST_CASE(Memory, CacheWriteThroughConsistency) {
+		reset_memory();
+		uint32_t addr = 4000;
+		write_word(addr, 0x11111111);
+		write_word(addr, 0x22222222);
+		write_word(addr, 0x33333333);
+		ASSERT_EQ(read_word(addr), 0x33333333);
+	}
+	
+	// ============================================
+	// Cache Tests (Write-Back)
+	// ============================================
+	
+	TEST_CASE(Memory, WriteBackDelaysRAMWrite) {
+		reset_memory_write_back();
+		write_word(5000, 0xFEEDFACE);
+		ASSERT_EQ(read_word(5000), 0xFEEDFACE);
+	}
+	
+	TEST_CASE(Memory, WriteBackMultipleWrites) {
+		reset_memory_write_back();
+		uint32_t addr = 6000;
+		write_word(addr, 0x11111111);
+		write_word(addr, 0x22222222);
+		write_word(addr, 0x33333333);
+		ASSERT_EQ(read_word(addr), 0x33333333);
+	}
+	
+	TEST_CASE(Memory, WriteBackCacheLineEviction) {
+		reset_memory_write_back();
+		// Write enough data to force cache eviction
+		for (uint32_t i = 0; i < 100; i++) {
+			write_word(7000 + (i * 64), i);
+		}
+		for (uint32_t i = 0; i < 100; i++) {
+			ASSERT_EQ(read_word(7000 + (i * 64)), i);
+		}
+	}
+	
+	// ============================================
+	// Memory Allocation Tests
+	// ============================================
+	
+	TEST_CASE(Memory, AllocateMemoryForProcess) {
+		reset_memory();
+		uint32_t addr = mallocate(1, 1024);
+		ASSERT_TRUE(addr != UINT32_MAX);
+	}
+	
+	TEST_CASE(Memory, AllocateMultipleBlocks) {
+		reset_memory();
+		uint32_t addr1 = mallocate(1, 512);
+		uint32_t addr2 = mallocate(2, 512);
+		ASSERT_TRUE(addr1 != UINT32_MAX);
+		ASSERT_TRUE(addr2 != UINT32_MAX);
+		ASSERT_TRUE(addr1 != addr2);
+	}
+	
+	TEST_CASE(Memory, AllocateZeroSizeFails) {
+		reset_memory();
+		uint32_t addr = mallocate(1, 0);
+		ASSERT_EQ(addr, UINT32_MAX);
+	}
+	
+	TEST_CASE(Memory, FreeAllocatedMemory) {
+		reset_memory();
+		uint32_t addr = mallocate(1, 1024);
+		ASSERT_TRUE(addr != UINT32_MAX);
+		liberate(1);
+		// Should be able to allocate same size again
+		uint32_t addr2 = mallocate(2, 1024);
+		ASSERT_TRUE(addr2 != UINT32_MAX);
+	}
+	
+	TEST_CASE(Memory, BestFitAllocation) {
+		reset_memory();
+		// Allocate and free to create fragmentation
+		uint32_t addr1 = mallocate(1, 512);
+		uint32_t addr2 = mallocate(2, 1024);
+		uint32_t addr3 = mallocate(3, 512);
+		
+		ASSERT_TRUE(addr1 != UINT32_MAX);
+		ASSERT_TRUE(addr2 != UINT32_MAX);
+		ASSERT_TRUE(addr3 != UINT32_MAX);
+		
+		liberate(2); // Free middle block
+		
+		// Should fit in freed space
+		uint32_t addr4 = mallocate(4, 512);
+		ASSERT_TRUE(addr4 != UINT32_MAX);
+	}
+	
+	TEST_CASE(Memory, AllocateAfterMultipleFrees) {
+		reset_memory();
+		uint32_t addr1 = mallocate(1, 256);
+		uint32_t addr2 = mallocate(2, 256);
+		uint32_t addr3 = mallocate(3, 256);
+		
+		liberate(1);
+		liberate(2);
+		liberate(3);
+		(void)addr1;
+		(void)addr2;
+		(void)addr3;
+		
+		uint32_t addr4 = mallocate(4, 512);
+		ASSERT_TRUE(addr4 != UINT32_MAX);
+	}
+	
+	// ============================================
+	// Process Isolation Tests
+	// ============================================
+	
+	TEST_CASE(Memory, ProcessCanAccessOwnMemory) {
+		reset_memory();
+		uint32_t addr = mallocate(1, 1024);
+		set_current_process(1);
+		write_word(addr, 0x12345678);
+		ASSERT_EQ(read_word(addr), 0x12345678);
+	}
+	
+	TEST_CASE(Memory, SystemProcessCanAccessAll) {
+		reset_memory();
+		set_current_process(SYSTEM_PROCESS_ID);
+		write_word(1000, 0xAAAAAAAA);
+		ASSERT_EQ(read_word(1000), 0xAAAAAAAA);
+	}
+	
+	TEST_CASE(Memory, ProcessCanAccessTextSegment) {
+		reset_memory();
+		set_current_process(0);
+		uint32_t text_addr = TEXT_BASE;
+		write_word(text_addr, 0x11223344);
+		ASSERT_EQ(read_word(text_addr), 0x11223344);
+	}
+	
+	TEST_CASE(Memory, ProcessCanAccessDataSegment) {
+		reset_memory();
+		set_current_process(0);
+		uint32_t data_addr = DATA_BASE;
+		write_word(data_addr, 0x55667788);
+		ASSERT_EQ(read_word(data_addr), 0x55667788);
+	}
+	
+	// ============================================
+	// Edge Cases and Bounds Tests
+	// ============================================
+	
+	TEST_CASE(Memory, ReadAtAddressZero) {
+		reset_memory();
+		write_word(0, 0xCAFEBABE);
+		ASSERT_EQ(read_word(0), 0xCAFEBABE);
+	}
+	
+	TEST_CASE(Memory, WriteReadSequentialAddresses) {
+		reset_memory();
+		for (uint32_t i = 0; i < 100; i++) {
+			write_byte(10000 + i, (uint8_t)(i & 0xFF));
+		}
+		for (uint32_t i = 0; i < 100; i++) {
+			ASSERT_EQ(read_byte(10000 + i), (uint8_t)(i & 0xFF));
+		}
+	}
+	
+	TEST_CASE(Memory, LargeDataTransfer) {
+		reset_memory();
+		uint32_t base = 20000;
+		for (uint32_t i = 0; i < 256; i++) {
+			write_word(base + (i * 4), i * 0x11111111);
+		}
+		for (uint32_t i = 0; i < 256; i++) {
+			ASSERT_EQ(read_word(base + (i * 4)), i * 0x11111111);
+		}
+	}
+	
+	TEST_CASE(Memory, AlternatingReadWrite) {
+		reset_memory();
+		uint32_t addr = 30000;
+		write_word(addr, 0x12345678);
+		ASSERT_EQ(read_word(addr), 0x12345678);
+		write_word(addr, 0xAABBCCDD);
+		ASSERT_EQ(read_word(addr), 0xAABBCCDD);
+		write_word(addr, 0xFFEEDDCC);
+		ASSERT_EQ(read_word(addr), 0xFFEEDDCC);
+	}
+	
+	// ============================================
+	// Endianness Tests
+	// ============================================
+	
+	TEST_CASE(Memory, LittleEndianByteOrder) {
+		reset_memory();
+		write_word(40000, 0x12345678);
+		ASSERT_EQ(read_byte(40000), 0x78);
+		ASSERT_EQ(read_byte(40001), 0x56);
+		ASSERT_EQ(read_byte(40002), 0x34);
+		ASSERT_EQ(read_byte(40003), 0x12);
+	}
+	
+	TEST_CASE(Memory, HalfwordEndianness) {
+		reset_memory();
+		write_word(41000, 0xAABBCCDD);
+		ASSERT_EQ(read_hword(41000), 0xCCDD);
+		ASSERT_EQ(read_hword(41002), 0xAABB);
+	}
+	
+	// ============================================
+	// Cache Statistics Tests
+	// ============================================
+	
+	TEST_CASE(Memory, CacheStatsInitiallyZero) {
+		reset_memory();
+		// Just verify it doesn't crash
+		print_cache_stats();
+		ASSERT_TRUE(1);
+	}
+	
+	TEST_CASE(Memory, ReadGeneratesCacheActivity) {
+		reset_memory();
+		for (int i = 0; i < 10; i++) {
+			read_word(50000 + (i * 4));
+		}
+		// Cache should have some activity
+		ASSERT_TRUE(1);
+	}
+	
+	// ============================================
+	// Memory Coalescing Tests
+	// ============================================
+	
+	TEST_CASE(Memory, CoalesceAdjacentFreeBlocks) {
+		reset_memory();
+		uint32_t addr1 = mallocate(1, 256);
+		uint32_t addr2 = mallocate(2, 256);
+		
+		ASSERT_TRUE(addr1 != UINT32_MAX);
+		ASSERT_TRUE(addr2 != UINT32_MAX);
+		
+		liberate(1);
+		liberate(2);
+		
+		// Should be able to allocate larger block
+		uint32_t addr3 = mallocate(3, 512);
+		ASSERT_TRUE(addr3 != UINT32_MAX);
+	}
+	
+	// ============================================
+	// Stress Tests
+	// ============================================
+	
+	TEST_CASE(Memory, ManyAllocationsAndFrees) {
+		reset_memory();
+		for (int i = 0; i < 20; i++) {
+			uint32_t addr = mallocate(i, 128);
+			ASSERT_TRUE(addr != UINT32_MAX);
+			if (i % 2 == 0) {
+				liberate(i);
+			}
+		}
+	}
+	
+	TEST_CASE(Memory, InterleavedCacheOperations) {
+		reset_memory();
+		for (int i = 0; i < 50; i++) {
+			uint32_t addr = 60000 + (i * 8);
+			write_word(addr, i);
+			uint32_t val = read_word(addr);
+			ASSERT_EQ(val, (uint32_t)i);
+		}
+	}
+	
+	static uint32_t make_i_instruction(uint32_t opcode, uint32_t rs, uint32_t rt,
+	uint32_t immediate) {
+		return (opcode & 0x3F) << OPCODE_SHIFT | (rs & 0x1F) << RS_SHIFT |
+		(rt & 0x1F) << RT_SHIFT | (immediate & 0xFFFF);
+	}
+	
+	static void reset_cpu_state(void) {
+		memset(&THE_CPU, 0, sizeof(THE_CPU));
+	}
+	
+	
+	static void reset_cpu_and_memory(void) {
+		reset_cpu_state();
+		free_memory();
+		init_memory(CACHE_WRITE_THROUGH);
+		set_current_process(SYSTEM_PROCESS_ID);
+	}
+	
+	static inline uint32_t mask_reg_index(uint32_t reg) {
+		return (uint32_t)reg & 0x1F;
+	}
+	
+	static inline int32_t read_gpr(uint32_t reg) {
+		uint32_t idx = mask_reg_index(reg);
+		if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
+			return 0;
+		}
+		return THE_CPU.gp_registers[idx];
+	}
+	
+	static inline void write_gpr(uint32_t reg, uint32_t value) {
+		uint32_t idx = mask_reg_index(reg);
+		if (idx == REG_ZERO || idx >= GP_REG_COUNT) {
+			return;
+		}
+		THE_CPU.gp_registers[idx] = value;
+	}
+	
+	TEST_CASE(ITypeImmediate, AddiAddsSignedImmediate) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, 5);
+		execute_instruction(make_i_instruction(OP_ADDI, REG_T0, REG_T1, 0xFFFD));
+		ASSERT_EQ(read_gpr(REG_T1), 2);
+	}
+	
+	TEST_CASE(ITypeImmediate, AddiuWrapsUnsignedResult) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, (uint32_t)0xFFFFFFFF);
+		execute_instruction(make_i_instruction(OP_ADDIU, REG_T0, REG_T1, 0x0001));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T1), (uint32_t)0x00000000);
+	}
+	
+	TEST_CASE(ITypeImmediate, AndiZeroExtendsImmediate) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, (uint32_t)0xF0F0FFFF);
+		execute_instruction(make_i_instruction(OP_ANDI, REG_T0, REG_T1, 0x8001));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T1), (uint32_t)0x00008001);
+	}
+	
+	TEST_CASE(ITypeImmediate, OriCombinesBits) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, 0x00FF0000);
+		execute_instruction(make_i_instruction(OP_ORI, REG_T0, REG_T1, 0x1234));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T1), (uint32_t)0x00FF1234);
+	}
+	
+	TEST_CASE(ITypeImmediate, XoriFlipsBits) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, 0xFFFF0000);
+		execute_instruction(make_i_instruction(OP_XORI, REG_T0, REG_T1, 0x0F0F));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T1), (uint32_t)0xFFFF0F0F);
+	}
+	
+	TEST_CASE(ITypeImmediate, SltiPerformsSignedComparison) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, -2);
+		execute_instruction(make_i_instruction(OP_SLTI, REG_T0, REG_T1, 0x0001));
+		ASSERT_EQ(read_gpr(REG_T1), 1);
+	}
+	
+	TEST_CASE(ITypeImmediate, SltiuPerformsUnsignedComparison) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, (uint32_t)0x80000000);
+		execute_instruction(make_i_instruction(OP_SLTIU, REG_T0, REG_T1, 0xFFFF));
+		ASSERT_EQ(read_gpr(REG_T1), 1);
+	}
+	
+	TEST_CASE(ITypeImmediate, LuiLoadsUpperImmediate) {
+		reset_cpu_and_memory();
+		execute_instruction(make_i_instruction(OP_LUI, REG_ZERO, REG_T1, 0x1234));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T1), (uint32_t)0x12340000);
+	}
+	
+	TEST_CASE(ITypeImmediate, LoadWordFetchesStoredValue) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, 100);
+		write_gpr(REG_T1, 0x12345678);
+		execute_instruction(make_i_instruction(OP_SW, REG_T0, REG_T1, 0));
+		write_gpr(REG_T1, 0);
+		execute_instruction(make_i_instruction(OP_LW, REG_T0, REG_T1, 0));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T1), (uint32_t)0x12345678);
+	}
+	
+	TEST_CASE(ITypeImmediate, LoadByteSignExtendsValue) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, 120);
+		write_gpr(REG_T1, 0x000000FF);
+		execute_instruction(make_i_instruction(OP_SB, REG_T0, REG_T1, 0));
+		write_gpr(REG_T2, 0);
+		execute_instruction(make_i_instruction(OP_LB, REG_T0, REG_T2, 0));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T2), (uint32_t)0xFFFFFFFF);
+	}
+	
+	TEST_CASE(ITypeImmediate, LoadByteUnsignedZeroExtends) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, 140);
+		write_gpr(REG_T1, 0x00000080);
+		execute_instruction(make_i_instruction(OP_SB, REG_T0, REG_T1, 0));
+		write_gpr(REG_T2, 0);
+		execute_instruction(make_i_instruction(OP_LBU, REG_T0, REG_T2, 0));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T2), (uint32_t)0x00000080);
+	}
+	
+	TEST_CASE(ITypeImmediate, LoadHalfSignExtendsValue) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, 160);
+		write_gpr(REG_T1, 0x0000F234);
+		execute_instruction(make_i_instruction(OP_SH, REG_T0, REG_T1, 0));
+		write_gpr(REG_T2, 0);
+		execute_instruction(make_i_instruction(OP_LH, REG_T0, REG_T2, 0));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T2), (uint32_t)0xFFFFF234);
+	}
+	
+	TEST_CASE(ITypeImmediate, LoadHalfUnsignedZeroExtends) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, 180);
+		write_gpr(REG_T1, 0x0000ABCD);
+		execute_instruction(make_i_instruction(OP_SH, REG_T0, REG_T1, 0));
+		write_gpr(REG_T2, 0);
+		execute_instruction(make_i_instruction(OP_LHU, REG_T0, REG_T2, 0));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T2), (uint32_t)0x0000ABCD);
+	}
+	
+	TEST_CASE(ITypeImmediate, StoreByteUpdatesSingleByte) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, 200);
+		write_gpr(REG_T1, 0x11223344);
+		execute_instruction(make_i_instruction(OP_SW, REG_T0, REG_T1, 0));
+		write_gpr(REG_T2, 0x000000AA);
+		execute_instruction(make_i_instruction(OP_SB, REG_T0, REG_T2, 2));
+		write_gpr(REG_T3, 0);
+		execute_instruction(make_i_instruction(OP_LW, REG_T0, REG_T3, 0));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T3), (uint32_t)0x11AA3344);
+	}
+	
+	TEST_CASE(ITypeImmediate, StoreHalfWritesTwoBytes) {
+		reset_cpu_and_memory();
+		write_gpr(REG_T0, 220);
+		write_gpr(REG_T1, 0x00001234);
+		execute_instruction(make_i_instruction(OP_SH, REG_T0, REG_T1, 0));
+		write_gpr(REG_T2, 0);
+		execute_instruction(make_i_instruction(OP_LW, REG_T0, REG_T2, 0));
+		ASSERT_EQ((uint32_t)read_gpr(REG_T2), (uint32_t)0x00001234);
+	}
+	
+	TEST_CASE(ITypeImmediate, BeqBranchesWhenEqual) {
+		reset_cpu_and_memory();
+		THE_CPU.hw_registers[PC] = 0x100;
+		write_gpr(REG_T0, 7);
+		write_gpr(REG_T1, 7);
+		execute_instruction(make_i_instruction(OP_BEQ, REG_T0, REG_T1, 0x0002));
+		ASSERT_EQ(THE_CPU.hw_registers[PC], (uint32_t)(0x100 + 4 + (2 << 2)));
+	}
+	
+	TEST_CASE(ITypeImmediate, BneBranchesWhenNotEqual) {
+		reset_cpu_and_memory();
+		THE_CPU.hw_registers[PC] = 0x80;
+		write_gpr(REG_T0, 1);
+		write_gpr(REG_T1, 2);
+		execute_instruction(make_i_instruction(OP_BNE, REG_T0, REG_T1, 0x0003));
+		ASSERT_EQ(THE_CPU.hw_registers[PC], (uint32_t)(0x80 + 4 + (3 << 2)));
+	}
+	
+\end{lstlisting}
 
-
-\pagebreak
 \section{Conclusion}
 \label{concl}
 
-\pagebreak
-\section{Appendix A: Screenshots}
-\label{SS}
+\subsection{Summary}
+
+The operating system simulator represents a comprehensive exploration of core OS concepts through hands-on implementation and analysis. One of the key accomplishments of this project was the successful simulation of concurrent process execution, allowing multiple processes to be managed simultaneously while accurately modeling CPU behavior. Through advanced process simulation, the system demonstrates realistic handling of process states, execution flow, and synchronization challenges inherent in multitasking environments.
+
+A major focus of the project was memory management and its tight integration with concurrency. By designing memory allocation and access mechanisms that operate correctly under concurrent workloads, the simulator highlights the complexities of shared resources, data consistency, and performance trade-offs. This integration reinforced the importance of coordination between memory systems and process execution in modern operating systems.
+
+The simulator also implements several process scheduling strategies, emphasizing context switching under real-time and non-real-time constraints. Supporting multiple scheduling algorithms required careful handling of timing, preemption, and priority management. Through interrupt handling, the system models asynchronous events such as I/O completion and timer interrupts, further enhancing realism and demonstrating how operating systems maintain responsiveness and fairness in the presence of unpredictable events.
+
+Finally, a comprehensive scheduling algorithm analysis module enables direct comparison of different scheduling techniques under varied workload scenarios. By collecting and evaluating metrics such as waiting time, turnaround time, response time, and cache behavior, the project provides insight into the strengths and weaknesses of each algorithm. Overall, this simulator strengthened understanding of how individual OS components interact as a cohesive system and deepened practical knowledge of performance evaluation, concurrency control, and system-level design.
+
+
+\subsection{Key Learning Insights}
+
+Working on this simulator deepened understanding of how operating system components interact under concurrent workloads. In particular, it highlighted the complexity of context switching, the impact of scheduling decisions on performance metrics, and the challenges of coordinating memory management with process execution. The project also reinforced the importance of empirical analysis when evaluating scheduling algorithms, demonstrating how different workloads can significantly influence fairness, responsiveness, and throughput. In addition, we learned how to make an assembler as well as the MIPS I architecture. 
+
 
 \end{document}

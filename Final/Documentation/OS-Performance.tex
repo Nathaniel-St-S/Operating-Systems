@@ -1,93 +1,237 @@
 \section{Module 5: Efficiency Analysis of Concurrency}
 \label{OS-Performance}
 
+This sections outlines how we conducted an efficiency analysis of concurrency for our simulated \os.
 
 
 \subsection{Problem Statement}
 \label{PS-m5}
+In this module, you will analyze the efficiency of your simulator by comparing the performance of different scheduling algorithms and concurrency mechanisms
+implemented in the previous modules. The goal is to evaluate the impact of scheduling strategies, concurrency, and synchronization on execution time, CPU utilization, memory usage, and overall system efficiency.
 
 \subsection{Implementation}
 \label{IMP-m5}
 
 \subsubsection{Performance Metrics Setup}
 
+To collect performance metrics, we created the following structures:
+
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	// Performance metrics for individual processes
+	typedef struct {
+		int pid;
+		int arrival_time;
+		int burst_time;
+		int completion_time;
+		int waiting_time;
+		int turnaround_time;
+		int response_time;
+		int priority;
+	} ProcessMetrics;
+	
+	// Performance metrics for scheduling algorithms
+	typedef struct {
+		char algorithm_name[64];
+		double execution_time;           // Time to complete all processes
+		int context_switches;            // Number of context switches
+		double avg_waiting_time;         // Average waiting time
+		double avg_turnaround_time;      // Average turnaround time
+		double avg_response_time;        // Average response time
+		double cpu_utilization;          // CPU utilization percentage
+		double throughput;               // Processes completed per unit time
+		
+		// Memory metrics
+		unsigned long l1_cache_hits;
+		unsigned long l1_cache_misses;
+		unsigned long l2_cache_hits;
+		unsigned long l2_cache_misses;
+		unsigned long write_backs;
+		
+		// Per-process metrics
+		ProcessMetrics process_metrics[MAX_PROCESSES];
+		int process_count;
+		
+		// Timing breakdown
+		double scheduler_time;           // Time spent in scheduler
+		double context_switch_time;      // Time spent context switching
+		double execution_time_total;     // Total process execution time
+		double idle_time;                // CPU idle time
+		
+		// System time tracking
+		int start_time;
+		int end_time;
+		int total_burst_time;
+	} PerformanceMetrics;
+	
+	// Global metrics storage
+	typedef struct {
+		PerformanceMetrics algorithms[MAX_ALGORITHMS];
+		int algorithm_count;
+		
+		// System-wide cache stats (captured at start/end)
+		unsigned long initial_l1_hits;
+		unsigned long initial_l1_misses;
+		unsigned long initial_l2_hits;
+		unsigned long initial_l2_misses;
+		unsigned long initial_write_backs;
+	} PerformanceTracker;
+	
+	// Timer for measuring execution time
+	typedef struct {
+		struct timespec start;
+		struct timespec end;
+		int is_running;
+	} PerfTimer;
+\end{lstlisting}
+
+These structures allowed stored all the information that we need to collect the performance metrics required.
 
 \subsubsection{Implementation of Time Tracking}
 
+To track time, we use a combination of the \texttt{time.h} and \texttt{sys/time.h} libraries, the \texttt{PerfTimer} structure and the following functions:
 
-\subsubsection{Data Comparison}
-
-
-\subsubsection{Performance Comparison}
-
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	void perf_timer_start(PerfTimer *timer) {
+		if (!timer) return;
+		
+		clock_gettime(CLOCK_MONOTONIC, &timer->start);
+		timer->is_running = 1;
+	}
+	
+	double perf_timer_end(PerfTimer *timer) {
+		if (!timer || !timer->is_running) return 0.0;
+		
+		clock_gettime(CLOCK_MONOTONIC, &timer->end);
+		timer->is_running = 0;
+		
+		double elapsed = (timer->end.tv_sec - timer->start.tv_sec) * 1000.0;
+		elapsed += (timer->end.tv_nsec - timer->start.tv_nsec) / 1000000.0;
+		
+		return elapsed;
+	}
+	
+	double perf_timer_end_seconds(PerfTimer *timer) {
+		return perf_timer_end(timer) / 1000.0;
+	}
+\end{lstlisting}
 
 \subsubsection{Visualization and Reporting}
 
-\begin{figure}
+\subsubsection*{Average Response Time Comparison}
+
+\begin{figure}[h!]
 		\centering
 		\includegraphics[scale=.5]{./charts/comparison_AvgResponseTime.png}
 		\caption{Avg Response Time Comparison}
+		\label{avg-rt}
 \end{figure}
 
-\begin{figure}
+\Cref{avg-rt} highlights how quickly a process receives its first CPU response after arrival. MLFQ and Round Robin have the lowest response times, making them well-suited for interactive systems. SRT also performs well, benefiting from preemption. SPN has a moderate response time due to its non-preemptive nature. FCFS, Priority, and HRRN show significantly higher response times, indicating slower initial responsiveness, especially under heavy workloads.
+
+\subsubsection*{Average Turnaround Time Comparison}
+
+\begin{figure}[h!]
 		\centering
 		\includegraphics[scale=.5]{./charts/comparison_AvgTurnaroundTime.png}
 		\caption{Avg Turnaround Time Comparison}
+		\label{avg-tt}
 \end{figure}
 
-\begin{figure}
+\Cref{avg-tt} measures the total time from process arrival to completion. SRT again achieves the best performance, minimizing overall completion time by favoring short remaining jobs. SPN and Round Robin follow closely, offering balanced turnaround times. MLFQ performs moderately well due to its feedback-driven optimization. FCFS and Priority scheduling have the highest turnaround times, reflecting inefficiencies caused by long waiting periods and poor handling of job length variability.
+
+\subsubsection*{Average Wait Time Comparison}
+
+\begin{figure}[h]
 		\centering
 		\includegraphics[scale=.5]{./charts/comparison_AvgWaitTime.png}
 		\caption{Avg Wait Time Comparison}
+		\label{avg-wt}
 \end{figure}
 
-\begin{figure}
+\Cref{avg-wt} compares how long processes wait in the ready queue before execution under different scheduling algorithms. SRT (Shortest Remaining Time) performs best, with the lowest average waiting time, showing its efficiency in prioritizing shorter jobs dynamically. SPN (Shortest Process Next) and Round Robin also achieve relatively low waiting times, balancing fairness and efficiency. MLFQ falls in the mid-range, reflecting its adaptive but more complex scheduling behavior. FCFS and Priority scheduling show the highest waiting times, indicating potential inefficiencies such as convoy effects (FCFS) and starvation (Priority).
+
+\subsubsection*{Context Switch Comparison}
+
+\begin{figure}[h]
 		\centering
 		\includegraphics[scale=.5]{./charts/comparison_ContextSwitches.png}
 		\caption{Context Switch Comparison}
+		\label{cont-switch}
 \end{figure}
 
-\begin{figure}
+\Cref{cont-switch} compares the number of context switches incurred by each scheduling algorithm during the simulation. Context switches represent the overhead associated with saving and restoring process state when the CPU switches between tasks, and higher values generally indicate increased scheduling overhead.
+
+Round Robin exhibits a significantly higher number of context switches than all other algorithms. This is expected, as Round Robin relies on frequent preemption based on time quanta, causing the CPU to switch between processes often to ensure fairness. While this improves responsiveness, it introduces substantial overhead. In contrast, FCFS, SPN, Priority, and HRRN all show very low and nearly identical context switch counts. These algorithms are either non-preemptive or minimize preemption, resulting in fewer interruptions and lower scheduling overhead. SRT shows a slightly higher count due to its preemptive nature, but it remains far below Round Robin. MLFQ falls between the two extremes. Its moderate number of context switches reflects its adaptive, multi-level design, which balances responsiveness and efficiency by adjusting process priorities dynamically without excessive preemption.
+
+Overall, the results highlight the trade-off between responsiveness and overhead: highly preemptive algorithms like Round Robin incur more context switches, while simpler or non-preemptive algorithms achieve lower overhead at the cost of reduced responsiveness.
+
+\subsubsection*{CPU Utilization Comparison}
+
+\begin{figure}[h]
 		\centering
 		\includegraphics[scale=.5]{./charts/comparison_CPUUtilization.png}
 		\caption{CPU Utilization Comparison}
+		\label{cpu-util}
 \end{figure}
 
+\Cref{cpu-util} demonstrates that CPU utilization is consistently at 100\% for all algorithms. This confirms that the simulator effectively keeps the CPU busy regardless of scheduling strategy. It also indicates that the workload is CPU-bound, meaning scheduling decisions influence how work is distributed among processes rather than how much idle time the CPU experiences.
 
-\begin{figure}{L1 Cache: Hits vs Misses}
+\subsubsection*{L1 Cache: Hits vs Misses}
+
+\begin{figure}[h]
 	\centering
-	%\begin{subfigure}
-		%\centering
-		%\includegraphics{./charts/comparison_L1Hits.png}
-		%\caption{L1 Cache Hits}
-	%\end{subfigure}
-	
-	%\begin{subfigure}
-		%\centering
-	%	\includegraphics{./charts/comparison_L1Misses.png}
-		%\caption{L1 Cache Misses}
-	%\end{subfigure}
+	\begin{subfigure}{.5\textwidth}
+		\centering
+		\includegraphics[scale=.55]{./charts/comparison_L1Hits.png}
+		\caption{L1 Cache Hits}
+		\label{L1-Hits}
+	\end{subfigure}%
+	\begin{subfigure}{.5\textwidth}
+		\centering
+		\includegraphics[scale=.55]{./charts/comparison_L1Misses.png}
+		\caption{L1 Cache Misses}
+		\label{L1-Misses}
+	\end{subfigure}
 	\caption{L1 Cache: Hits vs Misses}
+	\label{L1-cache}
 \end{figure}
 
-\begin{figure}{L1 Cache: Hits vs Misses}
+\Cref{L1-Misses} depicts L1 cache hits steadily increase from FCFS to MLFQ. More advanced scheduling algorithms, such as HRRN and MLFQ, show significantly higher hit counts. This suggests that these algorithms execute more instructions overall or revisit cached data more frequently. While higher L1 hits are generally beneficial, they must be considered alongside miss rates and context switch overhead to fully evaluate cache efficiency.
+
+\Cref{L1-Misses} mirrors the trend seen in L1 hits, with misses increasing as scheduling complexity increases. Algorithms like MLFQ and HRRN incur the highest miss counts, likely due to frequent preemption and context switching disrupting cache locality. This illustrates how aggressive multitasking can negatively impact cache performance, even when overall responsiveness improves.
+
+\subsubsection*{L2 Cache: Hits vs Misses}
+\begin{figure}[h]
 	\centering
-	%\begin{subfigure}
-			%\centering
-			%\includegraphics{./charts/comparison_L2Hits.png}
-		%\subcaption{L2 Cache Hits}
-	%\end{subfigure}
+	\begin{subfigure}[t!]{.5\textwidth}
+		\centering
+		\includegraphics[scale=.55]{./charts/comparison_L2Hits.png}
+		\caption{L2 Cache Hits}
+		\label{L2-Hit}
+	\end{subfigure}%	
+	\begin{subfigure}[t!]{.5\textwidth}
+		\centering
+		\includegraphics[scale=.55]{./charts/comparison_L2Misses.png}
+		\caption{L2 Cache Misses}
+		\label{L2-Misses}
+	\end{subfigure}
 	
-	%\begin{subfigure}
-			%\centering
-	%		\includegraphics{./charts/comparison_L2Misses.png}
-		%\subcaption{L2 Cache Misses}
-	%\end{subfigure}
 	\caption{L2 Cache: Hits vs Misses}
+	\label{L2-cache}
 \end{figure}
 
-\begin{figure}
-		%\centering
+\Cref{L2-Misses} depicts the L2 cache hits increase consistently across the algorithms, with MLFQ achieving the highest value. This indicates that while L1 locality may degrade, many memory accesses are still successfully resolved at the L2 level. The trend suggests that deeper cache levels play an important role in mitigating the memory performance costs introduced by complex scheduling strategies.
+
+\Cref{L2-Misses} shows the number of L2 cache misses for each scheduling algorithm. FCFS has the fewest misses, while MLFQ has the highest. As scheduling strategies become more dynamic and aggressive (e.g., HRRN and MLFQ), L2 cache misses increase, likely due to more frequent context switches and reduced temporal locality. This highlights the trade-off between responsiveness and cache efficiency, where advanced schedulers may improve fairness or response time at the cost of cache performance.
+
+\subsubsection*{Throughput Comparison}
+
+\begin{figure}[h]
+		\centering
 		\includegraphics[scale=.5]{./charts/comparison_Throughput.png}
 		\caption{Throughput Comparison}
+		\label{throuhput-comparison}
 \end{figure}
+
+\Cref{throuhput-comparison} indicates that all scheduling algorithms achieve nearly identical throughput. This suggests that, under the simulated workload, total completed work over time is largely unaffected by the choice of scheduling algorithm. Since CPU utilization is near 100\% across all cases, throughput remains stable, reinforcing the idea that scheduling primarily affects latency-related metrics rather than overall system productivity in this scenario.
+
