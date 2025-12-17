@@ -5,39 +5,49 @@
 
 \subsection{Problem Statement}
 \label{PS-m2}
-The objective of this module is to enhance the existing memory management system by implementing a hierarchical memory architecture consisting of main memory (RAM) and two levels of cache (L1 and L2).
-%
-This design aims to simulate realistic memory behavior, where data is accessed through progressively slower layers of storage, improving efficiency through caching frequently used data.
-%
-Additionally, a Memory Table will be introduced to track memory allocation and availability for each process, ensuring proper management of system resources.
-%
-The module will support dynamic memory allocation and deallocation, allowing processes to request and release memory as needed using strategies such as First-Fit or Best-Fit.
-%
-Through these implementations, the system will demonstrate efficient memory utilization, process-level memory tracking, and realistic cache behavior for multi-process and multithreaded environments.
+In this module, you’ll expand the memory management system from Project 2 by adding features for efficient memory allocation, hierarchical memory structure, dynamic memory allocation, and shared memory access. Compared to Project 3, this module introduces enhanced features for memory efficiency and concurrency, simulating a more realistic and sophisticated operating system environment.
 
 \subsection{Implementation}
 \label{IMP-m2}
 \subsubsection{Hierarchical Memory System}
-To simulate a hierarchical memory system, we implemented the RAM as an array of \texttt{word} and the L1 and L2 caches are structures: 
+To simulate a hierarchical memory system, we implemented cache lines which stores the data in an array to allow for multiple sizes of data without overwriting data. The cache line is represented as structure:
+\begin{lstlisting} [language=MyC, escapechar=\$, numbers=none]
+typedef struct {
+	uint32_t tag;
+	bool is_valid;
+	bool is_dirty;
+	uint8_t data[CACHE_LINE_SIZE];
+} CacheLine;
+\end{lstlisting}
+
+The L1 and L2 caches are structures: 
 
 \begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
-	typedef struct
-	{
-		Entry* items;
-		int front;
-		int count;
-		int size;
+	typedef struct {
+		CacheLine *lines;
+		size_t front;
+		size_t count;
+		size_t line_count;
 	} Cache;
 \end{lstlisting}
 %
-where \texttt{Entry} is a structure: 
+A \texttt{MemoryBlock} is a structure: 
 %
 \begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
-	typedef struct
-	{
-		word val;
-		mem_addr addr;
-	} Entry;
+	typedef struct {
+		int pid;
+		uint32_t start_addr;
+		uint32_t end_addr;
+		bool is_free;
+	} MemoryBlock;
+\end{lstlisting}
+
+\begin{lstlisting}[language=MyC, escapechar=\$, numbers=none]
+	typedef struct {
+		MemoryBlock *blocks;
+		size_t block_count;
+		size_t capacity;
+	} MemoryTable;
 \end{lstlisting}
 
 The two main functions for this module is \texttt{read\textunderscore{}mem} and \texttt{write\textunderscore{}mem}. 

@@ -20,10 +20,21 @@
 %\pagebreak
 %\subsubsection{Core CPU Components and Registers}
 
-\section{Overview}
+\section{Module 1: Process Simulation}
 \label{ISA-Spec}
-This document specifies a small, real 32-bit ISA based closely on the original MIPS~I architecture. 
+This section specifies a small, real 32-bit ISA based closely on the original MIPS~I architecture. 
 %
+
+%\subsection{Implementation}
+\subsection{Problem Statement}
+\label{PS-m1}
+
+In this module, you'll set up the basics for simulating a CPU that can handle multiple processes. The focus will be on building key CPU components, running the fetch-decode-execute cycle, and managing basic process states. This work will prepare you to tackle advanced scheduling and interrupt handling in the next modules.
+
+\subsection{Implementation}
+\label{IMP-m1}
+
+
 All instructions are 32 bits wide and follow one of three formats: R-type, I-type, or J-type.
 %
 The ISA includes:

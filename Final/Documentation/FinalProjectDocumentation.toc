@@ -4,58 +4,56 @@
 \contentsline {section}{\numberline {2}Module 1: Process Simulation}{4}{section.2}%
 \contentsline {subsection}{\numberline {2.1}Problem Statement}{4}{subsection.2.1}%
 \contentsline {subsection}{\numberline {2.2}Implementation}{4}{subsection.2.2}%
-\contentsline {subsubsection}{\numberline {2.2.1}Core CPU Components and Registers}{4}{subsubsection.2.2.1}%
-\contentsline {section}{\numberline {3}Overview}{5}{section.3}%
-\contentsline {section}{\numberline {4}Registers}{5}{section.4}%
-\contentsline {subsection}{\numberline {4.1}General-Purpose Registers}{5}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Special Registers}{5}{subsection.4.2}%
-\contentsline {section}{\numberline {5}Instruction Formats}{5}{section.5}%
-\contentsline {subsection}{\numberline {5.1}R-Type Format}{5}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}I-Type Format}{6}{subsection.5.2}%
-\contentsline {subsection}{\numberline {5.3}J-Type Format}{6}{subsection.5.3}%
-\contentsline {section}{\numberline {6}Instruction Encoding and Semantics}{6}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Integer Arithmetic (R-Type)}{6}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}Multiply and Divide (R-Type)}{6}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}Logical and Bitwise (R-Type)}{6}{subsection.6.3}%
-\contentsline {subsection}{\numberline {6.4}Shift Instructions (R-Type)}{7}{subsection.6.4}%
-\contentsline {subsection}{\numberline {6.5}Immediate Arithmetic and Logical (I-Type)}{7}{subsection.6.5}%
-\contentsline {subsection}{\numberline {6.6}Load and Store (I-Type)}{7}{subsection.6.6}%
-\contentsline {subsection}{\numberline {6.7}Branches (I-Type)}{7}{subsection.6.7}%
-\contentsline {subsection}{\numberline {6.8}Jumps (J-Type and R-Type)}{8}{subsection.6.8}%
-\contentsline {subsection}{\numberline {6.9}System and Exception Instructions}{8}{subsection.6.9}%
-\contentsline {subsection}{\numberline {6.10}Exception Return (ERET)}{8}{subsection.6.10}%
+\contentsline {section}{\numberline {3}Registers}{4}{section.3}%
+\contentsline {subsection}{\numberline {3.1}General-Purpose Registers}{4}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Special Registers}{4}{subsection.3.2}%
+\contentsline {section}{\numberline {4}Instruction Formats}{4}{section.4}%
+\contentsline {subsection}{\numberline {4.1}R-Type Format}{5}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}I-Type Format}{5}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}J-Type Format}{5}{subsection.4.3}%
+\contentsline {section}{\numberline {5}Instruction Encoding and Semantics}{5}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Integer Arithmetic (R-Type)}{5}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Multiply and Divide (R-Type)}{5}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Logical and Bitwise (R-Type)}{6}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Shift Instructions (R-Type)}{6}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Immediate Arithmetic and Logical (I-Type)}{6}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}Load and Store (I-Type)}{6}{subsection.5.6}%
+\contentsline {subsection}{\numberline {5.7}Branches (I-Type)}{7}{subsection.5.7}%
+\contentsline {subsection}{\numberline {5.8}Jumps (J-Type and R-Type)}{7}{subsection.5.8}%
+\contentsline {subsection}{\numberline {5.9}System and Exception Instructions}{7}{subsection.5.9}%
+\contentsline {subsection}{\numberline {5.10}Exception Return (ERET)}{7}{subsection.5.10}%
 \contentsline {paragraph}{Semantics.}{8}{section*.2}%
-\contentsline {section}{\numberline {7}Exception and Interrupt Model}{8}{section.7}%
-\contentsline {subsection}{\numberline {7.1}Exception Types}{8}{subsection.7.1}%
-\contentsline {subsection}{\numberline {7.2}Exception Entry}{9}{subsection.7.2}%
-\contentsline {subsection}{\numberline {7.3}Exception Return}{9}{subsection.7.3}%
-\contentsline {section}{\numberline {8}Module 2: Advanced Memory Management}{10}{section.8}%
-\contentsline {subsection}{\numberline {8.1}Problem Statement}{10}{subsection.8.1}%
-\contentsline {subsection}{\numberline {8.2}Implementation}{10}{subsection.8.2}%
-\contentsline {subsubsection}{\numberline {8.2.1}Hierarchical Memory System}{10}{subsubsection.8.2.1}%
-\contentsline {subsubsection}{\numberline {8.2.2}Memory Table}{12}{subsubsection.8.2.2}%
-\contentsline {subsubsection}{\numberline {8.2.3}Dynamic Memory Allocation and Deallocation}{12}{subsubsection.8.2.3}%
-\contentsline {section}{\numberline {9}Module 3: Process Scheduling and Context Switching}{15}{section.9}%
-\contentsline {subsection}{\numberline {9.1}Problem Statement}{15}{subsection.9.1}%
-\contentsline {subsection}{\numberline {9.2}Implementation}{15}{subsection.9.2}%
-\contentsline {subsubsection}{\numberline {9.2.1}Process Control Block Enhancements}{15}{subsubsection.9.2.1}%
-\contentsline {subsubsection}{\numberline {9.2.2}Scheduling Algorithms}{16}{subsubsection.9.2.2}%
-\contentsline {subsubsection}{\numberline {9.2.3}Context Switching}{20}{subsubsection.9.2.3}%
-\contentsline {subsubsection}{\numberline {9.2.4}Integration with Fetch-Decode-Execute Cycle}{21}{subsubsection.9.2.4}%
-\contentsline {section}{\numberline {10}Module 4: Interrupt Handling and Dispatcher}{23}{section.10}%
-\contentsline {subsection}{\numberline {10.1}Problem Statement}{23}{subsection.10.1}%
-\contentsline {subsection}{\numberline {10.2}Implementation}{23}{subsection.10.2}%
-\contentsline {subsubsection}{\numberline {10.2.1}Interrupt Types}{23}{subsubsection.10.2.1}%
-\contentsline {subsubsection}{\numberline {10.2.2}Handling Interrupts}{24}{subsubsection.10.2.2}%
-\contentsline {section}{\numberline {11}Module 5: Efficiency Analysis of Concurrency}{27}{section.11}%
-\contentsline {subsection}{\numberline {11.1}Problem Statement}{27}{subsection.11.1}%
-\contentsline {subsection}{\numberline {11.2}Implementation}{27}{subsection.11.2}%
-\contentsline {subsubsection}{\numberline {11.2.1}Performance Metrics Setup}{27}{subsubsection.11.2.1}%
-\contentsline {subsubsection}{\numberline {11.2.2}Implementation of Time Tracking}{27}{subsubsection.11.2.2}%
-\contentsline {subsubsection}{\numberline {11.2.3}Data Comparison}{27}{subsubsection.11.2.3}%
-\contentsline {subsubsection}{\numberline {11.2.4}Performance Comparison}{27}{subsubsection.11.2.4}%
-\contentsline {subsubsection}{\numberline {11.2.5}Visualization and Reporting}{27}{subsubsection.11.2.5}%
-\contentsline {section}{\numberline {12}The Simulation}{28}{section.12}%
-\contentsline {section}{\numberline {13}Testing and Debugging}{38}{section.13}%
-\contentsline {section}{\numberline {14}Conclusion}{39}{section.14}%
-\contentsline {section}{\numberline {15}Appendix A: Screenshots}{40}{section.15}%
+\contentsline {section}{\numberline {6}Exception and Interrupt Model}{8}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Exception Types}{8}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Exception Entry}{8}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Exception Return}{8}{subsection.6.3}%
+\contentsline {section}{\numberline {7}Module 2: Advanced Memory Management}{9}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Problem Statement}{9}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Implementation}{9}{subsection.7.2}%
+\contentsline {subsubsection}{\numberline {7.2.1}Hierarchical Memory System}{9}{subsubsection.7.2.1}%
+\contentsline {subsubsection}{\numberline {7.2.2}Memory Table}{11}{subsubsection.7.2.2}%
+\contentsline {subsubsection}{\numberline {7.2.3}Dynamic Memory Allocation and Deallocation}{11}{subsubsection.7.2.3}%
+\contentsline {section}{\numberline {8}Module 3: Process Scheduling and Context Switching}{14}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Problem Statement}{14}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Implementation}{14}{subsection.8.2}%
+\contentsline {subsubsection}{\numberline {8.2.1}Process Control Block Enhancements}{14}{subsubsection.8.2.1}%
+\contentsline {subsubsection}{\numberline {8.2.2}Scheduling Algorithms}{15}{subsubsection.8.2.2}%
+\contentsline {subsubsection}{\numberline {8.2.3}Context Switching}{19}{subsubsection.8.2.3}%
+\contentsline {subsubsection}{\numberline {8.2.4}Integration with Fetch-Decode-Execute Cycle}{20}{subsubsection.8.2.4}%
+\contentsline {section}{\numberline {9}Module 4: Interrupt Handling and Dispatcher}{22}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Problem Statement}{22}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}Implementation}{22}{subsection.9.2}%
+\contentsline {subsubsection}{\numberline {9.2.1}Interrupt Types}{22}{subsubsection.9.2.1}%
+\contentsline {subsubsection}{\numberline {9.2.2}Handling Interrupts}{23}{subsubsection.9.2.2}%
+\contentsline {section}{\numberline {10}Module 5: Efficiency Analysis of Concurrency}{26}{section.10}%
+\contentsline {subsection}{\numberline {10.1}Problem Statement}{26}{subsection.10.1}%
+\contentsline {subsection}{\numberline {10.2}Implementation}{26}{subsection.10.2}%
+\contentsline {subsubsection}{\numberline {10.2.1}Performance Metrics Setup}{26}{subsubsection.10.2.1}%
+\contentsline {subsubsection}{\numberline {10.2.2}Implementation of Time Tracking}{26}{subsubsection.10.2.2}%
+\contentsline {subsubsection}{\numberline {10.2.3}Data Comparison}{26}{subsubsection.10.2.3}%
+\contentsline {subsubsection}{\numberline {10.2.4}Performance Comparison}{26}{subsubsection.10.2.4}%
+\contentsline {subsubsection}{\numberline {10.2.5}Visualization and Reporting}{26}{subsubsection.10.2.5}%
+\contentsline {section}{\numberline {11}The Simulation}{29}{section.11}%
+\contentsline {section}{\numberline {12}Testing and Debugging}{39}{section.12}%
+\contentsline {section}{\numberline {13}Conclusion}{40}{section.13}%
+\contentsline {section}{\numberline {14}Appendix A: Screenshots}{41}{section.14}%
